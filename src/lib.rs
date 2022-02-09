@@ -77,6 +77,7 @@ struct Style {
     emphasis: bool,
     strikethrough: bool,
     quote: bool,
+    code: bool,
 }
 
 struct Table {
@@ -279,6 +280,10 @@ impl<'ui> CommonMarkViewer<'ui> {
             text = text.strikethrough();
         }
 
+        if self.text_style.code {
+            text = text.font(TextStyle::Monospace.resolve(self.ui.style()))
+        }
+
         text
     }
 
@@ -363,7 +368,13 @@ impl<'ui> CommonMarkViewer<'ui> {
                 self.text_style.quote = true;
                 self.ui.add(egui::Separator::default().horizontal());
             }
-            pulldown_cmark::Tag::CodeBlock(_) => todo!(),
+            pulldown_cmark::Tag::CodeBlock(c) => {
+                if let pulldown_cmark::CodeBlockKind::Fenced(_lang) = c {
+                    self.ui.add(egui::Separator::default().horizontal());
+                }
+
+                self.text_style.code = true;
+            }
             pulldown_cmark::Tag::List(number) => {
                 self.indentation += 1;
                 self.list_point = number;
@@ -476,7 +487,13 @@ impl<'ui> CommonMarkViewer<'ui> {
                 self.text_style.quote = false;
                 self.ui.add(egui::Separator::default().horizontal());
             }
-            pulldown_cmark::Tag::CodeBlock(_) => todo!(),
+            pulldown_cmark::Tag::CodeBlock(c) => {
+                if let pulldown_cmark::CodeBlockKind::Fenced(_lang) = c {
+                    self.ui.add(egui::Separator::default().horizontal());
+                }
+
+                self.text_style.code = false;
+            }
             pulldown_cmark::Tag::List(_) => {
                 self.indentation -= 1;
                 self.newline();
