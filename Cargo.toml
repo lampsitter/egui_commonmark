@@ -1,0 +1,14 @@
+[package]
+name = "egui_commonmark"
+authors = ["Erlend Walstad"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Depend on master until next release
+egui = { git = "https://github.com/emilk/egui", rev = "defc400c21aaf3fc61f4a7530f13fdbe5991fcc1" }
+pulldown-cmark = "0.9.1"
+resvg = "0.20.0"
+usvg = "0.20.0"
+tiny-skia = "0.6.3"
+image = { version = "0.24", default-features = false, features = ["png"]}
