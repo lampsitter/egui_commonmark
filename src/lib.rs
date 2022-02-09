@@ -196,6 +196,12 @@ impl CommonMarkViewer {
     }
 }
 
+struct Image {
+    handle: Option<TextureHandle>,
+    url: String,
+    alt_text: Vec<RichText>,
+}
+
 struct CommonMarkViewerInternal<'ui> {
     ui: &'ui mut egui::Ui,
     /// The current text style
@@ -204,7 +210,7 @@ struct CommonMarkViewerInternal<'ui> {
     link: Option<Link>,
     table: Option<Table>,
     indentation: i64,
-    image_alt_text: Option<(egui::Response, Vec<RichText>)>,
+    image: Option<Image>,
     should_insert_newline: bool,
     is_first_heading: bool,
 }
@@ -218,7 +224,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
             link: None,
             table: None,
             indentation: -1,
-            image_alt_text: None,
+            image: None,
             should_insert_newline: true,
             is_first_heading: true,
         }
@@ -348,8 +354,8 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                     let text = self.style_text(text.borrow());
                     if let Some(table) = &mut self.table {
                         table.rows[table.curr_row as usize][table.curr_cell as usize].push(text);
-                    } else if let Some((_, alt)) = &mut self.image_alt_text {
-                        alt.push(text);
+                    } else if let Some(image) = &mut self.image {
+                        image.alt_text.push(text);
                     } else {
                         self.ui.label(text);
                     }
@@ -479,12 +485,12 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                     text: String::new(),
                 });
             }
-            pulldown_cmark::Tag::Image(_, destination, _) => {
+            pulldown_cmark::Tag::Image(_, url, _) => {
                 use std::collections::hash_map::Entry;
-                let texture = match cache.images.entry(destination.to_string()) {
+                let texture = match cache.images.entry(url.to_string()) {
                     Entry::Occupied(o) => Some(o.get().clone()),
                     Entry::Vacant(v) => {
-                        if let Ok(data) = std::fs::read(destination.as_ref()) {
+                        if let Ok(data) = std::fs::read(url.as_ref()) {
                             let image = if let Ok(image) = load_image(&data) {
                                 Some(image)
                             } else {
@@ -492,8 +498,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                             };
 
                             if let Some(image) = image {
-                                let texture =
-                                    self.ui.ctx().load_texture(destination.to_string(), image);
+                                let texture = self.ui.ctx().load_texture(url.to_string(), image);
 
                                 v.insert(texture.clone());
                                 Some(texture)
@@ -506,13 +511,19 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                     }
                 };
 
-                if let Some(texture) = texture {
-                    let size = options.image_scaled(&texture);
-                    let response = self.ui.image(&texture, size);
-                    self.newline();
-
-                    self.image_alt_text = Some((response, vec![]));
-                }
+                self.image = Some(if let Some(texture) = texture {
+                    Image {
+                        handle: Some(texture),
+                        url: url.to_string(),
+                        alt_text: Vec::new(),
+                    }
+                } else {
+                    Image {
+                        handle: None,
+                        url: url.to_string(),
+                        alt_text: Vec::new(),
+                    }
+                });
 
                 // TODO: Support urls
             }
@@ -578,14 +589,27 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                 }
             }
             pulldown_cmark::Tag::Image(_, _, _) => {
-                if let Some((response, alts)) = self.image_alt_text.take() {
-                    if !alts.is_empty() && options.show_alt_text_on_hover {
-                        response.on_hover_ui_at_pointer(|ui| {
-                            for alt in alts {
-                                ui.label(alt);
-                            }
-                        });
+                if let Some(image) = self.image.take() {
+                    if let Some(texture) = image.handle {
+                        let size = options.image_scaled(&texture);
+                        let response = self.ui.image(&texture, size);
+
+                        if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
+                            response.on_hover_ui_at_pointer(|ui| {
+                                for alt in image.alt_text {
+                                    ui.label(alt);
+                                }
+                            });
+                        }
+                    } else {
+                        self.ui.label("![");
+                        for alt in image.alt_text {
+                            self.ui.label(alt);
+                        }
+                        self.ui.label(format!("]({})", image.url));
                     }
+
+                    self.newline();
                 }
             }
         }
