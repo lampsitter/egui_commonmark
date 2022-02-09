@@ -362,7 +362,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
             pulldown_cmark::Event::Code(text) => {
                 self.ui.code(text.as_ref());
             }
-            pulldown_cmark::Event::Html(_) => todo!(),
+            pulldown_cmark::Event::Html(_) => {}
             pulldown_cmark::Event::FootnoteReference(footnote) => {
                 self.footnote_start(&footnote);
             }
@@ -429,8 +429,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                 self.ui
                     .label(" ".repeat(self.indentation as usize * options.indentation_spaces));
 
-                // FIXME: If text is longer than available_width, then the entire
-                // text is placed below the point
+                self.should_insert_newline = false;
                 if let Some(mut number) = self.list_point.take() {
                     self.numbered_point(&number.to_string());
                     number += 1;
