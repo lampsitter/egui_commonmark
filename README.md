@@ -11,10 +11,9 @@ r"# Hello world
 * A list
 * [ ] Checkbox
 ";
-let options = CommonMarkOptions::default();
 // Stores image handles between each frame
 let mut cache = CommonMarkCache::default();
-CommonMarkViewer::show(ui, &mut cache, &options, markdown);
+CommonMarkViewer::default().show(ui, &mut cache, markdown);
 ```
 
 ## License

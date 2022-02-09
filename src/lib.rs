@@ -11,11 +11,10 @@
 //! * A list
 //! * [ ] Checkbox
 //! ";
-//! let options = CommonMarkOptions::default();
 //! // Stores image handles between each frame
 //! let mut cache = CommonMarkCache::default();
 //! # __run_test_ui(|ui| {
-//! CommonMarkViewer::show(ui, &mut cache, &options, markdown);
+//! CommonMarkViewer::default().show(ui, &mut cache, markdown);
 //! # });
 //!
 //! ```
@@ -120,11 +119,11 @@ impl CommonMarkCache {
     }
 }
 
-pub struct CommonMarkOptions {
-    pub indentation_spaces: usize,
-    pub max_image_width: Option<usize>,
-    pub show_alt_text_on_hover: bool,
-    pub default_width: Option<usize>,
+struct CommonMarkOptions {
+    indentation_spaces: usize,
+    max_image_width: Option<usize>,
+    show_alt_text_on_hover: bool,
+    default_width: Option<usize>,
 }
 
 impl Default for CommonMarkOptions {
@@ -159,7 +158,45 @@ impl CommonMarkOptions {
     }
 }
 
-pub struct CommonMarkViewer<'ui> {
+#[derive(Default)]
+pub struct CommonMarkViewer {
+    options: CommonMarkOptions,
+}
+
+impl CommonMarkViewer {
+    /// The amount of spaces a bullet point is indented. By default this is 4
+    /// spaces.
+    pub fn indentation_spaces(mut self, spaces: usize) -> Self {
+        self.options.indentation_spaces = spaces;
+        self
+    }
+
+    /// The maximum size images are allowed to be. They will be scaled down if
+    /// they are larger
+    pub fn max_image_width(mut self, width: Option<usize>) -> Self {
+        self.options.max_image_width = width;
+        self
+    }
+
+    /// The default width of the ui. This is only respected if this is larger than
+    /// the [`max_image_width`](Self::max_image_width)
+    pub fn default_width(mut self, width: Option<usize>) -> Self {
+        self.options.default_width = width;
+        self
+    }
+
+    /// Show alt text when hovering over images. By default this is enabled.
+    pub fn show_alt_text_on_hover(mut self, show: bool) -> Self {
+        self.options.show_alt_text_on_hover = show;
+        self
+    }
+
+    pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
+        CommonMarkViewerInternal::show(ui, cache, &self.options, text);
+    }
+}
+
+struct CommonMarkViewerInternal<'ui> {
     ui: &'ui mut egui::Ui,
     /// The current text style
     text_style: Style,
@@ -172,7 +209,7 @@ pub struct CommonMarkViewer<'ui> {
     is_first_heading: bool,
 }
 
-impl<'ui> CommonMarkViewer<'ui> {
+impl<'ui> CommonMarkViewerInternal<'ui> {
     fn new(ui: &'ui mut egui::Ui) -> Self {
         Self {
             ui,
@@ -188,7 +225,7 @@ impl<'ui> CommonMarkViewer<'ui> {
     }
 }
 
-impl<'ui> CommonMarkViewer<'ui> {
+impl<'ui> CommonMarkViewerInternal<'ui> {
     pub fn show(
         ui: &'ui mut egui::Ui,
         cache: &mut CommonMarkCache,
@@ -220,7 +257,7 @@ impl<'ui> CommonMarkViewer<'ui> {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut writer = CommonMarkViewer::new(ui);
+            let mut writer = CommonMarkViewerInternal::new(ui);
             for e in pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all()) {
                 writer.event(e, cache, options);
             }
