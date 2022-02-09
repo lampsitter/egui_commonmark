@@ -37,7 +37,7 @@ fn load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
 }
 
 #[cfg(not(feature = "svg"))]
-fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
+fn try_render_svg(_data: &[u8]) -> Option<ColorImage> {
     None
 }
 
