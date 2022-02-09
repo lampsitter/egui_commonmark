@@ -116,6 +116,7 @@ impl CommonMarkCache {
 pub struct CommonMarkOptions {
     pub indentation_spaces: usize,
     pub max_image_width: Option<usize>,
+    pub show_alt_text_on_hover: bool,
 }
 
 impl Default for CommonMarkOptions {
@@ -123,6 +124,7 @@ impl Default for CommonMarkOptions {
         Self {
             indentation_spaces: 4,
             max_image_width: None,
+            show_alt_text_on_hover: true,
         }
     }
 }
@@ -156,6 +158,21 @@ pub struct CommonMarkViewer<'ui> {
     link: Option<Link>,
     table: Option<Table>,
     indentation: i64,
+    image_alt_text: Option<(egui::Response, Vec<RichText>)>,
+}
+
+impl<'ui> CommonMarkViewer<'ui> {
+    fn new(ui: &'ui mut egui::Ui) -> Self {
+        Self {
+            ui,
+            text_style: Style::default(),
+            list_point: None,
+            link: None,
+            table: None,
+            indentation: -1,
+            image_alt_text: None,
+        }
+    }
 }
 
 impl<'ui> CommonMarkViewer<'ui> {
@@ -184,15 +201,7 @@ impl<'ui> CommonMarkViewer<'ui> {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut writer = CommonMarkViewer {
-                ui,
-                text_style: Style::default(),
-                list_point: None,
-                link: None,
-                table: None,
-                indentation: -1,
-            };
-
+            let mut writer = CommonMarkViewer::new(ui);
             for e in pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all()) {
                 writer.event(e, cache, options);
             }
@@ -272,7 +281,7 @@ impl<'ui> CommonMarkViewer<'ui> {
     ) {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(tag, cache, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(tag),
+            pulldown_cmark::Event::End(tag) => self.end_tag(tag, options),
             pulldown_cmark::Event::Text(text) => {
                 if let Some(link) = &mut self.link {
                     link.text += &text;
@@ -280,6 +289,8 @@ impl<'ui> CommonMarkViewer<'ui> {
                     let text = self.style_text(text.borrow());
                     if let Some(table) = &mut self.table {
                         table.rows[table.curr_row as usize][table.curr_cell as usize].push(text);
+                    } else if let Some((_, alt)) = &mut self.image_alt_text {
+                        alt.push(text);
                     } else {
                         self.ui.label(text);
                     }
@@ -419,8 +430,10 @@ impl<'ui> CommonMarkViewer<'ui> {
 
                 if let Some(texture) = texture {
                     let size = options.image_scaled(&texture);
-                    self.ui.image(&texture, size);
+                    let response = self.ui.image(&texture, size);
                     self.newline();
+
+                    self.image_alt_text = Some((response, vec![]));
                 }
 
                 // TODO: Support urls
@@ -428,7 +441,7 @@ impl<'ui> CommonMarkViewer<'ui> {
         }
     }
 
-    fn end_tag(&mut self, tag: pulldown_cmark::Tag) {
+    fn end_tag(&mut self, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 self.newline();
@@ -479,7 +492,17 @@ impl<'ui> CommonMarkViewer<'ui> {
                     self.ui.hyperlink_to(link.text, link.destination);
                 }
             }
-            pulldown_cmark::Tag::Image(_, _, _) => {}
+            pulldown_cmark::Tag::Image(_, _, _) => {
+                if let Some((response, alts)) = self.image_alt_text.take() {
+                    if !alts.is_empty() && options.show_alt_text_on_hover {
+                        response.on_hover_ui_at_pointer(|ui| {
+                            for alt in alts {
+                                ui.label(alt);
+                            }
+                        });
+                    }
+                }
+            }
         }
     }
 
