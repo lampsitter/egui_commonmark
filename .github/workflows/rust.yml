@@ -1,0 +1,14 @@
+name: Rust
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Check no features
+      run: cargo check --no-default-features
+    - name: Check all features
+      run: cargo check --all-features
+    - name: Tests
+      run: cargo test --all-features
