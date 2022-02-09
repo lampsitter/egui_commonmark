@@ -20,7 +20,7 @@
 //! ```
 //!
 
-use egui::{self, RichText, Sense, TextStyle};
+use egui::{self, RichText, Sense, TextStyle, Ui};
 use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::HeadingLevel;
 use std::borrow::Borrow;
@@ -202,8 +202,7 @@ struct Image {
     alt_text: Vec<RichText>,
 }
 
-struct CommonMarkViewerInternal<'ui> {
-    ui: &'ui mut egui::Ui,
+struct CommonMarkViewerInternal {
     /// The current text style
     text_style: Style,
     list_point: Option<u64>,
@@ -213,12 +212,12 @@ struct CommonMarkViewerInternal<'ui> {
     image: Option<Image>,
     should_insert_newline: bool,
     is_first_heading: bool,
+    collect_code_block_events: bool,
 }
 
-impl<'ui> CommonMarkViewerInternal<'ui> {
-    fn new(ui: &'ui mut egui::Ui) -> Self {
+impl CommonMarkViewerInternal {
+    fn new() -> Self {
         Self {
-            ui,
             text_style: Style::default(),
             list_point: None,
             link: None,
@@ -227,13 +226,14 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
             image: None,
             should_insert_newline: true,
             is_first_heading: true,
+            collect_code_block_events: false,
         }
     }
 }
 
-impl<'ui> CommonMarkViewerInternal<'ui> {
+impl CommonMarkViewerInternal {
     pub fn show(
-        ui: &'ui mut egui::Ui,
+        ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         text: &str,
@@ -263,29 +263,51 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut writer = CommonMarkViewerInternal::new(ui);
+            let mut writer = CommonMarkViewerInternal::new();
+            let mut events = Vec::new();
             for e in pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all()) {
-                writer.event(e, cache, options);
+                // Collect a bunch of events before painting them
+                if writer.collect_code_block_events {
+                    let should_end_collection = end_event_collection(&e);
+                    events.push(e);
+
+                    if !should_end_collection {
+                        let events2 = events.clone();
+                        egui::Frame::dark_canvas(ui.style())
+                            .margin(egui::vec2(0.0, 0.0))
+                            .show(ui, |ui| {
+                                ui.set_min_width(initial_size.x);
+                                for e in events2 {
+                                    writer.event(ui, e, cache, options);
+                                }
+                            });
+                        writer.collect_code_block_events = false;
+
+                        events.clear();
+                    }
+                } else {
+                    // paint without collecting first
+                    writer.event(ui, e, cache, options);
+                }
             }
         });
     }
 
-    fn newline(&mut self) {
-        self.ui
-            .allocate_exact_size(egui::vec2(0.0, self.height_body()), Sense::hover());
-        self.ui.end_row();
+    fn newline(&self, ui: &mut Ui) {
+        ui.allocate_exact_size(egui::vec2(0.0, height_body(ui)), Sense::hover());
+        ui.end_row();
     }
 
-    fn newline_heading(&mut self) {
-        self.ui.label("\n");
+    fn newline_heading(&self, ui: &mut Ui) {
+        ui.label("\n");
     }
 
-    fn style_text(&mut self, text: &str) -> RichText {
+    fn style_text(&mut self, ui: &mut Ui, text: &str) -> RichText {
         let mut text = RichText::new(text);
 
         if let Some(level) = self.text_style.heading {
-            let max_height = self.ui.text_style_height(&TextStyle::Heading);
-            let min_height = self.ui.text_style_height(&TextStyle::Body);
+            let max_height = ui.text_style_height(&TextStyle::Heading);
+            let min_height = ui.text_style_height(&TextStyle::Body);
             let diff = max_height - min_height;
             match level {
                 HeadingLevel::H1 => {
@@ -332,7 +354,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
         }
 
         if self.text_style.code {
-            text = text.font(TextStyle::Monospace.resolve(self.ui.style()))
+            text = text.font(TextStyle::Monospace.resolve(ui.style()))
         }
 
         text
@@ -340,51 +362,52 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
 
     fn event(
         &mut self,
+        ui: &mut Ui,
         event: pulldown_cmark::Event,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
     ) {
         match event {
-            pulldown_cmark::Event::Start(tag) => self.start_tag(tag, cache, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(tag, options),
+            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
+            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, options),
             pulldown_cmark::Event::Text(text) => {
                 if let Some(link) = &mut self.link {
                     link.text += &text;
                 } else {
-                    let text = self.style_text(text.borrow());
+                    let text = self.style_text(ui, text.borrow());
                     if let Some(table) = &mut self.table {
                         table.rows[table.curr_row as usize][table.curr_cell as usize].push(text);
                     } else if let Some(image) = &mut self.image {
                         image.alt_text.push(text);
                     } else {
-                        self.ui.label(text);
+                        ui.label(text);
                     }
 
                     if self.text_style.heading.is_some() {
-                        self.newline_heading();
+                        self.newline_heading(ui);
                     }
                 }
             }
             pulldown_cmark::Event::Code(text) => {
-                self.ui.code(text.as_ref());
+                ui.code(text.as_ref());
             }
             pulldown_cmark::Event::Html(_) => {}
             pulldown_cmark::Event::FootnoteReference(footnote) => {
-                self.footnote_start(&footnote);
+                footnote_start(ui, &footnote);
             }
             pulldown_cmark::Event::SoftBreak => {
-                self.ui.label(" ");
+                ui.label(" ");
             }
-            pulldown_cmark::Event::HardBreak => self.newline(),
+            pulldown_cmark::Event::HardBreak => self.newline(ui),
             pulldown_cmark::Event::Rule => {
-                self.newline();
-                self.ui.add(egui::Separator::default().horizontal());
+                self.newline(ui);
+                ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Event::TaskListMarker(checkbox) => {
                 if checkbox {
-                    self.ui.label("☑ ");
+                    ui.label("☑ ");
                 } else {
-                    self.ui.label("☐ ");
+                    ui.label("☐ ");
                 }
             }
         }
@@ -392,6 +415,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
 
     fn start_tag(
         &mut self,
+        ui: &mut Ui,
         tag: pulldown_cmark::Tag,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -399,29 +423,33 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 if self.should_insert_newline {
-                    self.newline();
+                    self.newline(ui);
                 }
                 self.should_insert_newline = true;
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
                 if matches!(l, HeadingLevel::H1) {
                     if !self.is_first_heading {
-                        self.newline_heading();
+                        self.newline_heading(ui);
                     }
                     self.is_first_heading = false;
                 } else {
-                    self.newline_heading();
+                    self.newline_heading(ui);
                 }
 
                 self.text_style.heading = Some(l);
             }
             pulldown_cmark::Tag::BlockQuote => {
                 self.text_style.quote = true;
-                self.ui.add(egui::Separator::default().horizontal());
+                ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
                 if let pulldown_cmark::CodeBlockKind::Fenced(_lang) = c {
-                    self.ui.add(egui::Separator::default().horizontal());
+                    if self.collect_code_block_events {
+                        ui.add(egui::Separator::default().horizontal());
+                    } else {
+                        self.collect_code_block_events = true;
+                    }
                 }
 
                 self.text_style.code = true;
@@ -431,24 +459,23 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                 self.list_point = number;
             }
             pulldown_cmark::Tag::Item => {
-                self.newline();
-                self.ui
-                    .label(" ".repeat(self.indentation as usize * options.indentation_spaces));
+                self.newline(ui);
+                ui.label(" ".repeat(self.indentation as usize * options.indentation_spaces));
 
                 self.should_insert_newline = false;
                 if let Some(mut number) = self.list_point.take() {
-                    self.numbered_point(&number.to_string());
+                    numbered_point(ui, &number.to_string());
                     number += 1;
                     self.list_point = Some(number);
                 } else if self.indentation >= 1 {
-                    self.bullet_point_hollow();
+                    bullet_point_hollow(ui);
                 } else {
-                    self.bullet_point();
+                    bullet_point(ui);
                 }
             }
-            pulldown_cmark::Tag::FootnoteDefinition(footnote) => {
+            pulldown_cmark::Tag::FootnoteDefinition(note) => {
                 self.should_insert_newline = false;
-                self.footnote(&footnote);
+                footnote(ui, &note);
             }
             pulldown_cmark::Tag::Table(_) => self.table = Some(Table::default()),
             pulldown_cmark::Tag::TableHead => {
@@ -498,7 +525,7 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                             };
 
                             if let Some(image) = image {
-                                let texture = self.ui.ctx().load_texture(url.to_string(), image);
+                                let texture = ui.ctx().load_texture(url.to_string(), image);
 
                                 v.insert(texture.clone());
                                 Some(texture)
@@ -530,33 +557,33 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
         }
     }
 
-    fn end_tag(&mut self, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
+    fn end_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
-                self.newline();
+                self.newline(ui);
             }
             pulldown_cmark::Tag::Heading(_, _, _) => {
                 self.text_style.heading = None;
             }
             pulldown_cmark::Tag::BlockQuote => {
                 self.text_style.quote = false;
-                self.ui.add(egui::Separator::default().horizontal());
+                ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
                 if let pulldown_cmark::CodeBlockKind::Fenced(_lang) = c {
-                    self.ui.add(egui::Separator::default().horizontal());
+                    ui.add(egui::Separator::default().horizontal());
                 }
 
                 self.text_style.code = false;
             }
             pulldown_cmark::Tag::List(_) => {
                 self.indentation -= 1;
-                self.newline();
+                self.newline(ui);
             }
             pulldown_cmark::Tag::Item => {}
             pulldown_cmark::Tag::FootnoteDefinition(_) => {}
             pulldown_cmark::Tag::Table(_) => {
-                egui::Grid::new("todo_unique id").show(self.ui, |ui| {
+                egui::Grid::new("todo_unique id").show(ui, |ui| {
                     if let Some(table) = self.table.take() {
                         for row in table.rows {
                             ui.add(egui::Separator::default().vertical());
@@ -585,14 +612,14 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
             }
             pulldown_cmark::Tag::Link(_, _, _) => {
                 if let Some(link) = self.link.take() {
-                    self.ui.hyperlink_to(link.text, link.destination);
+                    ui.hyperlink_to(link.text, link.destination);
                 }
             }
             pulldown_cmark::Tag::Image(_, _, _) => {
                 if let Some(image) = self.image.take() {
                     if let Some(texture) = image.handle {
                         let size = options.image_scaled(&texture);
-                        let response = self.ui.image(&texture, size);
+                        let response = ui.image(&texture, size);
 
                         if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
                             response.on_hover_ui_at_pointer(|ui| {
@@ -602,82 +629,87 @@ impl<'ui> CommonMarkViewerInternal<'ui> {
                             });
                         }
                     } else {
-                        self.ui.label("![");
+                        ui.label("![");
                         for alt in image.alt_text {
-                            self.ui.label(alt);
+                            ui.label(alt);
                         }
-                        self.ui.label(format!("]({})", image.url));
+                        ui.label(format!("]({})", image.url));
                     }
 
-                    self.newline();
+                    self.newline(ui);
                 }
             }
         }
     }
+}
 
-    fn bullet_point(&mut self) {
-        let (rect, _) = self.ui.allocate_exact_size(
-            egui::vec2(self.width_body_space() * 4.0, self.height_body()),
-            Sense::hover(),
-        );
-        self.ui.painter().circle_filled(
-            rect.center(),
-            rect.height() / 6.0,
-            self.ui.visuals().strong_text_color(),
-        );
-    }
+fn end_event_collection(e: &pulldown_cmark::Event) -> bool {
+    use pulldown_cmark::{CodeBlockKind, Event, Tag};
+    matches!(e, Event::End(Tag::CodeBlock(CodeBlockKind::Fenced(_lang))))
+}
 
-    fn bullet_point_hollow(&mut self) {
-        let (rect, _) = self.ui.allocate_exact_size(
-            egui::vec2(self.width_body_space() * 4.0, self.height_body()),
-            Sense::hover(),
-        );
-        self.ui.painter().circle(
-            rect.center(),
-            rect.height() / 6.0,
-            egui::Color32::TRANSPARENT,
-            egui::Stroke::new(0.6, self.ui.visuals().strong_text_color()),
-        );
-    }
+fn bullet_point(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
+        Sense::hover(),
+    );
+    ui.painter().circle_filled(
+        rect.center(),
+        rect.height() / 6.0,
+        ui.visuals().strong_text_color(),
+    );
+}
 
-    fn numbered_point(&mut self, number: &str) {
-        let (rect, _) = self.ui.allocate_exact_size(
-            egui::vec2(self.width_body_space() * 4.0, self.height_body()),
-            Sense::hover(),
-        );
-        self.ui.painter().text(
-            rect.right_center(),
-            egui::Align2::RIGHT_CENTER,
-            format!("{number}."),
-            TextStyle::Body.resolve(self.ui.style()),
-            self.ui.visuals().strong_text_color(),
-        );
-    }
+fn bullet_point_hollow(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
+        Sense::hover(),
+    );
+    ui.painter().circle(
+        rect.center(),
+        rect.height() / 6.0,
+        egui::Color32::TRANSPARENT,
+        egui::Stroke::new(0.6, ui.visuals().strong_text_color()),
+    );
+}
 
-    fn footnote_start(&mut self, note: &str) {
-        self.ui.label(RichText::new(note).raised().strong().small());
-    }
+fn numbered_point(ui: &mut Ui, number: &str) {
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
+        Sense::hover(),
+    );
+    ui.painter().text(
+        rect.right_center(),
+        egui::Align2::RIGHT_CENTER,
+        format!("{number}."),
+        TextStyle::Body.resolve(ui.style()),
+        ui.visuals().strong_text_color(),
+    );
+}
 
-    fn footnote(&mut self, text: &str) {
-        let (rect, _) = self.ui.allocate_exact_size(
-            egui::vec2(self.width_body_space() * 4.0, self.height_body()),
-            Sense::hover(),
-        );
-        self.ui.painter().text(
-            rect.right_top(),
-            egui::Align2::RIGHT_TOP,
-            format!("{text}."),
-            TextStyle::Small.resolve(self.ui.style()),
-            self.ui.visuals().strong_text_color(),
-        );
-    }
+fn footnote_start(ui: &mut Ui, note: &str) {
+    ui.label(RichText::new(note).raised().strong().small());
+}
 
-    fn height_body(&self) -> f32 {
-        self.ui.text_style_height(&TextStyle::Body)
-    }
+fn footnote(ui: &mut Ui, text: &str) {
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
+        Sense::hover(),
+    );
+    ui.painter().text(
+        rect.right_top(),
+        egui::Align2::RIGHT_TOP,
+        format!("{text}."),
+        TextStyle::Small.resolve(ui.style()),
+        ui.visuals().strong_text_color(),
+    );
+}
 
-    fn width_body_space(&self) -> f32 {
-        let id = TextStyle::Body.resolve(self.ui.style());
-        self.ui.fonts().glyph_width(&id, ' ')
-    }
+fn height_body(ui: &Ui) -> f32 {
+    ui.text_style_height(&TextStyle::Body)
+}
+
+fn width_body_space(ui: &Ui) -> f32 {
+    let id = TextStyle::Body.resolve(ui.style());
+    ui.fonts().glyph_width(&id, ' ')
 }
