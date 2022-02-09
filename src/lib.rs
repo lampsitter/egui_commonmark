@@ -361,12 +361,10 @@ impl<'ui> CommonMarkViewer<'ui> {
                     self.numbered_point(&number.to_string());
                     number += 1;
                     self.list_point = Some(number);
+                } else if self.indentation >= 1 {
+                    self.bullet_point_hollow();
                 } else {
-                    if self.indentation >= 1 {
-                        self.bullet_point_hollow();
-                    } else {
-                        self.bullet_point();
-                    }
+                    self.bullet_point();
                 }
             }
             pulldown_cmark::Tag::FootnoteDefinition(_) => todo!(),

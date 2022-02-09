@@ -17,3 +17,5 @@ jobs:
       run: cargo check --all-features
     - name: Tests
       run: cargo test --all-features
+    - name: Clippy
+      run: cargo clippy -- -Dwarnings
