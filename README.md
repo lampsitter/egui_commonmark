@@ -1,4 +1,4 @@
-A commonmark viewer for egui
+A commonmark viewer for [egui](https://github.com/emilk/egui)
 
 # Usage
 ```rust
