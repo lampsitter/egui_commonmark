@@ -1,5 +1,7 @@
 A commonmark viewer for [egui](https://github.com/emilk/egui)
 
+[![CI](https://github.com/lampsitter/egui_commonmark/actions/workflows/rust.yml/badge.svg)](https://github.com/lampsitter/egui_commonmark/actions/workflows/rust.yml)
+
 # Usage
 ```rust
 use egui_commonmark::*;
