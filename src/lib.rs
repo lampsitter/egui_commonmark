@@ -166,6 +166,7 @@ pub struct CommonMarkViewer<'ui> {
     indentation: i64,
     image_alt_text: Option<(egui::Response, Vec<RichText>)>,
     should_insert_newline: bool,
+    is_first_heading: bool,
 }
 
 impl<'ui> CommonMarkViewer<'ui> {
@@ -179,6 +180,7 @@ impl<'ui> CommonMarkViewer<'ui> {
             indentation: -1,
             image_alt_text: None,
             should_insert_newline: true,
+            is_first_heading: true,
         }
     }
 }
@@ -346,6 +348,15 @@ impl<'ui> CommonMarkViewer<'ui> {
                 self.should_insert_newline = true;
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
+                if matches!(l, HeadingLevel::H1) {
+                    if !self.is_first_heading {
+                        self.newline_heading();
+                    }
+                    self.is_first_heading = false;
+                } else {
+                    self.newline_heading();
+                }
+
                 self.text_style.heading = Some(l);
             }
             pulldown_cmark::Tag::BlockQuote => {
