@@ -350,6 +350,7 @@ impl<'ui> CommonMarkViewer<'ui> {
             }
             pulldown_cmark::Tag::BlockQuote => {
                 self.text_style.quote = true;
+                self.ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(_) => todo!(),
             pulldown_cmark::Tag::List(number) => {
@@ -462,6 +463,7 @@ impl<'ui> CommonMarkViewer<'ui> {
             }
             pulldown_cmark::Tag::BlockQuote => {
                 self.text_style.quote = false;
+                self.ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(_) => todo!(),
             pulldown_cmark::Tag::List(_) => {
