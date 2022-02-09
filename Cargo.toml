@@ -8,7 +8,13 @@ edition = "2021"
 # Depend on master until next release
 egui = { git = "https://github.com/emilk/egui", rev = "defc400c21aaf3fc61f4a7530f13fdbe5991fcc1" }
 pulldown-cmark = "0.9.1"
-resvg = "0.20.0"
-usvg = "0.20.0"
-tiny-skia = "0.6.3"
+resvg = { version = "0.20.0", optional = true }
+usvg = { version = "0.20.0", optional = true }
+tiny-skia = { version = "0.6.3", optional = true }
 image = { version = "0.24", default-features = false, features = ["png"]}
+
+[features]
+default = ["svg"]
+
+# Support loading svg images
+svg = ["resvg", "usvg", "tiny-skia"]

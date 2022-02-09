@@ -36,12 +36,18 @@ fn load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
     Ok(ColorImage::from_rgba_unmultiplied(size, pixels.as_slice()))
 }
 
-fn render_svg(data: &[u8]) -> Result<ColorImage, usvg::Error> {
+#[cfg(not(feature = "svg"))]
+fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
+    None
+}
+
+#[cfg(feature = "svg")]
+fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
     let options = usvg::Options::default();
-    let tree = usvg::Tree::from_data(data, &options.to_ref())?;
+    let tree = usvg::Tree::from_data(data, &options.to_ref()).ok()?;
     let size = tree.svg_node().size.to_screen_size();
 
-    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height()).unwrap();
+    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
     resvg::render(
         &tree,
         usvg::FitTo::Original,
@@ -49,7 +55,7 @@ fn render_svg(data: &[u8]) -> Result<ColorImage, usvg::Error> {
         pixmap.as_mut(),
     );
 
-    Ok(
+    Some(
         if let Some((_, _, pixmap)) = resvg::trim_transparency(pixmap.clone()) {
             ColorImage::from_rgba_unmultiplied(
                 [pixmap.width() as usize, pixmap.height() as usize],
@@ -407,10 +413,8 @@ impl<'ui> CommonMarkViewer<'ui> {
                         if let Ok(data) = std::fs::read(destination.as_ref()) {
                             let image = if let Ok(image) = load_image(&data) {
                                 Some(image)
-                            } else if let Ok(image) = render_svg(&data) {
-                                Some(image)
                             } else {
-                                None
+                                try_render_svg(&data)
                             };
 
                             if let Some(image) = image {
