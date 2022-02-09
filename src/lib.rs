@@ -124,6 +124,7 @@ pub struct CommonMarkOptions {
     pub indentation_spaces: usize,
     pub max_image_width: Option<usize>,
     pub show_alt_text_on_hover: bool,
+    pub default_width: Option<usize>,
 }
 
 impl Default for CommonMarkOptions {
@@ -132,6 +133,7 @@ impl Default for CommonMarkOptions {
             indentation_spaces: 4,
             max_image_width: None,
             show_alt_text_on_hover: true,
+            default_width: None,
         }
     }
 }
@@ -195,10 +197,16 @@ impl<'ui> CommonMarkViewer<'ui> {
     ) {
         let max_image_width = cache.max_image_width(options);
         let available_width = ui.available_width();
-        let max_width = if max_image_width > available_width {
-            max_image_width
+
+        let max_width = max_image_width.max(available_width);
+        let max_width = if let Some(default_width) = options.default_width {
+            if default_width as f32 > max_width {
+                default_width as f32
+            } else {
+                max_width
+            }
         } else {
-            available_width
+            max_width
         };
 
         let initial_size = egui::vec2(max_width, 0.0);
