@@ -165,6 +165,7 @@ pub struct CommonMarkViewer<'ui> {
     table: Option<Table>,
     indentation: i64,
     image_alt_text: Option<(egui::Response, Vec<RichText>)>,
+    should_insert_newline: bool,
 }
 
 impl<'ui> CommonMarkViewer<'ui> {
@@ -177,6 +178,7 @@ impl<'ui> CommonMarkViewer<'ui> {
             table: None,
             indentation: -1,
             image_alt_text: None,
+            should_insert_newline: true,
         }
     }
 }
@@ -309,7 +311,9 @@ impl<'ui> CommonMarkViewer<'ui> {
                 self.ui.code(text.as_ref());
             }
             pulldown_cmark::Event::Html(_) => todo!(),
-            pulldown_cmark::Event::FootnoteReference(_) => todo!(),
+            pulldown_cmark::Event::FootnoteReference(footnote) => {
+                self.footnote_start(&footnote);
+            }
             pulldown_cmark::Event::SoftBreak => {
                 self.ui.label(" ");
             }
@@ -336,7 +340,10 @@ impl<'ui> CommonMarkViewer<'ui> {
     ) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
-                self.newline();
+                if self.should_insert_newline {
+                    self.newline();
+                    self.should_insert_newline = false;
+                }
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
                 self.text_style.heading = Some(l);
@@ -366,7 +373,10 @@ impl<'ui> CommonMarkViewer<'ui> {
                     self.bullet_point();
                 }
             }
-            pulldown_cmark::Tag::FootnoteDefinition(_) => todo!(),
+            pulldown_cmark::Tag::FootnoteDefinition(footnote) => {
+                self.should_insert_newline = false;
+                self.footnote(&footnote);
+            }
             pulldown_cmark::Tag::Table(_) => self.table = Some(Table::default()),
             pulldown_cmark::Tag::TableHead => {
                 if let Some(table) = &mut self.table {
@@ -459,7 +469,7 @@ impl<'ui> CommonMarkViewer<'ui> {
                 self.newline();
             }
             pulldown_cmark::Tag::Item => {}
-            pulldown_cmark::Tag::FootnoteDefinition(_) => todo!(),
+            pulldown_cmark::Tag::FootnoteDefinition(_) => {}
             pulldown_cmark::Tag::Table(_) => {
                 egui::Grid::new("todo_unique id").show(self.ui, |ui| {
                     if let Some(table) = self.table.take() {
@@ -542,6 +552,24 @@ impl<'ui> CommonMarkViewer<'ui> {
             egui::Align2::RIGHT_CENTER,
             format!("{number}."),
             TextStyle::Body.resolve(self.ui.style()),
+            self.ui.visuals().strong_text_color(),
+        );
+    }
+
+    fn footnote_start(&mut self, note: &str) {
+        self.ui.label(RichText::new(note).raised().strong().small());
+    }
+
+    fn footnote(&mut self, text: &str) {
+        let (rect, _) = self.ui.allocate_exact_size(
+            egui::vec2(self.width_body_space() * 4.0, self.height_body()),
+            Sense::hover(),
+        );
+        self.ui.painter().text(
+            rect.right_top(),
+            egui::Align2::RIGHT_TOP,
+            format!("{text}."),
+            TextStyle::Small.resolve(self.ui.style()),
             self.ui.visuals().strong_text_color(),
         );
     }
