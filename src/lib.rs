@@ -342,8 +342,8 @@ impl<'ui> CommonMarkViewer<'ui> {
             pulldown_cmark::Tag::Paragraph => {
                 if self.should_insert_newline {
                     self.newline();
-                    self.should_insert_newline = false;
                 }
+                self.should_insert_newline = true;
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
                 self.text_style.heading = Some(l);
