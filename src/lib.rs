@@ -139,7 +139,7 @@ impl CommonMarkCache {
     #[cfg(feature = "syntax_highlighting")]
     fn background_colour(&mut self, options: &CommonMarkOptions) -> egui::Color32 {
         if let Some(bg) = self.ts.themes[&options.theme].settings.background {
-            egui::Color32::from_rgb(bg.r, bg.r, bg.b)
+            egui::Color32::from_rgb(bg.r, bg.g, bg.b)
         } else {
             egui::Color32::BLACK
         }
