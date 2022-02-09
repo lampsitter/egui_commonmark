@@ -233,27 +233,26 @@ impl<'ui> CommonMarkViewer<'ui> {
             let diff = max_height - min_height;
             match level {
                 HeadingLevel::H1 => {
-                    let size = min_height + diff;
-                    text = text.strong().size(size);
+                    text = text.strong().heading();
                 }
                 HeadingLevel::H2 => {
-                    let size = min_height + diff * 0.8;
+                    let size = min_height + diff * 0.835;
                     text = text.strong().size(size);
                 }
                 HeadingLevel::H3 => {
-                    let size = min_height + diff * 0.6;
+                    let size = min_height + diff * 0.668;
                     text = text.strong().size(size);
                 }
                 HeadingLevel::H4 => {
-                    let size = min_height + diff * 0.4;
+                    let size = min_height + diff * 0.501;
                     text = text.strong().size(size);
                 }
                 HeadingLevel::H5 => {
-                    let size = min_height + diff * 0.2;
+                    let size = min_height + diff * 0.334;
                     text = text.size(size);
                 }
                 HeadingLevel::H6 => {
-                    let size = min_height + diff * 0.15;
+                    let size = min_height + diff * 0.167;
                     text = text.size(size);
                 }
             }
