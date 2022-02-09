@@ -26,6 +26,13 @@ use pulldown_cmark::HeadingLevel;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 
+#[cfg(feature = "syntax_highlighting")]
+use syntect::easy::HighlightLines;
+#[cfg(feature = "syntax_highlighting")]
+use syntect::highlighting::ThemeSet;
+#[cfg(feature = "syntax_highlighting")]
+use syntect::parsing::SyntaxSet;
+
 fn load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
     let image = image::load_from_memory(data)?;
     let image_buffer = image.to_rgba8();
@@ -101,12 +108,48 @@ struct Link {
     text: String,
 }
 
-#[derive(Default)]
 pub struct CommonMarkCache {
     images: HashMap<String, TextureHandle>,
+    #[cfg(feature = "syntax_highlighting")]
+    ps: SyntaxSet,
+    #[cfg(feature = "syntax_highlighting")]
+    ts: ThemeSet,
+}
+
+impl Default for CommonMarkCache {
+    fn default() -> Self {
+        Self {
+            images: Default::default(),
+            #[cfg(feature = "syntax_highlighting")]
+            ps: SyntaxSet::load_defaults_newlines(),
+            #[cfg(feature = "syntax_highlighting")]
+            ts: ThemeSet::load_defaults(),
+        }
+    }
 }
 
 impl CommonMarkCache {
+    #[cfg(feature = "syntax_highlighting")]
+    pub fn add_syntax_from_folder(&mut self, path: &str) {
+        let mut builder = self.ps.clone().into_builder();
+        let _ = builder.add_from_folder(path, true);
+        self.ps = builder.build();
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    fn background_colour(&mut self, options: &CommonMarkOptions) -> egui::Color32 {
+        if let Some(bg) = self.ts.themes[&options.theme].settings.background {
+            egui::Color32::from_rgb(bg.r, bg.r, bg.b)
+        } else {
+            egui::Color32::BLACK
+        }
+    }
+
+    #[cfg(not(feature = "syntax_highlighting"))]
+    fn background_colour(&mut self, _options: &CommonMarkOptions) -> egui::Color32 {
+        egui::Color32::BLACK
+    }
+
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
         let mut max = 0.0;
         for i in self.images.values() {
@@ -124,6 +167,8 @@ struct CommonMarkOptions {
     max_image_width: Option<usize>,
     show_alt_text_on_hover: bool,
     default_width: Option<usize>,
+    #[cfg(feature = "syntax_highlighting")]
+    theme: String,
 }
 
 impl Default for CommonMarkOptions {
@@ -133,6 +178,8 @@ impl Default for CommonMarkOptions {
             max_image_width: None,
             show_alt_text_on_hover: true,
             default_width: None,
+            #[cfg(feature = "syntax_highlighting")]
+            theme: "base16-mocha.dark".to_owned(),
         }
     }
 }
@@ -191,6 +238,12 @@ impl CommonMarkViewer {
         self
     }
 
+    #[cfg(feature = "syntax_highlighting")]
+    pub fn syntax_theme(mut self, theme: String) -> Self {
+        self.options.theme = theme;
+        self
+    }
+
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         CommonMarkViewerInternal::show(ui, cache, &self.options, text);
     }
@@ -212,7 +265,7 @@ struct CommonMarkViewerInternal {
     image: Option<Image>,
     should_insert_newline: bool,
     is_first_heading: bool,
-    collect_code_block_events: bool,
+    collect_code_block_events: Option<String>,
 }
 
 impl CommonMarkViewerInternal {
@@ -226,7 +279,7 @@ impl CommonMarkViewerInternal {
             image: None,
             should_insert_newline: true,
             is_first_heading: true,
-            collect_code_block_events: false,
+            collect_code_block_events: None,
         }
     }
 }
@@ -267,13 +320,15 @@ impl CommonMarkViewerInternal {
             let mut events = Vec::new();
             for e in pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all()) {
                 // Collect a bunch of events before painting them
-                if writer.collect_code_block_events {
+                if writer.collect_code_block_events.is_some() {
                     let should_end_collection = end_event_collection(&e);
                     events.push(e);
 
                     if !should_end_collection {
                         let events2 = events.clone();
-                        egui::Frame::dark_canvas(ui.style())
+                        let bg_colour = cache.background_colour(options);
+                        egui::Frame::default()
+                            .fill(bg_colour)
                             .margin(egui::vec2(0.0, 0.0))
                             .show(ui, |ui| {
                                 ui.set_min_width(initial_size.x);
@@ -281,8 +336,8 @@ impl CommonMarkViewerInternal {
                                     writer.event(ui, e, cache, options);
                                 }
                             });
-                        writer.collect_code_block_events = false;
 
+                        writer.collect_code_block_events = None;
                         events.clear();
                     }
                 } else {
@@ -374,13 +429,16 @@ impl CommonMarkViewerInternal {
                 if let Some(link) = &mut self.link {
                     link.text += &text;
                 } else {
-                    let text = self.style_text(ui, text.borrow());
+                    let rich_text = self.style_text(ui, text.borrow());
                     if let Some(table) = &mut self.table {
-                        table.rows[table.curr_row as usize][table.curr_cell as usize].push(text);
+                        table.rows[table.curr_row as usize][table.curr_cell as usize]
+                            .push(rich_text);
                     } else if let Some(image) = &mut self.image {
-                        image.alt_text.push(text);
+                        image.alt_text.push(rich_text);
+                    } else if let Some(lang) = &self.collect_code_block_events.clone() {
+                        self.syntax_highlighting(cache, options, lang, ui, &text);
                     } else {
-                        ui.label(text);
+                        ui.label(rich_text);
                     }
 
                     if self.text_style.heading.is_some() {
@@ -444,11 +502,11 @@ impl CommonMarkViewerInternal {
                 ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
-                if let pulldown_cmark::CodeBlockKind::Fenced(_lang) = c {
-                    if self.collect_code_block_events {
+                if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
+                    if self.collect_code_block_events.is_some() {
                         ui.add(egui::Separator::default().horizontal());
                     } else {
-                        self.collect_code_block_events = true;
+                        self.collect_code_block_events = Some(lang.to_string());
                     }
                 }
 
@@ -640,6 +698,45 @@ impl CommonMarkViewerInternal {
                 }
             }
         }
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    fn syntax_highlighting(
+        &mut self,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        extension: &str,
+        ui: &mut Ui,
+        text: &str,
+    ) {
+        if let Some(syntax) = cache.ps.find_syntax_by_extension(extension) {
+            let mut h = HighlightLines::new(syntax, &cache.ts.themes[&options.theme]);
+            let ranges = h.highlight(text, &cache.ps);
+            for v in ranges {
+                let front = v.0.foreground;
+                ui.label(
+                    RichText::new(v.1)
+                        .color(egui::Color32::from_rgb(front.r, front.g, front.b))
+                        .font(TextStyle::Monospace.resolve(ui.style())),
+                );
+            }
+        } else {
+            let rich_text = self.style_text(ui, text.borrow());
+            ui.label(rich_text);
+        }
+    }
+
+    #[cfg(not(feature = "syntax_highlighting"))]
+    fn syntax_highlighting(
+        &mut self,
+        _cache: &mut CommonMarkCache,
+        _options: &CommonMarkOptions,
+        _extension: &str,
+        ui: &mut Ui,
+        text: &str,
+    ) {
+        let rich_text = self.style_text(ui, text.borrow());
+        ui.label(rich_text);
     }
 }
 
