@@ -73,17 +73,6 @@ struct Style {
     quote: bool,
 }
 
-#[derive(Default)]
-pub struct CommonMarkCache {
-    images: HashMap<String, TextureHandle>,
-}
-
-impl CommonMarkCache {
-    fn max_image_width(&self) -> usize {
-        self.images.values().map(|i| i.size()[0]).max().unwrap_or(0)
-    }
-}
-
 struct Table {
     rows: Vec<Vec<Vec<RichText>>>,
     curr_row: i64,
@@ -106,14 +95,55 @@ struct Link {
     text: String,
 }
 
+#[derive(Default)]
+pub struct CommonMarkCache {
+    images: HashMap<String, TextureHandle>,
+}
+
+impl CommonMarkCache {
+    fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
+        let mut max = 0.0;
+        for i in self.images.values() {
+            let width = options.image_scaled(i)[0];
+            if width >= max {
+                max = width;
+            }
+        }
+        max
+    }
+}
+
 pub struct CommonMarkOptions {
     pub indentation_spaces: usize,
+    pub max_image_width: Option<usize>,
 }
 
 impl Default for CommonMarkOptions {
     fn default() -> Self {
         Self {
             indentation_spaces: 4,
+            max_image_width: None,
+        }
+    }
+}
+
+impl CommonMarkOptions {
+    fn image_scaled(&self, texture: &TextureHandle) -> egui::Vec2 {
+        let size = texture.size();
+        if let Some(max_width) = self.max_image_width {
+            let width = size[0];
+
+            if width > max_width {
+                let height = size[1] as f32;
+                let ratio = height / width as f32;
+
+                let scaled_height = ratio * max_width as f32;
+                egui::vec2(max_width as f32, scaled_height)
+            } else {
+                egui::vec2(width as f32, size[1] as f32)
+            }
+        } else {
+            egui::vec2(size[0] as f32, size[1] as f32)
         }
     }
 }
@@ -135,10 +165,10 @@ impl<'ui> CommonMarkViewer<'ui> {
         options: &CommonMarkOptions,
         text: &str,
     ) {
-        let max_image_width = cache.max_image_width();
+        let max_image_width = cache.max_image_width(options);
         let available_width = ui.available_width();
-        let max_width = if max_image_width as f32 > available_width {
-            max_image_width as f32
+        let max_width = if max_image_width > available_width {
+            max_image_width
         } else {
             available_width
         };
@@ -388,9 +418,9 @@ impl<'ui> CommonMarkViewer<'ui> {
                 };
 
                 if let Some(texture) = texture {
-                    let size = texture.size();
-                    self.ui
-                        .image(&texture, egui::vec2(size[0] as f32, size[1] as f32));
+                    let size = options.image_scaled(&texture);
+                    self.ui.image(&texture, size);
+                    self.newline();
                 }
 
                 // TODO: Support urls
