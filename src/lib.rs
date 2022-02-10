@@ -23,7 +23,6 @@
 use egui::{self, RichText, Sense, TextStyle, Ui};
 use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::HeadingLevel;
-use std::borrow::Borrow;
 use std::collections::HashMap;
 
 #[cfg(feature = "syntax_highlighting")]
@@ -245,7 +244,7 @@ impl CommonMarkViewer {
     }
 
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
-        CommonMarkViewerInternal::show(ui, cache, &self.options, text);
+        CommonMarkViewerInternal::new().show(ui, cache, &self.options, text);
     }
 }
 
@@ -265,7 +264,7 @@ struct CommonMarkViewerInternal {
     image: Option<Image>,
     should_insert_newline: bool,
     is_first_heading: bool,
-    collect_code_block_events: Option<String>,
+    fenced_code_block: Option<String>,
 }
 
 impl CommonMarkViewerInternal {
@@ -279,13 +278,14 @@ impl CommonMarkViewerInternal {
             image: None,
             should_insert_newline: true,
             is_first_heading: true,
-            collect_code_block_events: None,
+            fenced_code_block: None,
         }
     }
 }
 
 impl CommonMarkViewerInternal {
     pub fn show(
+        &mut self,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -305,56 +305,40 @@ impl CommonMarkViewerInternal {
             max_width
         };
 
-        let initial_size = egui::vec2(max_width, 0.0);
-
         let layout = egui::Layout::left_to_right()
             .with_main_wrap(true)
             .with_cross_align(egui::Align::BOTTOM);
 
-        ui.allocate_ui_with_layout(initial_size, layout, |ui| {
+        ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut writer = CommonMarkViewerInternal::new();
-            let mut events = Vec::new();
-            for e in pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all()) {
-                // Collect a bunch of events before painting them
-                if writer.collect_code_block_events.is_some() {
-                    let should_end_collection = end_event_collection(&e);
-                    events.push(e);
+            let mut events = pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all());
 
-                    if !should_end_collection {
-                        let events2 = events.clone();
-                        let bg_colour = cache.background_colour(options);
-                        egui::Frame::default()
-                            .fill(bg_colour)
-                            .margin(egui::vec2(0.0, 0.0))
-                            .show(ui, |ui| {
-                                ui.set_min_width(initial_size.x);
-                                for e in events2 {
-                                    writer.event(ui, e, cache, options);
+            while let Some(e) = events.next() {
+                self.event(ui, e, cache, options);
+
+                if self.fenced_code_block.is_some() {
+                    let bg_colour = cache.background_colour(options);
+                    egui::Frame::default()
+                        .fill(bg_colour)
+                        .margin(egui::vec2(0.0, 0.0))
+                        .show(ui, |ui| {
+                            ui.set_min_width(max_width);
+
+                            while self.fenced_code_block.is_some() {
+                                if let Some(e) = events.next() {
+                                    self.event(ui, e, cache, options);
+                                } else {
+                                    break;
                                 }
-                            });
-
-                        writer.collect_code_block_events = None;
-                        events.clear();
-                    }
-                } else {
-                    // paint without collecting first
-                    writer.event(ui, e, cache, options);
+                            }
+                        });
+                    newline(ui);
                 }
             }
         });
-    }
-
-    fn newline(&self, ui: &mut Ui) {
-        ui.allocate_exact_size(egui::vec2(0.0, height_body(ui)), Sense::hover());
-        ui.end_row();
-    }
-
-    fn newline_heading(&self, ui: &mut Ui) {
-        ui.label("\n");
     }
 
     fn style_text(&mut self, ui: &mut Ui, text: &str) -> RichText {
@@ -429,20 +413,20 @@ impl CommonMarkViewerInternal {
                 if let Some(link) = &mut self.link {
                     link.text += &text;
                 } else {
-                    let rich_text = self.style_text(ui, text.borrow());
+                    let rich_text = self.style_text(ui, &text);
                     if let Some(table) = &mut self.table {
                         table.rows[table.curr_row as usize][table.curr_cell as usize]
                             .push(rich_text);
                     } else if let Some(image) = &mut self.image {
                         image.alt_text.push(rich_text);
-                    } else if let Some(lang) = &self.collect_code_block_events.clone() {
+                    } else if let Some(lang) = &self.fenced_code_block.clone() {
                         self.syntax_highlighting(cache, options, lang, ui, &text);
                     } else {
                         ui.label(rich_text);
                     }
 
                     if self.text_style.heading.is_some() {
-                        self.newline_heading(ui);
+                        newline_heading(ui);
                     }
                 }
             }
@@ -456,9 +440,9 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Event::SoftBreak => {
                 ui.label(" ");
             }
-            pulldown_cmark::Event::HardBreak => self.newline(ui),
+            pulldown_cmark::Event::HardBreak => newline(ui),
             pulldown_cmark::Event::Rule => {
-                self.newline(ui);
+                newline(ui);
                 ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Event::TaskListMarker(checkbox) => {
@@ -481,18 +465,18 @@ impl CommonMarkViewerInternal {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 if self.should_insert_newline {
-                    self.newline(ui);
+                    newline(ui);
                 }
                 self.should_insert_newline = true;
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
                 if matches!(l, HeadingLevel::H1) {
                     if !self.is_first_heading {
-                        self.newline_heading(ui);
+                        newline_heading(ui);
                     }
                     self.is_first_heading = false;
                 } else {
-                    self.newline_heading(ui);
+                    newline_heading(ui);
                 }
 
                 self.text_style.heading = Some(l);
@@ -503,11 +487,8 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
                 if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
-                    if self.collect_code_block_events.is_some() {
-                        ui.add(egui::Separator::default().horizontal());
-                    } else {
-                        self.collect_code_block_events = Some(lang.to_string());
-                    }
+                    self.fenced_code_block = Some(lang.to_string());
+                    newline(ui);
                 }
 
                 self.text_style.code = true;
@@ -517,7 +498,7 @@ impl CommonMarkViewerInternal {
                 self.list_point = number;
             }
             pulldown_cmark::Tag::Item => {
-                self.newline(ui);
+                newline(ui);
                 ui.label(" ".repeat(self.indentation as usize * options.indentation_spaces));
 
                 self.should_insert_newline = false;
@@ -618,7 +599,7 @@ impl CommonMarkViewerInternal {
     fn end_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
-                self.newline(ui);
+                newline(ui);
             }
             pulldown_cmark::Tag::Heading(_, _, _) => {
                 self.text_style.heading = None;
@@ -627,16 +608,14 @@ impl CommonMarkViewerInternal {
                 self.text_style.quote = false;
                 ui.add(egui::Separator::default().horizontal());
             }
-            pulldown_cmark::Tag::CodeBlock(c) => {
-                if let pulldown_cmark::CodeBlockKind::Fenced(_lang) = c {
-                    ui.add(egui::Separator::default().horizontal());
-                }
-
+            pulldown_cmark::Tag::CodeBlock(_) => {
+                self.fenced_code_block = None;
                 self.text_style.code = false;
+                newline(ui);
             }
             pulldown_cmark::Tag::List(_) => {
                 self.indentation -= 1;
-                self.newline(ui);
+                newline(ui);
             }
             pulldown_cmark::Tag::Item => {}
             pulldown_cmark::Tag::FootnoteDefinition(_) => {}
@@ -694,7 +673,7 @@ impl CommonMarkViewerInternal {
                         ui.label(format!("]({})", image.url));
                     }
 
-                    self.newline(ui);
+                    newline(ui);
                 }
             }
         }
@@ -721,7 +700,7 @@ impl CommonMarkViewerInternal {
                 );
             }
         } else {
-            let rich_text = self.style_text(ui, text.borrow());
+            let rich_text = self.style_text(ui, text);
             ui.label(rich_text);
         }
     }
@@ -735,14 +714,18 @@ impl CommonMarkViewerInternal {
         ui: &mut Ui,
         text: &str,
     ) {
-        let rich_text = self.style_text(ui, text.borrow());
+        let rich_text = self.style_text(ui, &text);
         ui.label(rich_text);
     }
 }
 
-fn end_event_collection(e: &pulldown_cmark::Event) -> bool {
-    use pulldown_cmark::{CodeBlockKind, Event, Tag};
-    matches!(e, Event::End(Tag::CodeBlock(CodeBlockKind::Fenced(_lang))))
+fn newline(ui: &mut Ui) {
+    ui.allocate_exact_size(egui::vec2(0.0, height_body(ui)), Sense::hover());
+    ui.end_row();
+}
+
+fn newline_heading(ui: &mut Ui) {
+    ui.label("\n");
 }
 
 fn bullet_point(ui: &mut Ui) {
