@@ -23,6 +23,7 @@
 use egui::{self, RichText, Sense, TextStyle, Ui};
 use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::HeadingLevel;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 #[cfg(feature = "syntax_highlighting")]
@@ -108,7 +109,7 @@ struct Link {
 }
 
 pub struct CommonMarkCache {
-    images: HashMap<String, TextureHandle>,
+    images: HashMap<String, Option<TextureHandle>>,
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
     #[cfg(feature = "syntax_highlighting")]
@@ -135,6 +136,11 @@ impl CommonMarkCache {
         self.ps = builder.build();
     }
 
+    /// Refetch all images
+    pub fn reload_images(&mut self) {
+        self.images.clear();
+    }
+
     #[cfg(feature = "syntax_highlighting")]
     fn background_colour(&mut self, options: &CommonMarkOptions) -> egui::Color32 {
         if let Some(bg) = self.ts.themes[&options.theme].settings.background {
@@ -151,7 +157,7 @@ impl CommonMarkCache {
 
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
         let mut max = 0.0;
-        for i in self.images.values() {
+        for i in self.images.values().flatten() {
             let width = options.image_scaled(i)[0];
             if width >= max {
                 max = width;
@@ -552,43 +558,25 @@ impl CommonMarkViewerInternal {
                 });
             }
             pulldown_cmark::Tag::Image(_, url, _) => {
-                use std::collections::hash_map::Entry;
-                let texture = match cache.images.entry(url.to_string()) {
-                    Entry::Occupied(o) => Some(o.get().clone()),
+                let handle = match cache.images.entry(url.to_string()) {
+                    Entry::Occupied(o) => o.get().clone(),
                     Entry::Vacant(v) => {
-                        if let Ok(data) = std::fs::read(url.as_ref()) {
-                            let image = if let Ok(image) = load_image(&data) {
-                                Some(image)
-                            } else {
-                                try_render_svg(&data)
-                            };
-
-                            if let Some(image) = image {
-                                let texture = ui.ctx().load_texture(url.to_string(), image);
-
-                                v.insert(texture.clone());
-                                Some(texture)
-                            } else {
-                                None
-                            }
+                        let handle = if let Ok(data) = std::fs::read(url.as_ref()) {
+                            let image = load_image(&data).ok().or_else(|| try_render_svg(&data));
+                            image.map(|image| ui.ctx().load_texture(url.to_string(), image))
                         } else {
                             None
-                        }
+                        };
+
+                        v.insert(handle.clone());
+                        handle
                     }
                 };
 
-                self.image = Some(if let Some(texture) = texture {
-                    Image {
-                        handle: Some(texture),
-                        url: url.to_string(),
-                        alt_text: Vec::new(),
-                    }
-                } else {
-                    Image {
-                        handle: None,
-                        url: url.to_string(),
-                        alt_text: Vec::new(),
-                    }
+                self.image = Some(Image {
+                    handle,
+                    url: url.to_string(),
+                    alt_text: Vec::new(),
                 });
 
                 // TODO: Support urls
