@@ -16,6 +16,13 @@ let mut cache = CommonMarkCache::default();
 CommonMarkViewer::default().show(ui, &mut cache, markdown);
 ```
 
+## Features
+
+* `syntax_highlighting`: Syntax highlighting inside code blocks with
+  [`syntect`](https://crates.io/crates/syntect)
+* `svg`: Support for viewing svg images
+* `fetch`: Images with urls will be downloaded and displayed
+
 ## License
 
 Licensed under either of

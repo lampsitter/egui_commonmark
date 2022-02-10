@@ -25,6 +25,8 @@ use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::HeadingLevel;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[cfg(feature = "syntax_highlighting")]
 use syntect::easy::HighlightLines;
@@ -108,14 +110,16 @@ struct Link {
     text: String,
 }
 
+type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
 pub struct CommonMarkCache {
-    images: HashMap<String, Option<TextureHandle>>,
+    images: ImageHashMap,
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
     #[cfg(feature = "syntax_highlighting")]
     ts: ThemeSet,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for CommonMarkCache {
     fn default() -> Self {
         Self {
@@ -138,7 +142,7 @@ impl CommonMarkCache {
 
     /// Refetch all images
     pub fn reload_images(&mut self) {
-        self.images.clear();
+        self.images.lock().unwrap().clear();
     }
 
     #[cfg(feature = "syntax_highlighting")]
@@ -157,7 +161,7 @@ impl CommonMarkCache {
 
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
         let mut max = 0.0;
-        for i in self.images.values().flatten() {
+        for i in self.images.lock().unwrap().values().flatten() {
             let width = options.image_scaled(i)[0];
             if width >= max {
                 max = width;
@@ -290,6 +294,7 @@ impl CommonMarkViewerInternal {
 }
 
 impl CommonMarkViewerInternal {
+    /// Be aware that this aquires egui::Context internally.
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
@@ -558,15 +563,13 @@ impl CommonMarkViewerInternal {
                 });
             }
             pulldown_cmark::Tag::Image(_, url, _) => {
-                let handle = match cache.images.entry(url.to_string()) {
+                let handle = match cache.images.lock().unwrap().entry(url.to_string()) {
                     Entry::Occupied(o) => o.get().clone(),
                     Entry::Vacant(v) => {
-                        let handle = if let Ok(data) = std::fs::read(url.as_ref()) {
-                            let image = load_image(&data).ok().or_else(|| try_render_svg(&data));
-                            image.map(|image| ui.ctx().load_texture(url.to_string(), image))
-                        } else {
-                            None
-                        };
+                        let ctx = ui.ctx();
+                        let handle =
+                            get_image_data(url.to_string(), ctx, Arc::clone(&cache.images))
+                                .and_then(|data| parse_image(ctx, url.to_string(), &data));
 
                         v.insert(handle.clone());
                         handle
@@ -702,7 +705,7 @@ impl CommonMarkViewerInternal {
         ui: &mut Ui,
         text: &str,
     ) {
-        let rich_text = self.style_text(ui, &text);
+        let rich_text = self.style_text(ui, text);
         ui.label(rich_text);
     }
 }
@@ -780,4 +783,40 @@ fn height_body(ui: &Ui) -> f32 {
 fn width_body_space(ui: &Ui) -> f32 {
     let id = TextStyle::Body.resolve(ui.style());
     ui.fonts().glyph_width(&id, ' ')
+}
+
+fn parse_image(ctx: &egui::Context, url: String, data: &[u8]) -> Option<TextureHandle> {
+    let image = load_image(data).ok().or_else(|| try_render_svg(data));
+    image.map(|image| ctx.load_texture(url, image))
+}
+
+#[cfg(feature = "fetch")]
+fn get_image_data(path: String, ctx: &egui::Context, images: ImageHashMap) -> Option<Vec<u8>> {
+    let url = url::Url::parse(&path);
+    if url.is_ok() {
+        let ctx2 = ctx.clone();
+        ehttp::fetch(ehttp::Request::get(&path), move |r| {
+            if let Ok(r) = r {
+                let data = r.bytes;
+                if let Some(handle) = parse_image(&ctx2, path.clone(), &data) {
+                    // we only update if the image was loaded properly
+                    *images.lock().unwrap().get_mut(&path).unwrap() = Some(handle);
+                    ctx2.request_repaint();
+                }
+            }
+        });
+
+        None
+    } else {
+        get_image_data_from_file(&path)
+    }
+}
+
+#[cfg(not(feature = "fetch"))]
+fn get_image_data(path: String, _ctx: &egui::Context, _images: ImageHashMap) -> Option<Vec<u8>> {
+    get_image_data_from_file(&path)
+}
+
+fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
+    std::fs::read(url).ok()
 }
