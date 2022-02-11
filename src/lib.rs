@@ -495,9 +495,9 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Event::TaskListMarker(checkbox) => {
                 if checkbox {
-                    ui.label("☑ ");
+                    checkbox_point(ui, "☑ ")
                 } else {
-                    ui.label("☐ ");
+                    checkbox_point(ui, "☐ ")
                 }
             }
         }
@@ -551,7 +551,7 @@ impl CommonMarkViewerInternal {
 
                 self.should_insert_newline = false;
                 if let Some(mut number) = self.list_point.take() {
-                    numbered_point(ui, &number.to_string());
+                    number_point(ui, &number.to_string());
                     number += 1;
                     self.list_point = Some(number);
                 } else if self.indentation >= 1 {
@@ -764,7 +764,21 @@ fn bullet_point_hollow(ui: &mut Ui) {
     );
 }
 
-fn numbered_point(ui: &mut Ui, number: &str) {
+fn checkbox_point(ui: &mut Ui, ty: &str) {
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(width_body_space(ui) * 5.0, height_body(ui)),
+        Sense::hover(),
+    );
+    ui.painter().text(
+        rect.right_center(),
+        egui::Align2::RIGHT_CENTER,
+        ty,
+        TextStyle::Body.resolve(ui.style()),
+        ui.visuals().text_color(),
+    );
+}
+
+fn number_point(ui: &mut Ui, number: &str) {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
         Sense::hover(),
@@ -772,7 +786,7 @@ fn numbered_point(ui: &mut Ui, number: &str) {
     ui.painter().text(
         rect.right_center(),
         egui::Align2::RIGHT_CENTER,
-        format!("{number}."),
+        format!("{number}. "),
         TextStyle::Body.resolve(ui.style()),
         ui.visuals().strong_text_color(),
     );
