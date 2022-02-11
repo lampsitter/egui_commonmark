@@ -265,7 +265,6 @@ struct CommonMarkViewerInternal {
     indentation: i64,
     image: Option<Image>,
     should_insert_newline: bool,
-    is_first_heading: bool,
     fenced_code_block: Option<String>,
     is_table: bool,
 }
@@ -281,7 +280,6 @@ impl CommonMarkViewerInternal {
             indentation: -1,
             image: None,
             should_insert_newline: true,
-            is_first_heading: true,
             fenced_code_block: None,
             is_table: false,
         }
@@ -518,15 +516,7 @@ impl CommonMarkViewerInternal {
                 self.should_insert_newline = true;
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
-                if matches!(l, HeadingLevel::H1) {
-                    if !self.is_first_heading {
-                        newline_heading(ui);
-                    }
-                    self.is_first_heading = false;
-                } else {
-                    newline_heading(ui);
-                }
-
+                newline_heading(ui);
                 self.text_style.heading = Some(l);
             }
             pulldown_cmark::Tag::BlockQuote => {
