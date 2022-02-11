@@ -13,7 +13,7 @@ r"# Hello world
 ";
 // Stores image handles between each frame
 let mut cache = CommonMarkCache::default();
-CommonMarkViewer::default().show(ui, &mut cache, markdown);
+CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 ```
 
 ## Features

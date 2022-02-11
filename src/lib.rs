@@ -14,13 +14,13 @@
 //! // Stores image handles between each frame
 //! let mut cache = CommonMarkCache::default();
 //! # __run_test_ui(|ui| {
-//! CommonMarkViewer::default().show(ui, &mut cache, markdown);
+//! CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 //! # });
 //!
 //! ```
 //!
 
-use egui::{self, RichText, Sense, TextStyle, Ui};
+use egui::{self, Id, RichText, Sense, TextStyle, Ui};
 use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::HeadingLevel;
 use std::collections::hash_map::Entry;
@@ -182,12 +182,19 @@ impl CommonMarkOptions {
     }
 }
 
-#[derive(Default)]
 pub struct CommonMarkViewer {
+    source_id: Id,
     options: CommonMarkOptions,
 }
 
 impl CommonMarkViewer {
+    pub fn new(source_id: impl std::hash::Hash) -> Self {
+        Self {
+            source_id: Id::new(source_id),
+            options: CommonMarkOptions::default(),
+        }
+    }
+
     /// The amount of spaces a bullet point is indented. By default this is 4
     /// spaces.
     pub fn indentation_spaces(mut self, spaces: usize) -> Self {
@@ -222,7 +229,7 @@ impl CommonMarkViewer {
     }
 
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
-        CommonMarkViewerInternal::new().show(ui, cache, &self.options, text);
+        CommonMarkViewerInternal::new(self.source_id).show(ui, cache, &self.options, text);
     }
 }
 
@@ -249,6 +256,8 @@ struct Image {
 }
 
 struct CommonMarkViewerInternal {
+    source_id: Id,
+    curr_table: usize,
     /// The current text style
     text_style: Style,
     list_point: Option<u64>,
@@ -262,8 +271,10 @@ struct CommonMarkViewerInternal {
 }
 
 impl CommonMarkViewerInternal {
-    fn new() -> Self {
+    fn new(source_id: Id) -> Self {
         Self {
+            source_id,
+            curr_table: 0,
             text_style: Style::default(),
             list_point: None,
             link: None,
@@ -358,18 +369,18 @@ impl CommonMarkViewerInternal {
         if self.is_table {
             newline(ui);
             egui::Frame::group(ui.style()).show(ui, |ui| {
-                egui::Grid::new("todo unique id")
-                    .striped(true)
-                    .show(ui, |ui| {
-                        while self.is_table {
-                            if let Some(e) = events.next() {
-                                self.should_insert_newline = false;
-                                self.event(ui, e, cache, options);
-                            } else {
-                                break;
-                            }
+                let id = self.source_id.with(self.curr_table);
+                self.curr_table += 1;
+                egui::Grid::new(id).striped(true).show(ui, |ui| {
+                    while self.is_table {
+                        if let Some(e) = events.next() {
+                            self.should_insert_newline = false;
+                            self.event(ui, e, cache, options);
+                        } else {
+                            break;
                         }
-                    });
+                    }
+                });
             });
 
             newline(ui);
