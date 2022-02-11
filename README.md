@@ -1,8 +1,11 @@
-A commonmark viewer for [egui](https://github.com/emilk/egui)
+# A commonmark viewer for [egui](https://github.com/emilk/egui)
 
 [![CI](https://github.com/lampsitter/egui_commonmark/actions/workflows/rust.yml/badge.svg)](https://github.com/lampsitter/egui_commonmark/actions/workflows/rust.yml)
 
-# Usage
+<img src="https://raw.githubusercontent.com/lampsitter/egui_commonmark/example/assets/example.png" alt="showcase" width=300/>
+
+## Usage
+
 ```rust
 use egui_commonmark::*;
 let markdown =

@@ -3,6 +3,12 @@ name = "egui_commonmark"
 authors = ["Erlend Walstad"]
 version = "0.1.0"
 edition = "2021"
+description = "Commonmark viewer for egui"
+keywords = ["commonmark", "egui"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/lampsitter/egui_commonmark"
+exclude = ["assets/"]
 
 [dependencies]
 # Depend on master until next release
@@ -26,3 +32,6 @@ svg = ["resvg", "usvg", "tiny-skia"]
 
 # Fetch images over http
 fetch = ["ehttp", "url", "image/jpeg"]
+
+[dev-dependencies]
+eframe = { git = "https://github.com/emilk/egui" }
