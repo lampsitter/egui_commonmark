@@ -78,38 +78,6 @@ fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
     )
 }
 
-#[derive(Default)]
-struct Style {
-    heading: Option<pulldown_cmark::HeadingLevel>,
-    strong: bool,
-    emphasis: bool,
-    strikethrough: bool,
-    quote: bool,
-    code: bool,
-}
-
-struct Table {
-    rows: Vec<Vec<Vec<RichText>>>,
-    curr_row: i64,
-    curr_cell: i64,
-}
-
-impl Default for Table {
-    fn default() -> Self {
-        Self {
-            rows: Vec::new(),
-            curr_row: -1,
-            curr_cell: -1,
-        }
-    }
-}
-
-#[derive(Default)]
-struct Link {
-    destination: String,
-    text: String,
-}
-
 type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
 pub struct CommonMarkCache {
     images: ImageHashMap,
@@ -258,6 +226,22 @@ impl CommonMarkViewer {
     }
 }
 
+#[derive(Default)]
+struct Style {
+    heading: Option<pulldown_cmark::HeadingLevel>,
+    strong: bool,
+    emphasis: bool,
+    strikethrough: bool,
+    quote: bool,
+    code: bool,
+}
+
+#[derive(Default)]
+struct Link {
+    destination: String,
+    text: String,
+}
+
 struct Image {
     handle: Option<TextureHandle>,
     url: String,
@@ -269,12 +253,12 @@ struct CommonMarkViewerInternal {
     text_style: Style,
     list_point: Option<u64>,
     link: Option<Link>,
-    table: Option<Table>,
     indentation: i64,
     image: Option<Image>,
     should_insert_newline: bool,
     is_first_heading: bool,
     fenced_code_block: Option<String>,
+    is_table: bool,
 }
 
 impl CommonMarkViewerInternal {
@@ -283,12 +267,12 @@ impl CommonMarkViewerInternal {
             text_style: Style::default(),
             list_point: None,
             link: None,
-            table: None,
             indentation: -1,
             image: None,
             should_insert_newline: true,
             is_first_heading: true,
             fenced_code_block: None,
+            is_table: false,
         }
     }
 }
@@ -330,26 +314,66 @@ impl CommonMarkViewerInternal {
             while let Some(e) = events.next() {
                 self.event(ui, e, cache, options);
 
-                if self.fenced_code_block.is_some() {
-                    let bg_colour = cache.background_colour(options);
-                    egui::Frame::default()
-                        .fill(bg_colour)
-                        .margin(egui::vec2(0.0, 0.0))
-                        .show(ui, |ui| {
-                            ui.set_min_width(max_width);
-
-                            while self.fenced_code_block.is_some() {
-                                if let Some(e) = events.next() {
-                                    self.event(ui, e, cache, options);
-                                } else {
-                                    break;
-                                }
-                            }
-                        });
-                    newline(ui);
-                }
+                self.fenced_code_block(&mut events, max_width, cache, options, ui);
+                self.table(&mut events, cache, options, ui);
             }
         });
+    }
+
+    fn fenced_code_block<'e>(
+        &mut self,
+        events: &mut impl Iterator<Item = pulldown_cmark::Event<'e>>,
+        max_width: f32,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        ui: &mut Ui,
+    ) {
+        if self.fenced_code_block.is_some() {
+            let bg_colour = cache.background_colour(options);
+            egui::Frame::default()
+                .fill(bg_colour)
+                .margin(egui::vec2(0.0, 0.0))
+                .show(ui, |ui| {
+                    ui.set_min_width(max_width);
+
+                    while self.fenced_code_block.is_some() {
+                        if let Some(e) = events.next() {
+                            self.event(ui, e, cache, options);
+                        } else {
+                            break;
+                        }
+                    }
+                });
+            newline(ui);
+        }
+    }
+
+    fn table<'e>(
+        &mut self,
+        events: &mut impl Iterator<Item = pulldown_cmark::Event<'e>>,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        ui: &mut Ui,
+    ) {
+        if self.is_table {
+            newline(ui);
+            egui::Frame::group(ui.style()).show(ui, |ui| {
+                egui::Grid::new("todo unique id")
+                    .striped(true)
+                    .show(ui, |ui| {
+                        while self.is_table {
+                            if let Some(e) = events.next() {
+                                self.should_insert_newline = false;
+                                self.event(ui, e, cache, options);
+                            } else {
+                                break;
+                            }
+                        }
+                    });
+            });
+
+            newline(ui);
+        }
     }
 
     fn style_text(&mut self, ui: &mut Ui, text: &str) -> RichText {
@@ -425,10 +449,7 @@ impl CommonMarkViewerInternal {
                     link.text += &text;
                 } else {
                     let rich_text = self.style_text(ui, &text);
-                    if let Some(table) = &mut self.table {
-                        table.rows[table.curr_row as usize][table.curr_cell as usize]
-                            .push(rich_text);
-                    } else if let Some(image) = &mut self.image {
+                    if let Some(image) = &mut self.image {
                         image.alt_text.push(rich_text);
                     } else if let Some(lang) = &self.fenced_code_block.clone() {
                         self.syntax_highlighting(cache, options, lang, ui, &text);
@@ -527,26 +548,12 @@ impl CommonMarkViewerInternal {
                 self.should_insert_newline = false;
                 footnote(ui, &note);
             }
-            pulldown_cmark::Tag::Table(_) => self.table = Some(Table::default()),
-            pulldown_cmark::Tag::TableHead => {
-                if let Some(table) = &mut self.table {
-                    table.curr_row += 1;
-                    table.rows.push(Vec::new());
-                }
+            pulldown_cmark::Tag::Table(_) => {
+                self.is_table = true;
             }
-            pulldown_cmark::Tag::TableRow => {
-                if let Some(table) = &mut self.table {
-                    table.curr_row += 1;
-                    table.curr_cell = -1;
-                    table.rows.push(Vec::new());
-                }
-            }
-            pulldown_cmark::Tag::TableCell => {
-                if let Some(table) = &mut self.table {
-                    table.curr_cell += 1;
-                    table.rows[table.curr_row as usize].push(Vec::new());
-                }
-            }
+            pulldown_cmark::Tag::TableHead => {}
+            pulldown_cmark::Tag::TableRow => {}
+            pulldown_cmark::Tag::TableCell => {}
             pulldown_cmark::Tag::Emphasis => {
                 self.text_style.emphasis = true;
             }
@@ -611,24 +618,18 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::Item => {}
             pulldown_cmark::Tag::FootnoteDefinition(_) => {}
             pulldown_cmark::Tag::Table(_) => {
-                egui::Grid::new("todo_unique id").show(ui, |ui| {
-                    if let Some(table) = self.table.take() {
-                        for row in table.rows {
-                            ui.add(egui::Separator::default().vertical());
-                            for cell in row {
-                                for text in cell {
-                                    ui.label(text);
-                                }
-                                ui.add(egui::Separator::default().vertical());
-                            }
-                            ui.end_row();
-                        }
-                    }
-                });
+                self.is_table = false;
             }
-            pulldown_cmark::Tag::TableHead => {}
-            pulldown_cmark::Tag::TableRow => {}
-            pulldown_cmark::Tag::TableCell => {}
+            pulldown_cmark::Tag::TableHead => {
+                ui.end_row();
+            }
+            pulldown_cmark::Tag::TableRow => {
+                ui.end_row();
+            }
+            pulldown_cmark::Tag::TableCell => {
+                // Ensure space between cells
+                ui.label("  ");
+            }
             pulldown_cmark::Tag::Emphasis => {
                 self.text_style.emphasis = false;
             }
@@ -664,7 +665,10 @@ impl CommonMarkViewerInternal {
                         ui.label(format!("]({})", image.url));
                     }
 
-                    newline(ui);
+                    if self.should_insert_newline {
+                        newline(ui);
+                        self.should_insert_newline = true;
+                    }
                 }
             }
         }
