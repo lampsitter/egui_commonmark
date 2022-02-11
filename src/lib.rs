@@ -619,7 +619,9 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::List(_) => {
                 self.indentation -= 1;
-                newline(ui);
+                if self.indentation == -1 {
+                    newline(ui);
+                }
             }
             pulldown_cmark::Tag::Item => {}
             pulldown_cmark::Tag::FootnoteDefinition(_) => {}
