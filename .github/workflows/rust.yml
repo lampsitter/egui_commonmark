@@ -11,11 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Check
-      run: cargo check
-    - name: Check all features
-      run: cargo check --all-features
-    - name: Tests
-      run: cargo test --all-features
     - name: Clippy
       run: cargo clippy -- -Dwarnings
+    - name: Check all features
+      run: cargo check --all-features
