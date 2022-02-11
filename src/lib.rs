@@ -320,7 +320,12 @@ impl CommonMarkViewerInternal {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut events = pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all());
+            use pulldown_cmark::Options;
+            let parser_options = Options::ENABLE_TABLES
+                | Options::ENABLE_TASKLISTS
+                | Options::ENABLE_STRIKETHROUGH
+                | Options::ENABLE_FOOTNOTES;
+            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options);
 
             while let Some(e) = events.next() {
                 self.event(ui, e, cache, options);
