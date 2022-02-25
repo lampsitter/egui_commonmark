@@ -8,6 +8,7 @@ keywords = ["commonmark", "egui"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/lampsitter/egui_commonmark"
+documentation = "https://docs.rs/egui_commonmark"
 exclude = ["assets/"]
 
 [dependencies]
