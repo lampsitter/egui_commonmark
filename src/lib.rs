@@ -18,7 +18,6 @@
 //! # });
 //!
 //! ```
-//!
 
 use egui::{self, Id, RichText, Sense, TextStyle, Ui};
 use egui::{ColorImage, TextureHandle};

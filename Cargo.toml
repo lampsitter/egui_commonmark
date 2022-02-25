@@ -12,7 +12,7 @@ exclude = ["assets/"]
 
 [dependencies]
 # Depend on master until next release
-egui = { git = "https://github.com/emilk/egui" }
+egui = "0.17"
 pulldown-cmark = "0.9.1"
 resvg = { version = "0.20.0", optional = true }
 usvg = { version = "0.20.0", optional = true }
