@@ -13,7 +13,7 @@ exclude = ["assets/"]
 
 [dependencies]
 egui = "0.17"
-pulldown-cmark = "0.9.1"
+pulldown-cmark = { version = "0.9.1", default-features = false }
 resvg = { version = "0.20.0", optional = true }
 usvg = { version = "0.20.0", optional = true }
 tiny-skia = { version = "0.6.3", optional = true }
