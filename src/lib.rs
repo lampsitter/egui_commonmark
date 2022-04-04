@@ -84,6 +84,7 @@ pub struct CommonMarkCache {
     ps: SyntaxSet,
     #[cfg(feature = "syntax_highlighting")]
     ts: ThemeSet,
+    link_hooks: HashMap<String, bool>,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -95,6 +96,7 @@ impl Default for CommonMarkCache {
             ps: SyntaxSet::load_defaults_newlines(),
             #[cfg(feature = "syntax_highlighting")]
             ts: ThemeSet::load_defaults(),
+            link_hooks: HashMap::new(),
         }
     }
 }
@@ -117,6 +119,47 @@ impl CommonMarkCache {
     /// Refetch all images
     pub fn reload_images(&mut self) {
         self.images.lock().unwrap().clear();
+    }
+
+    /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
+    /// specified with this method will be set to true. It's status can be aquired
+    /// with [`get_link_hook`](Self::get_link_hook). Be aware that all hooks are reset once
+    /// [`CommonMarkViewer::show`] gets called
+    pub fn add_link_hook<S: Into<String>>(&mut self, name: S) {
+        self.link_hooks.insert(name.into(), false);
+    }
+
+    /// Returns None if the link hook could not be found. Returns the last known status of the
+    /// hook otherwise.
+    pub fn remove_link_hook(&mut self, name: &str) -> Option<bool> {
+        self.link_hooks.remove(name)
+    }
+
+    /// Get status of link. Returns true if it was clicked
+    pub fn get_link_hook(&self, name: &str) -> Option<bool> {
+        self.link_hooks.get(name).copied()
+    }
+
+    /// Remove all link hooks
+    pub fn link_hooks_clear(&mut self) {
+        self.link_hooks.clear();
+    }
+
+    /// All link hooks
+    pub fn link_hooks(&self) -> &HashMap<String, bool> {
+        &self.link_hooks
+    }
+
+    /// Raw access to link hooks
+    pub fn link_hooks_mut(&mut self) -> &mut HashMap<String, bool> {
+        &mut self.link_hooks
+    }
+
+    /// Set all link hooks to false
+    fn deactivate_link_hooks(&mut self) {
+        for v in self.link_hooks.values_mut() {
+            *v = false;
+        }
     }
 
     #[cfg(feature = "syntax_highlighting")]
@@ -235,6 +278,7 @@ impl CommonMarkViewer {
     }
 
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
+        cache.deactivate_link_hooks();
         CommonMarkViewerInternal::new(self.source_id).show(ui, cache, &self.options, text);
     }
 }
@@ -463,7 +507,7 @@ impl CommonMarkViewerInternal {
     ) {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, options),
+            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options),
             pulldown_cmark::Event::Text(text) => {
                 if let Some(link) = &mut self.link {
                     link.text += &text;
@@ -606,7 +650,13 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn end_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
+    fn end_tag(
+        &mut self,
+        ui: &mut Ui,
+        tag: pulldown_cmark::Tag,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+    ) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 newline(ui);
@@ -655,7 +705,13 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::Link(_, _, _) => {
                 if let Some(link) = self.link.take() {
-                    ui.hyperlink_to(link.text, link.destination);
+                    if cache.link_hooks().contains_key(&link.destination) {
+                        if link.ui(ui).inner {
+                            cache.link_hooks_mut().insert(link.destination, true);
+                        }
+                    } else {
+                        ui.hyperlink_to(link.text, link.destination);
+                    }
                 }
             }
             pulldown_cmark::Tag::Image(_, _, _) => {
@@ -851,4 +907,51 @@ fn get_image_data(path: String, _ctx: &egui::Context, _images: ImageHashMap) -> 
 
 fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
     std::fs::read(url).ok()
+}
+
+use egui::{CursorIcon, InnerResponse, Label, Stroke, WidgetInfo, WidgetType};
+
+// This is pretty much the code from
+// `https://github.com/emilk/egui/blob/0.17.0/egui/src/widgets/hyperlink.rs`,
+// but without the going to the url part.
+impl Link {
+    fn ui(&self, ui: &mut Ui) -> InnerResponse<bool> {
+        let mut was_clicked = false;
+        let label = Label::new(&self.text).sense(Sense::click());
+
+        let (pos, text_galley, response) = label.layout_in_ui(ui);
+        response.widget_info(|| WidgetInfo::labeled(WidgetType::Hyperlink, text_galley.text()));
+
+        if response.hovered() {
+            ui.ctx().output().cursor_icon = CursorIcon::PointingHand;
+        }
+
+        if response.clicked() || response.middle_clicked() {
+            was_clicked = true;
+        }
+
+        if ui.is_rect_visible(response.rect) {
+            let color = ui.visuals().hyperlink_color;
+            let visuals = ui.style().interact(&response);
+
+            let underline = if response.hovered() || response.has_focus() {
+                Stroke::new(visuals.fg_stroke.width, color)
+            } else {
+                Stroke::none()
+            };
+
+            ui.painter().add(egui::epaint::TextShape {
+                pos,
+                galley: text_galley.galley,
+                override_text_color: Some(color),
+                underline,
+                angle: 0.0,
+            });
+        }
+
+        InnerResponse {
+            response,
+            inner: was_clicked,
+        }
+    }
 }
