@@ -1,4 +1,4 @@
-use eframe::{egui, epi};
+use eframe::egui;
 use egui_commonmark::*;
 
 struct App {
@@ -6,12 +6,8 @@ struct App {
     curr_page: usize,
 }
 
-impl epi::App for App {
-    fn name(&self) -> &str {
-        "Markdown link hooks"
-    }
-
-    fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let p1 = r#"# Page 1
 Check out the [next](#next) page."#;
         let p2 = r#"# Page 2
@@ -33,15 +29,17 @@ Check out the [previous](#prev) page."#;
 }
 
 fn main() {
-    let options = eframe::NativeOptions::default();
     let mut cache = CommonMarkCache::default();
     cache.add_link_hook("#next");
     cache.add_link_hook("#prev");
     eframe::run_native(
-        Box::new(App {
-            cache,
-            curr_page: 0,
+        "Markdown link hooks",
+        eframe::NativeOptions::default(),
+        Box::new(|_| {
+            Box::new(App {
+                cache,
+                curr_page: 0,
+            })
         }),
-        options,
     );
 }

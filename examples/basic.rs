@@ -2,19 +2,15 @@
 //! directory. To see all the features in full effect, run this example with
 //! `cargo r --example basic --all-features`
 
-use eframe::{egui, epi};
+use eframe::egui;
 use egui_commonmark::*;
 
 struct App {
     cache: CommonMarkCache,
 }
 
-impl epi::App for App {
-    fn name(&self) -> &str {
-        "Markdown viewer"
-    }
-
-    fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let text = r#"# Commonmark Viewer example
 
 A *little* ~~paragraph~~ __with__ `multiple` styles.
@@ -50,11 +46,13 @@ vec.push(5);
 }
 
 fn main() {
-    let options = eframe::NativeOptions::default();
     eframe::run_native(
-        Box::new(App {
-            cache: CommonMarkCache::default(),
+        "Markdown viewer",
+        eframe::NativeOptions::default(),
+        Box::new(|_| {
+            Box::new(App {
+                cache: CommonMarkCache::default(),
+            })
         }),
-        options,
     );
 }

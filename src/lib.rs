@@ -396,7 +396,7 @@ impl CommonMarkViewerInternal {
             let bg_colour = cache.background_colour(ui, options);
             egui::Frame::default()
                 .fill(bg_colour)
-                .margin(egui::vec2(0.0, 0.0))
+                .inner_margin(egui::vec2(0.0, 0.0))
                 .show(ui, |ui| {
                     ui.set_min_width(max_width);
 
@@ -706,7 +706,8 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::Link(_, _, _) => {
                 if let Some(link) = self.link.take() {
                     if cache.link_hooks().contains_key(&link.destination) {
-                        if link.ui(ui).inner {
+                        let ui_link = ui.link(link.text);
+                        if ui_link.clicked() || ui_link.middle_clicked() {
                             cache.link_hooks_mut().insert(link.destination, true);
                         }
                     } else {
@@ -907,51 +908,4 @@ fn get_image_data(path: String, _ctx: &egui::Context, _images: ImageHashMap) -> 
 
 fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
     std::fs::read(url).ok()
-}
-
-use egui::{CursorIcon, InnerResponse, Label, Stroke, WidgetInfo, WidgetType};
-
-// This is pretty much the code from
-// `https://github.com/emilk/egui/blob/0.17.0/egui/src/widgets/hyperlink.rs`,
-// but without the going to the url part.
-impl Link {
-    fn ui(&self, ui: &mut Ui) -> InnerResponse<bool> {
-        let mut was_clicked = false;
-        let label = Label::new(&self.text).sense(Sense::click());
-
-        let (pos, text_galley, response) = label.layout_in_ui(ui);
-        response.widget_info(|| WidgetInfo::labeled(WidgetType::Hyperlink, text_galley.text()));
-
-        if response.hovered() {
-            ui.ctx().output().cursor_icon = CursorIcon::PointingHand;
-        }
-
-        if response.clicked() || response.middle_clicked() {
-            was_clicked = true;
-        }
-
-        if ui.is_rect_visible(response.rect) {
-            let color = ui.visuals().hyperlink_color;
-            let visuals = ui.style().interact(&response);
-
-            let underline = if response.hovered() || response.has_focus() {
-                Stroke::new(visuals.fg_stroke.width, color)
-            } else {
-                Stroke::none()
-            };
-
-            ui.painter().add(egui::epaint::TextShape {
-                pos,
-                galley: text_galley.galley,
-                override_text_color: Some(color),
-                underline,
-                angle: 0.0,
-            });
-        }
-
-        InnerResponse {
-            response,
-            inner: was_clicked,
-        }
-    }
 }
