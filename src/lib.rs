@@ -163,17 +163,17 @@ impl CommonMarkCache {
     }
 
     #[cfg(feature = "syntax_highlighting")]
-    fn background_colour(&mut self, options: &CommonMarkOptions) -> egui::Color32 {
+    fn background_colour(&mut self, ui: &Ui, options: &CommonMarkOptions) -> egui::Color32 {
         if let Some(bg) = self.ts.themes[&options.theme].settings.background {
             egui::Color32::from_rgb(bg.r, bg.g, bg.b)
         } else {
-            egui::Color32::BLACK
+            ui.visuals().extreme_bg_color
         }
     }
 
     #[cfg(not(feature = "syntax_highlighting"))]
-    fn background_colour(&mut self, _options: &CommonMarkOptions) -> egui::Color32 {
-        egui::Color32::BLACK
+    fn background_colour(&mut self, ui: &Ui, _options: &CommonMarkOptions) -> egui::Color32 {
+        ui.visuals().extreme_bg_color
     }
 
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
@@ -393,7 +393,7 @@ impl CommonMarkViewerInternal {
         ui: &mut Ui,
     ) {
         if self.fenced_code_block.is_some() {
-            let bg_colour = cache.background_colour(options);
+            let bg_colour = cache.background_colour(ui, options);
             egui::Frame::default()
                 .fill(bg_colour)
                 .margin(egui::vec2(0.0, 0.0))
