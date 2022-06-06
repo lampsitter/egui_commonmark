@@ -376,10 +376,10 @@ impl CommonMarkViewerInternal {
             let mut events = pulldown_cmark::Parser::new_ext(text, parser_options);
 
             while let Some(e) = events.next() {
-                self.event(ui, e, cache, options);
+                self.event(ui, e, cache, options, max_width);
 
                 self.fenced_code_block(&mut events, max_width, cache, options, ui);
-                self.table(&mut events, cache, options, ui);
+                self.table(&mut events, cache, options, ui, max_width);
             }
         });
     }
@@ -393,22 +393,13 @@ impl CommonMarkViewerInternal {
         ui: &mut Ui,
     ) {
         if self.fenced_code_block.is_some() {
-            let bg_colour = cache.background_colour(ui, options);
-            egui::Frame::default()
-                .fill(bg_colour)
-                .inner_margin(egui::vec2(0.0, 0.0))
-                .show(ui, |ui| {
-                    ui.set_min_width(max_width);
-
-                    while self.fenced_code_block.is_some() {
-                        if let Some(e) = events.next() {
-                            self.event(ui, e, cache, options);
-                        } else {
-                            break;
-                        }
-                    }
-                });
-            newline(ui);
+            while self.fenced_code_block.is_some() {
+                if let Some(e) = events.next() {
+                    self.event(ui, e, cache, options, max_width);
+                } else {
+                    break;
+                }
+            }
         }
     }
 
@@ -418,6 +409,7 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
+        max_width: f32,
     ) {
         if self.is_table {
             newline(ui);
@@ -428,7 +420,7 @@ impl CommonMarkViewerInternal {
                     while self.is_table {
                         if let Some(e) = events.next() {
                             self.should_insert_newline = false;
-                            self.event(ui, e, cache, options);
+                            self.event(ui, e, cache, options, max_width);
                         } else {
                             break;
                         }
@@ -504,6 +496,7 @@ impl CommonMarkViewerInternal {
         event: pulldown_cmark::Event,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
+        max_width: f32,
     ) {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
@@ -516,7 +509,25 @@ impl CommonMarkViewerInternal {
                     if let Some(image) = &mut self.image {
                         image.alt_text.push(rich_text);
                     } else if let Some(lang) = &self.fenced_code_block.clone() {
-                        self.syntax_highlighting(cache, options, lang, ui, &text);
+                        ui.scope(|ui| {
+                            ui.style_mut().visuals.extreme_bg_color =
+                                cache.background_colour(ui, options);
+                            let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
+                                let mut job =
+                                    self.syntax_highlighting(cache, options, lang, ui, string);
+                                job.wrap.max_width = wrap_width;
+                                ui.fonts().layout_job(job)
+                            };
+                            ui.add(
+                                egui::TextEdit::multiline(
+                                    &mut text.strip_suffix('\n').unwrap_or(&text).to_string(),
+                                )
+                                .layouter(&mut layout)
+                                .desired_width(max_width)
+                                // prevent trailing lines
+                                .desired_rows(1),
+                            );
+                        });
                     } else {
                         ui.label(rich_text);
                     }
@@ -751,23 +762,27 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         extension: &str,
-        ui: &mut Ui,
+        ui: &Ui,
         text: &str,
-    ) {
+    ) -> egui::text::LayoutJob {
         if let Some(syntax) = cache.ps.find_syntax_by_extension(extension) {
+            let mut job = egui::text::LayoutJob::default();
             let mut h = HighlightLines::new(syntax, &cache.ts.themes[&options.theme]);
             let ranges = h.highlight(text, &cache.ps);
             for v in ranges {
                 let front = v.0.foreground;
-                ui.label(
-                    RichText::new(v.1)
-                        .color(egui::Color32::from_rgb(front.r, front.g, front.b))
-                        .font(TextStyle::Monospace.resolve(ui.style())),
+                job.append(
+                    v.1,
+                    0.0,
+                    egui::TextFormat::simple(
+                        TextStyle::Monospace.resolve(ui.style()),
+                        egui::Color32::from_rgb(front.r, front.g, front.b),
+                    ),
                 );
             }
+            job
         } else {
-            let rich_text = self.style_text(ui, text);
-            ui.label(rich_text);
+            plain_highlighting(ui, text)
         }
     }
 
@@ -777,14 +792,25 @@ impl CommonMarkViewerInternal {
         _cache: &mut CommonMarkCache,
         _options: &CommonMarkOptions,
         _extension: &str,
-        ui: &mut Ui,
+        ui: &Ui,
         text: &str,
-    ) {
-        let rich_text = self.style_text(ui, text);
-        ui.label(rich_text);
+    ) -> egui::text::LayoutJob {
+        plain_highlighting(ui, text)
     }
 }
 
+fn plain_highlighting(ui: &Ui, text: &str) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob::default();
+    job.append(
+        text,
+        0.0,
+        egui::TextFormat::simple(
+            TextStyle::Monospace.resolve(ui.style()),
+            ui.style().visuals.text_color(),
+        ),
+    );
+    job
+}
 fn newline(ui: &mut Ui) {
     ui.allocate_exact_size(egui::vec2(0.0, height_body(ui)), Sense::hover());
     ui.end_row();
