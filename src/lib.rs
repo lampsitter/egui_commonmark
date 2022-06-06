@@ -164,7 +164,7 @@ impl CommonMarkCache {
 
     #[cfg(feature = "syntax_highlighting")]
     fn background_colour(&mut self, ui: &Ui, options: &CommonMarkOptions) -> egui::Color32 {
-        if let Some(bg) = self.ts.themes[&options.theme].settings.background {
+        if let Some(bg) = self.ts.themes[options.curr_theme(ui)].settings.background {
             egui::Color32::from_rgb(bg.r, bg.g, bg.b)
         } else {
             ui.visuals().extreme_bg_color
@@ -194,7 +194,9 @@ struct CommonMarkOptions {
     show_alt_text_on_hover: bool,
     default_width: Option<usize>,
     #[cfg(feature = "syntax_highlighting")]
-    theme: String,
+    theme_light: String,
+    #[cfg(feature = "syntax_highlighting")]
+    theme_dark: String,
 }
 
 impl Default for CommonMarkOptions {
@@ -205,7 +207,9 @@ impl Default for CommonMarkOptions {
             show_alt_text_on_hover: true,
             default_width: None,
             #[cfg(feature = "syntax_highlighting")]
-            theme: "base16-mocha.dark".to_owned(),
+            theme_light: "base16-ocean.light".to_owned(),
+            #[cfg(feature = "syntax_highlighting")]
+            theme_dark: "base16-mocha.dark".to_owned(),
         }
     }
 }
@@ -227,6 +231,15 @@ impl CommonMarkOptions {
             }
         } else {
             egui::vec2(size[0] as f32, size[1] as f32)
+        }
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    fn curr_theme(&self, ui: &Ui) -> &str {
+        if ui.style().visuals.dark_mode {
+            &self.theme_dark
+        } else {
+            &self.theme_light
         }
     }
 }
@@ -272,8 +285,22 @@ impl CommonMarkViewer {
     }
 
     #[cfg(feature = "syntax_highlighting")]
+    #[deprecated(note = "use `syntax_theme_light` or `syntax_theme_dark` instead")]
     pub fn syntax_theme(mut self, theme: String) -> Self {
-        self.options.theme = theme;
+        self.options.theme_light = theme.clone();
+        self.options.theme_dark = theme;
+        self
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    pub fn syntax_theme_light(mut self, theme: String) -> Self {
+        self.options.theme_light = theme;
+        self
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    pub fn syntax_theme_dark(mut self, theme: String) -> Self {
+        self.options.theme_dark = theme;
         self
     }
 
@@ -767,7 +794,7 @@ impl CommonMarkViewerInternal {
     ) -> egui::text::LayoutJob {
         if let Some(syntax) = cache.ps.find_syntax_by_extension(extension) {
             let mut job = egui::text::LayoutJob::default();
-            let mut h = HighlightLines::new(syntax, &cache.ts.themes[&options.theme]);
+            let mut h = HighlightLines::new(syntax, &cache.ts.themes[options.curr_theme(ui)]);
             let ranges = h.highlight(text, &cache.ps);
             for v in ranges {
                 let front = v.0.foreground;
