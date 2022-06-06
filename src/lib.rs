@@ -30,7 +30,7 @@ use std::sync::Mutex;
 #[cfg(feature = "syntax_highlighting")]
 use syntect::{
     easy::HighlightLines,
-    highlighting::ThemeSet,
+    highlighting::{Theme, ThemeSet},
     parsing::{SyntaxDefinition, SyntaxSet},
     util::LinesWithEndings,
 };
@@ -165,7 +165,7 @@ impl CommonMarkCache {
 
     #[cfg(feature = "syntax_highlighting")]
     fn background_colour(&mut self, ui: &Ui, options: &CommonMarkOptions) -> egui::Color32 {
-        if let Some(bg) = self.ts.themes[options.curr_theme(ui)].settings.background {
+        if let Some(bg) = self.curr_theme(ui, options).settings.background {
             egui::Color32::from_rgb(bg.r, bg.g, bg.b)
         } else {
             ui.visuals().extreme_bg_color
@@ -175,6 +175,15 @@ impl CommonMarkCache {
     #[cfg(not(feature = "syntax_highlighting"))]
     fn background_colour(&mut self, ui: &Ui, _options: &CommonMarkOptions) -> egui::Color32 {
         ui.visuals().extreme_bg_color
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    fn curr_theme(&self, ui: &Ui, options: &CommonMarkOptions) -> &Theme {
+        self.ts
+            .themes
+            .get(options.curr_theme(ui))
+            // Since we have called load_defaults, the default theme *should* always be available..
+            .unwrap_or_else(|| &self.ts.themes[default_theme(ui)])
     }
 
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
@@ -188,6 +197,11 @@ impl CommonMarkCache {
         max
     }
 }
+
+#[cfg(feature = "syntax_highlighting")]
+const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
+#[cfg(feature = "syntax_highlighting")]
+const DEFAULT_THEME_DARK: &str = "base16-mocha.dark";
 
 struct CommonMarkOptions {
     indentation_spaces: usize,
@@ -208,9 +222,9 @@ impl Default for CommonMarkOptions {
             show_alt_text_on_hover: true,
             default_width: None,
             #[cfg(feature = "syntax_highlighting")]
-            theme_light: "base16-ocean.light".to_owned(),
+            theme_light: DEFAULT_THEME_LIGHT.to_owned(),
             #[cfg(feature = "syntax_highlighting")]
-            theme_dark: "base16-mocha.dark".to_owned(),
+            theme_dark: DEFAULT_THEME_DARK.to_owned(),
         }
     }
 }
@@ -294,14 +308,14 @@ impl CommonMarkViewer {
     }
 
     #[cfg(feature = "syntax_highlighting")]
-    pub fn syntax_theme_light(mut self, theme: String) -> Self {
-        self.options.theme_light = theme;
+    pub fn syntax_theme_light<S: Into<String>>(mut self, theme: S) -> Self {
+        self.options.theme_light = theme.into();
         self
     }
 
     #[cfg(feature = "syntax_highlighting")]
-    pub fn syntax_theme_dark(mut self, theme: String) -> Self {
-        self.options.theme_dark = theme;
+    pub fn syntax_theme_dark<S: Into<String>>(mut self, theme: S) -> Self {
+        self.options.theme_dark = theme.into();
         self
     }
 
@@ -795,7 +809,7 @@ impl CommonMarkViewerInternal {
     ) -> egui::text::LayoutJob {
         if let Some(syntax) = cache.ps.find_syntax_by_extension(extension) {
             let mut job = egui::text::LayoutJob::default();
-            let mut h = HighlightLines::new(syntax, &cache.ts.themes[options.curr_theme(ui)]);
+            let mut h = HighlightLines::new(syntax, cache.curr_theme(ui, options));
 
             for line in LinesWithEndings::from(text) {
                 let ranges = h.highlight_line(line, &cache.ps).unwrap();
@@ -966,4 +980,13 @@ fn get_image_data(path: String, _ctx: &egui::Context, _images: ImageHashMap) -> 
 
 fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
     std::fs::read(url).ok()
+}
+
+#[cfg(feature = "syntax_highlighting")]
+fn default_theme(ui: &Ui) -> &str {
+    if ui.style().visuals.dark_mode {
+        DEFAULT_THEME_DARK
+    } else {
+        DEFAULT_THEME_LIGHT
+    }
 }
