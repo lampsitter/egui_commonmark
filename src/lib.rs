@@ -28,11 +28,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[cfg(feature = "syntax_highlighting")]
-use syntect::easy::HighlightLines;
-#[cfg(feature = "syntax_highlighting")]
-use syntect::highlighting::ThemeSet;
-#[cfg(feature = "syntax_highlighting")]
-use syntect::parsing::{SyntaxDefinition, SyntaxSet};
+use syntect::{
+    easy::HighlightLines,
+    highlighting::ThemeSet,
+    parsing::{SyntaxDefinition, SyntaxSet},
+    util::LinesWithEndings,
+};
 
 fn load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
     let image = image::load_from_memory(data)?;
@@ -795,18 +796,22 @@ impl CommonMarkViewerInternal {
         if let Some(syntax) = cache.ps.find_syntax_by_extension(extension) {
             let mut job = egui::text::LayoutJob::default();
             let mut h = HighlightLines::new(syntax, &cache.ts.themes[options.curr_theme(ui)]);
-            let ranges = h.highlight(text, &cache.ps);
-            for v in ranges {
-                let front = v.0.foreground;
-                job.append(
-                    v.1,
-                    0.0,
-                    egui::TextFormat::simple(
-                        TextStyle::Monospace.resolve(ui.style()),
-                        egui::Color32::from_rgb(front.r, front.g, front.b),
-                    ),
-                );
+
+            for line in LinesWithEndings::from(text) {
+                let ranges = h.highlight_line(line, &cache.ps).unwrap();
+                for v in ranges {
+                    let front = v.0.foreground;
+                    job.append(
+                        v.1,
+                        0.0,
+                        egui::TextFormat::simple(
+                            TextStyle::Monospace.resolve(ui.style()),
+                            egui::Color32::from_rgb(front.r, front.g, front.b),
+                        ),
+                    );
+                }
             }
+
             job
         } else {
             plain_highlighting(ui, text)
