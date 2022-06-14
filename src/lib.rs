@@ -573,10 +573,6 @@ impl CommonMarkViewerInternal {
                     } else {
                         ui.label(rich_text);
                     }
-
-                    if self.text_style.heading.is_some() {
-                        newline_heading(ui);
-                    }
                 }
             }
             pulldown_cmark::Event::Code(text) => {
@@ -715,6 +711,7 @@ impl CommonMarkViewerInternal {
                 newline(ui);
             }
             pulldown_cmark::Tag::Heading(_, _, _) => {
+                newline_heading(ui);
                 self.text_style.heading = None;
             }
             pulldown_cmark::Tag::BlockQuote => {
