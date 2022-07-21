@@ -24,8 +24,7 @@ use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::HeadingLevel;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "syntax_highlighting")]
 use syntect::{
@@ -350,7 +349,6 @@ struct Image {
 struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
-    /// The current text style
     text_style: Style,
     list_point: Option<u64>,
     link: Option<Link>,
@@ -615,7 +613,7 @@ impl CommonMarkViewerInternal {
                 self.should_insert_newline = true;
             }
             pulldown_cmark::Tag::Heading(l, _, _) => {
-                newline_heading(ui);
+                newline(ui);
                 self.text_style.heading = Some(l);
             }
             pulldown_cmark::Tag::BlockQuote => {
@@ -693,8 +691,6 @@ impl CommonMarkViewerInternal {
                     url: url.to_string(),
                     alt_text: Vec::new(),
                 });
-
-                // TODO: Support urls
             }
         }
     }
@@ -711,7 +707,7 @@ impl CommonMarkViewerInternal {
                 newline(ui);
             }
             pulldown_cmark::Tag::Heading(_, _, _) => {
-                newline_heading(ui);
+                newline(ui);
                 self.text_style.heading = None;
             }
             pulldown_cmark::Tag::BlockQuote => {
@@ -854,12 +850,8 @@ fn plain_highlighting(ui: &Ui, text: &str) -> egui::text::LayoutJob {
     );
     job
 }
-fn newline(ui: &mut Ui) {
-    ui.allocate_exact_size(egui::vec2(0.0, height_body(ui)), Sense::hover());
-    ui.end_row();
-}
 
-fn newline_heading(ui: &mut Ui) {
+fn newline(ui: &mut Ui) {
     ui.label("\n");
 }
 
