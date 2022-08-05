@@ -355,7 +355,9 @@ struct CommonMarkViewerInternal {
     indentation: i64,
     image: Option<Image>,
     should_insert_newline: bool,
-    fenced_code_block: Option<String>,
+    fenced_code_block_lang: Option<String>,
+    fenced_code_block_contents: Option<String>,
+    fenced_code_block_max_width: Option<f32>,
     is_table: bool,
 }
 
@@ -370,8 +372,10 @@ impl CommonMarkViewerInternal {
             indentation: -1,
             image: None,
             should_insert_newline: true,
-            fenced_code_block: None,
+            fenced_code_block_lang: None,
             is_table: false,
+            fenced_code_block_contents: None,
+            fenced_code_block_max_width: None,
         }
     }
 }
@@ -432,8 +436,8 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &mut Ui,
     ) {
-        if self.fenced_code_block.is_some() {
-            while self.fenced_code_block.is_some() {
+        if self.fenced_code_block_lang.is_some() {
+            while self.fenced_code_block_lang.is_some() {
                 if let Some(e) = events.next() {
                     self.event(ui, e, cache, options, max_width);
                 } else {
@@ -548,26 +552,11 @@ impl CommonMarkViewerInternal {
                     let rich_text = self.style_text(ui, &text);
                     if let Some(image) = &mut self.image {
                         image.alt_text.push(rich_text);
-                    } else if let Some(lang) = &self.fenced_code_block.clone() {
-                        ui.scope(|ui| {
-                            ui.style_mut().visuals.extreme_bg_color =
-                                cache.background_colour(ui, options);
-                            let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
-                                let mut job =
-                                    self.syntax_highlighting(cache, options, lang, ui, string);
-                                job.wrap.max_width = wrap_width;
-                                ui.fonts().layout_job(job)
-                            };
-                            ui.add(
-                                egui::TextEdit::multiline(
-                                    &mut text.strip_suffix('\n').unwrap_or(&text).to_string(),
-                                )
-                                .layouter(&mut layout)
-                                .desired_width(max_width)
-                                // prevent trailing lines
-                                .desired_rows(1),
-                            );
-                        });
+                    } else if let Some(_lang) = &self.fenced_code_block_lang.clone() {
+                        self.fenced_code_block_max_width = Some(max_width);
+                        if let Some(contents) = &mut self.fenced_code_block_contents {
+                            contents.push_str(&text);
+                        }
                     } else {
                         ui.label(rich_text);
                     }
@@ -622,7 +611,8 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
                 if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
-                    self.fenced_code_block = Some(lang.to_string());
+                    self.fenced_code_block_lang = Some(lang.to_string());
+                    self.fenced_code_block_contents = Some("".to_string());
                     newline(ui);
                 }
 
@@ -715,7 +705,34 @@ impl CommonMarkViewerInternal {
                 ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(_) => {
-                self.fenced_code_block = None;
+                if let (Some(lang), Some(text), Some(max_width)) = (
+                    self.fenced_code_block_lang.clone(),
+                    self.fenced_code_block_contents.clone(),
+                    self.fenced_code_block_max_width,
+                ) {
+                    ui.scope(|ui| {
+                        ui.style_mut().visuals.extreme_bg_color =
+                            cache.background_colour(ui, options);
+                        let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
+                            let mut job =
+                                self.syntax_highlighting(cache, options, &lang, ui, string);
+                            job.wrap.max_width = wrap_width;
+                            ui.fonts().layout_job(job)
+                        };
+                        ui.add(
+                            egui::TextEdit::multiline(
+                                &mut text.strip_suffix('\n').unwrap_or(&text).to_string(),
+                            )
+                            .layouter(&mut layout)
+                            .desired_width(max_width)
+                            // prevent trailing lines
+                            .desired_rows(1),
+                        );
+                    });
+                }
+                self.fenced_code_block_lang = None;
+                self.fenced_code_block_contents = None;
+                self.fenced_code_block_max_width = None;
                 self.text_style.code = false;
                 newline(ui);
             }
