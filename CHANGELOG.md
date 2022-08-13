@@ -1,6 +1,6 @@
 # egui_commomnark changelog
 
-## [Unreleased]
+## [0.3.0] - 2022-08-13
 
 ### Added
 
