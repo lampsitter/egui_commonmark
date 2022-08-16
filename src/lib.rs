@@ -357,7 +357,6 @@ struct CommonMarkViewerInternal {
     should_insert_newline: bool,
     fenced_code_block_lang: Option<String>,
     fenced_code_block_contents: Option<String>,
-    fenced_code_block_max_width: Option<f32>,
     is_table: bool,
 }
 
@@ -375,7 +374,6 @@ impl CommonMarkViewerInternal {
             fenced_code_block_lang: None,
             is_table: false,
             fenced_code_block_contents: None,
-            fenced_code_block_max_width: None,
         }
     }
 }
@@ -544,7 +542,7 @@ impl CommonMarkViewerInternal {
     ) {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options),
+            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
             pulldown_cmark::Event::Text(text) => {
                 if let Some(link) = &mut self.link {
                     link.text += &text;
@@ -553,7 +551,6 @@ impl CommonMarkViewerInternal {
                     if let Some(image) = &mut self.image {
                         image.alt_text.push(rich_text);
                     } else if let Some(_lang) = &self.fenced_code_block_lang.clone() {
-                        self.fenced_code_block_max_width = Some(max_width);
                         if let Some(contents) = &mut self.fenced_code_block_contents {
                             contents.push_str(&text);
                         }
@@ -691,6 +688,7 @@ impl CommonMarkViewerInternal {
         tag: pulldown_cmark::Tag,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
+        max_width: f32,
     ) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
@@ -705,10 +703,9 @@ impl CommonMarkViewerInternal {
                 ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(_) => {
-                if let (Some(lang), Some(text), Some(max_width)) = (
+                if let (Some(lang), Some(text)) = (
                     self.fenced_code_block_lang.clone(),
                     self.fenced_code_block_contents.clone(),
-                    self.fenced_code_block_max_width,
                 ) {
                     ui.scope(|ui| {
                         ui.style_mut().visuals.extreme_bg_color =
@@ -732,7 +729,6 @@ impl CommonMarkViewerInternal {
                 }
                 self.fenced_code_block_lang = None;
                 self.fenced_code_block_contents = None;
-                self.fenced_code_block_max_width = None;
                 self.text_style.code = false;
                 newline(ui);
             }
