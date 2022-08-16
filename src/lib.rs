@@ -550,7 +550,7 @@ impl CommonMarkViewerInternal {
                     let rich_text = self.style_text(ui, &text);
                     if let Some(image) = &mut self.image {
                         image.alt_text.push(rich_text);
-                    } else if let Some(_lang) = &self.fenced_code_block_lang.clone() {
+                    } else if self.fenced_code_block_lang.is_some() {
                         if let Some(contents) = &mut self.fenced_code_block_contents {
                             contents.push_str(&text);
                         }
@@ -704,8 +704,8 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::CodeBlock(_) => {
                 if let (Some(lang), Some(text)) = (
-                    self.fenced_code_block_lang.clone(),
-                    self.fenced_code_block_contents.clone(),
+                    self.fenced_code_block_lang.take(),
+                    self.fenced_code_block_contents.take(),
                 ) {
                     ui.scope(|ui| {
                         ui.style_mut().visuals.extreme_bg_color =
@@ -727,8 +727,6 @@ impl CommonMarkViewerInternal {
                         );
                     });
                 }
-                self.fenced_code_block_lang = None;
-                self.fenced_code_block_contents = None;
                 self.text_style.code = false;
                 newline(ui);
             }
