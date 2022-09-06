@@ -1,7 +1,12 @@
 # egui_commomnark changelog
 
+## Unreleased
 
-## [0.4.0] - 2022-08-25
+### Fixed
+
+- Render text in svg images
+
+## 0.4.0 - 2022-08-25
 
 ### Changed
 
@@ -11,7 +16,7 @@
 
 - Display indented code blocks in a single code block ([#1](https://github.com/lampsitter/egui_commonmark/pull/1) by [@lazytanuki](https://github.com/lazytanuki))
 
-## [0.3.0] - 2022-08-13
+## 0.3.0 - 2022-08-13
 
 ### Added
 
