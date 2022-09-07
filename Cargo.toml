@@ -14,12 +14,13 @@ include = ["src/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 [dependencies]
 egui = "0.19"
 pulldown-cmark = { version = "0.9.2", default-features = false }
-resvg = { version = "0.20.0", optional = true }
-usvg = { version = "0.20.0", optional = true }
-tiny-skia = { version = "0.6.3", optional = true }
 image = { version = "0.24", default-features = false, features = ["png"] }
 
 syntect = { version = "5.0.0", optional = true, default-features = false, features = ["default-fancy"] }
+
+resvg = { version = "0.20.0", optional = true }
+usvg = { version = "0.20.0", optional = true }
+tiny-skia = { version = "0.6.3", optional = true }
 
 url = { version = "2.2.2", optional = true }
 ehttp = { version = "0.2.0", optional = true }

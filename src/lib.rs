@@ -21,7 +21,7 @@
 
 use egui::{self, Id, RichText, Sense, TextStyle, Ui};
 use egui::{ColorImage, TextureHandle};
-use pulldown_cmark::HeadingLevel;
+use pulldown_cmark::{CowStr, HeadingLevel};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -543,20 +543,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
             pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
             pulldown_cmark::Event::Text(text) => {
-                if let Some(link) = &mut self.link {
-                    link.text += &text;
-                } else {
-                    let rich_text = self.style_text(ui, &text);
-                    if let Some(image) = &mut self.image {
-                        image.alt_text.push(rich_text);
-                    } else if self.fenced_code_block_lang.is_some() {
-                        if let Some(contents) = &mut self.fenced_code_block_contents {
-                            contents.push_str(&text);
-                        }
-                    } else {
-                        ui.label(rich_text);
-                    }
-                }
+                self.event_text(text, ui);
             }
             pulldown_cmark::Event::Code(text) => {
                 ui.code(text.as_ref());
@@ -579,6 +566,23 @@ impl CommonMarkViewerInternal {
                 } else {
                     checkbox_point(ui, "☐ ")
                 }
+            }
+        }
+    }
+
+    fn event_text(&mut self, text: CowStr, ui: &mut Ui) {
+        if let Some(link) = &mut self.link {
+            link.text += &text;
+        } else {
+            let rich_text = self.style_text(ui, &text);
+            if let Some(image) = &mut self.image {
+                image.alt_text.push(rich_text);
+            } else if self.fenced_code_block_lang.is_some() {
+                if let Some(contents) = &mut self.fenced_code_block_contents {
+                    contents.push_str(&text);
+                }
+            } else {
+                ui.label(rich_text);
             }
         }
     }
@@ -619,19 +623,7 @@ impl CommonMarkViewerInternal {
                 self.list_point = number;
             }
             pulldown_cmark::Tag::Item => {
-                newline(ui);
-                ui.label(" ".repeat(self.indentation as usize * options.indentation_spaces));
-
-                self.should_insert_newline = false;
-                if let Some(mut number) = self.list_point.take() {
-                    number_point(ui, &number.to_string());
-                    number += 1;
-                    self.list_point = Some(number);
-                } else if self.indentation >= 1 {
-                    bullet_point_hollow(ui);
-                } else {
-                    bullet_point(ui);
-                }
+                self.start_item(ui, options);
             }
             pulldown_cmark::Tag::FootnoteDefinition(note) => {
                 self.should_insert_newline = false;
@@ -658,26 +650,7 @@ impl CommonMarkViewerInternal {
                     text: String::new(),
                 });
             }
-            pulldown_cmark::Tag::Image(_, url, _) => {
-                let handle = match cache.images.lock().unwrap().entry(url.to_string()) {
-                    Entry::Occupied(o) => o.get().clone(),
-                    Entry::Vacant(v) => {
-                        let ctx = ui.ctx();
-                        let handle =
-                            get_image_data(url.to_string(), ctx, Arc::clone(&cache.images))
-                                .and_then(|data| parse_image(ctx, url.to_string(), &data));
-
-                        v.insert(handle.clone());
-                        handle
-                    }
-                };
-
-                self.image = Some(Image {
-                    handle,
-                    url: url.to_string(),
-                    alt_text: Vec::new(),
-                });
-            }
+            pulldown_cmark::Tag::Image(_, url, _) => self.start_image(url.to_string(), ui, cache),
         }
     }
 
@@ -702,32 +675,7 @@ impl CommonMarkViewerInternal {
                 ui.add(egui::Separator::default().horizontal());
             }
             pulldown_cmark::Tag::CodeBlock(_) => {
-                if let (Some(lang), Some(text)) = (
-                    self.fenced_code_block_lang.take(),
-                    self.fenced_code_block_contents.take(),
-                ) {
-                    ui.scope(|ui| {
-                        ui.style_mut().visuals.extreme_bg_color =
-                            cache.background_colour(ui, options);
-                        let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
-                            let mut job =
-                                self.syntax_highlighting(cache, options, &lang, ui, string);
-                            job.wrap.max_width = wrap_width;
-                            ui.fonts().layout_job(job)
-                        };
-                        ui.add(
-                            egui::TextEdit::multiline(
-                                &mut text.strip_suffix('\n').unwrap_or(&text).to_string(),
-                            )
-                            .layouter(&mut layout)
-                            .desired_width(max_width)
-                            // prevent trailing lines
-                            .desired_rows(1),
-                        );
-                    });
-                }
-                self.text_style.code = false;
-                newline(ui);
+                self.end_code_block(ui, cache, options, max_width);
             }
             pulldown_cmark::Tag::List(_) => {
                 self.indentation -= 1;
@@ -760,45 +708,122 @@ impl CommonMarkViewerInternal {
                 self.text_style.strikethrough = false;
             }
             pulldown_cmark::Tag::Link(_, _, _) => {
-                if let Some(link) = self.link.take() {
-                    if cache.link_hooks().contains_key(&link.destination) {
-                        let ui_link = ui.link(link.text);
-                        if ui_link.clicked() || ui_link.middle_clicked() {
-                            cache.link_hooks_mut().insert(link.destination, true);
-                        }
-                    } else {
-                        ui.hyperlink_to(link.text, link.destination);
-                    }
-                }
+                self.end_link(ui, cache);
             }
             pulldown_cmark::Tag::Image(_, _, _) => {
-                if let Some(image) = self.image.take() {
-                    if let Some(texture) = image.handle {
-                        let size = options.image_scaled(&texture);
-                        let response = ui.image(&texture, size);
+                self.end_image(ui, options);
+            }
+        }
+    }
 
-                        if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
-                            response.on_hover_ui_at_pointer(|ui| {
-                                for alt in image.alt_text {
-                                    ui.label(alt);
-                                }
-                            });
-                        }
-                    } else {
-                        ui.label("![");
+    fn start_item(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
+        newline(ui);
+        ui.label(" ".repeat(self.indentation as usize * options.indentation_spaces));
+
+        self.should_insert_newline = false;
+        if let Some(mut number) = self.list_point.take() {
+            number_point(ui, &number.to_string());
+            number += 1;
+            self.list_point = Some(number);
+        } else if self.indentation >= 1 {
+            bullet_point_hollow(ui);
+        } else {
+            bullet_point(ui);
+        }
+    }
+
+    fn end_link(&mut self, ui: &mut Ui, cache: &mut CommonMarkCache) {
+        if let Some(link) = self.link.take() {
+            if cache.link_hooks().contains_key(&link.destination) {
+                let ui_link = ui.link(link.text);
+                if ui_link.clicked() || ui_link.middle_clicked() {
+                    cache.link_hooks_mut().insert(link.destination, true);
+                }
+            } else {
+                ui.hyperlink_to(link.text, link.destination);
+            }
+        }
+    }
+
+    fn start_image(&mut self, url: String, ui: &mut Ui, cache: &mut CommonMarkCache) {
+        let handle = match cache.images.lock().unwrap().entry(url.clone()) {
+            Entry::Occupied(o) => o.get().clone(),
+            Entry::Vacant(v) => {
+                let ctx = ui.ctx();
+                let handle = get_image_data(&url, ctx, Arc::clone(&cache.images))
+                    .and_then(|data| parse_image(ctx, &url, &data));
+
+                v.insert(handle.clone());
+                handle
+            }
+        };
+
+        self.image = Some(Image {
+            handle,
+            url,
+            alt_text: Vec::new(),
+        });
+    }
+
+    fn end_image(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
+        if let Some(image) = self.image.take() {
+            if let Some(texture) = image.handle {
+                let size = options.image_scaled(&texture);
+                let response = ui.image(&texture, size);
+
+                if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
+                    response.on_hover_ui_at_pointer(|ui| {
                         for alt in image.alt_text {
                             ui.label(alt);
                         }
-                        ui.label(format!("]({})", image.url));
-                    }
-
-                    if self.should_insert_newline {
-                        newline(ui);
-                        self.should_insert_newline = false;
-                    }
+                    });
                 }
+            } else {
+                ui.label("![");
+                for alt in image.alt_text {
+                    ui.label(alt);
+                }
+                ui.label(format!("]({})", image.url));
+            }
+
+            if self.should_insert_newline {
+                newline(ui);
+                self.should_insert_newline = false;
             }
         }
+    }
+
+    fn end_code_block(
+        &mut self,
+        ui: &mut Ui,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        max_width: f32,
+    ) {
+        if let (Some(lang), Some(text)) = (
+            self.fenced_code_block_lang.take(),
+            self.fenced_code_block_contents.take(),
+        ) {
+            ui.scope(|ui| {
+                ui.style_mut().visuals.extreme_bg_color = cache.background_colour(ui, options);
+                let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
+                    let mut job = self.syntax_highlighting(cache, options, &lang, ui, string);
+                    job.wrap.max_width = wrap_width;
+                    ui.fonts().layout_job(job)
+                };
+                ui.add(
+                    egui::TextEdit::multiline(
+                        &mut text.strip_suffix('\n').unwrap_or(&text).to_string(),
+                    )
+                    .layouter(&mut layout)
+                    .desired_width(max_width)
+                    // prevent trailing lines
+                    .desired_rows(1),
+                );
+            });
+        }
+        self.text_style.code = false;
+        newline(ui);
     }
 
     #[cfg(feature = "syntax_highlighting")]
@@ -945,20 +970,21 @@ fn width_body_space(ui: &Ui) -> f32 {
     ui.fonts().glyph_width(&id, ' ')
 }
 
-fn parse_image(ctx: &egui::Context, url: String, data: &[u8]) -> Option<TextureHandle> {
+fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Option<TextureHandle> {
     let image = load_image(data).ok().or_else(|| try_render_svg(data));
     image.map(|image| ctx.load_texture(url, image, egui::TextureFilter::Linear))
 }
 
 #[cfg(feature = "fetch")]
-fn get_image_data(path: String, ctx: &egui::Context, images: ImageHashMap) -> Option<Vec<u8>> {
-    let url = url::Url::parse(&path);
+fn get_image_data(path: &str, ctx: &egui::Context, images: ImageHashMap) -> Option<Vec<u8>> {
+    let url = url::Url::parse(path);
     if url.is_ok() {
         let ctx2 = ctx.clone();
+        let path = path.to_owned();
         ehttp::fetch(ehttp::Request::get(&path), move |r| {
             if let Ok(r) = r {
                 let data = r.bytes;
-                if let Some(handle) = parse_image(&ctx2, path.clone(), &data) {
+                if let Some(handle) = parse_image(&ctx2, &path, &data) {
                     // we only update if the image was loaded properly
                     *images.lock().unwrap().get_mut(&path).unwrap() = Some(handle);
                     ctx2.request_repaint();
@@ -968,13 +994,13 @@ fn get_image_data(path: String, ctx: &egui::Context, images: ImageHashMap) -> Op
 
         None
     } else {
-        get_image_data_from_file(&path)
+        get_image_data_from_file(path)
     }
 }
 
 #[cfg(not(feature = "fetch"))]
-fn get_image_data(path: String, _ctx: &egui::Context, _images: ImageHashMap) -> Option<Vec<u8>> {
-    get_image_data_from_file(&path)
+fn get_image_data(path: &str, _ctx: &egui::Context, _images: ImageHashMap) -> Option<Vec<u8>> {
+    get_image_data_from_file(path)
 }
 
 fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
