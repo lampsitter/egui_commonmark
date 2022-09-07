@@ -201,7 +201,7 @@ impl CommonMarkCache {
 #[cfg(feature = "syntax_highlighting")]
 const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
 #[cfg(feature = "syntax_highlighting")]
-const DEFAULT_THEME_DARK: &str = "base16-mocha.dark";
+const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
 struct CommonMarkOptions {
     indentation_spaces: usize,

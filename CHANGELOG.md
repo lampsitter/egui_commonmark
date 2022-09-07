@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- Default dark syntax highlighting theme has been changed from base16-mocha.dark
+  to base16-ocean.dark.
+
 ### Fixed
 
 - Render text in svg images
