@@ -13,9 +13,9 @@ struct App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let text = r#"# Commonmark Viewer example
+        let text = r#"# Commonmark Viewer Example
 
-A *little* ~~paragraph~~ __with__ `multiple` styles.
+A *bunch* ~~of~~ __different__ `text` styles.
 
 | __A table!__ |
 | -------- |

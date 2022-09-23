@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/egui_commonmark/badge.svg)](https://docs.rs/egui_commonmark)
 [![CI](https://github.com/lampsitter/egui_commonmark/actions/workflows/rust.yml/badge.svg)](https://github.com/lampsitter/egui_commonmark/actions/workflows/rust.yml)
 
-<img src="https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example.png" alt="showcase" width=300/>
+<img src="https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v2.png" alt="showcase" width=280/>
 
 ## Usage
 
