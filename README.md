@@ -6,6 +6,9 @@
 
 <img src="https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v2.png" alt="showcase" width=280/>
 
+While this crate's main focus is commonmark, it also supports a subset of
+Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
+
 ## Usage
 
 ```rust
