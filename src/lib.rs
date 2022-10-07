@@ -673,6 +673,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::BlockQuote => {
                 self.text_style.quote = false;
                 ui.add(egui::Separator::default().horizontal());
+                newline(ui);
             }
             pulldown_cmark::Tag::CodeBlock(_) => {
                 self.end_code_block(ui, cache, options, max_width);
@@ -681,6 +682,7 @@ impl CommonMarkViewerInternal {
                 self.indentation -= 1;
                 if self.indentation == -1 {
                     newline(ui);
+                    self.should_insert_newline = true;
                 }
             }
             pulldown_cmark::Tag::Item => {}

@@ -11,6 +11,7 @@
 
 - Render text in svg images.
 - Fixed erroneous newline after images.
+- Fixed missing newline after lists and quotes.
 
 ## 0.4.0 - 2022-08-25
 
