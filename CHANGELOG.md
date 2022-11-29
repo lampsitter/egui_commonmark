@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.5.0 - 2022-11-29
+
 ### Changed
 
 - Default dark syntax highlighting theme has been changed from base16-mocha.dark
