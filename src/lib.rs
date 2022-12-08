@@ -974,7 +974,7 @@ fn width_body_space(ui: &Ui) -> f32 {
 
 fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Option<TextureHandle> {
     let image = load_image(data).ok().or_else(|| try_render_svg(data));
-    image.map(|image| ctx.load_texture(url, image, egui::TextureFilter::Linear))
+    image.map(|image| ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
 }
 
 #[cfg(feature = "fetch")]
