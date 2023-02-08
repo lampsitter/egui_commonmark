@@ -74,5 +74,5 @@ fn main() {
                 cache: CommonMarkCache::default(),
             })
         }),
-    );
+    ).unwrap();
 }

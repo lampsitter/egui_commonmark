@@ -433,13 +433,11 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &mut Ui,
     ) {
-        if self.fenced_code_block_lang.is_some() {
-            while self.fenced_code_block_lang.is_some() {
-                if let Some(e) = events.next() {
-                    self.event(ui, e, cache, options, max_width);
-                } else {
-                    break;
-                }
+        while self.fenced_code_block_lang.is_some() {
+            if let Some(e) = events.next() {
+                self.event(ui, e, cache, options, max_width);
+            } else {
+                break;
             }
         }
     }
@@ -811,7 +809,7 @@ impl CommonMarkViewerInternal {
                 let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
                     let mut job = self.syntax_highlighting(cache, options, &lang, ui, string);
                     job.wrap.max_width = wrap_width;
-                    ui.fonts().layout_job(job)
+                    ui.fonts(|f| f.layout_job(job))
                 };
                 ui.add(
                     egui::TextEdit::multiline(
@@ -969,7 +967,7 @@ fn height_body(ui: &Ui) -> f32 {
 
 fn width_body_space(ui: &Ui) -> f32 {
     let id = TextStyle::Body.resolve(ui.style());
-    ui.fonts().glyph_width(&id, ' ')
+    ui.fonts(|f| f.glyph_width(&id, ' '))
 }
 
 fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Option<TextureHandle> {
