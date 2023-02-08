@@ -35,7 +35,7 @@ svg = ["resvg", "usvg", "tiny-skia"]
 fetch = ["ehttp", "url", "image/jpeg"]
 
 [dev-dependencies]
-eframe = { git = "https://github.com/emilk/egui" }
+eframe = "0.21"
 
 [package.metadata.docs.rs]
 features = ["syntax_highlighting", "svg"]
