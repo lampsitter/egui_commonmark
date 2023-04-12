@@ -41,5 +41,6 @@ fn main() {
                 curr_page: 0,
             })
         }),
-    ).unwrap();
+    )
+    .unwrap();
 }

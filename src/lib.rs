@@ -410,20 +410,7 @@ impl CommonMarkViewerInternal {
     ) {
         cache.available_size = ui.available_size();
 
-        let max_image_width = cache.max_image_width(options);
-        let available_width = ui.available_width();
-
-        let max_width = max_image_width.max(available_width);
-        let max_width = if let Some(default_width) = options.default_width {
-            if default_width as f32 > max_width {
-                default_width as f32
-            } else {
-                max_width
-            }
-        } else {
-            max_width
-        };
-
+        let max_width = self.max_width(cache, options, ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
         ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
@@ -492,20 +479,7 @@ impl CommonMarkViewerInternal {
             ui.set_height(page_size.y);
             let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
-            let max_image_width = cache.max_image_width(options);
-            let available_width = ui.available_width();
-
-            let max_width = max_image_width.max(available_width);
-            let max_width = if let Some(default_width) = options.default_width {
-                if default_width as f32 > max_width {
-                    default_width as f32
-                } else {
-                    max_width
-                }
-            } else {
-                max_width
-            };
-
+            let max_width = self.max_width(cache, options, ui);
             ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
                 // finding the first element that's not in the viewport anymore
                 let (first_event_index, _, first_end_position) = cache
@@ -545,6 +519,22 @@ impl CommonMarkViewerInternal {
         // Forcing full re-render to repopulate split points for the new size
         if available_size != cache.available_size {
             cache.page_size = None;
+        }
+    }
+
+    fn max_width(&self, cache: &CommonMarkCache, options: &CommonMarkOptions, ui: &Ui) -> f32 {
+        let max_image_width = cache.max_image_width(options);
+        let available_width = ui.available_width();
+
+        let max_width = max_image_width.max(available_width);
+        if let Some(default_width) = options.default_width {
+            if default_width as f32 > max_width {
+                default_width as f32
+            } else {
+                max_width
+            }
+        } else {
+            max_width
         }
     }
 
