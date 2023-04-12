@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Only render visible elements within a ScrollArea with `show_scrollable`
+ ([#4](https://github.com/lampsitter/egui_commonmark/pull/4) by [@localcc](https://github.com/localcc)).
+
 ## 0.7.0 - 2023-02-09
 
 ### Changed
