@@ -86,6 +86,7 @@ pub struct CommonMarkCache {
     #[cfg(feature = "syntax_highlighting")]
     ts: ThemeSet,
     link_hooks: HashMap<String, bool>,
+    available_size: Vec2,
     page_size: Option<Vec2>,
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
@@ -100,6 +101,7 @@ impl Default for CommonMarkCache {
             #[cfg(feature = "syntax_highlighting")]
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
+            available_size: Vec2::ZERO,
             page_size: None,
             split_points: Vec::new(),
         }
@@ -406,6 +408,8 @@ impl CommonMarkViewerInternal {
         text: &str,
         populate_split_points: bool,
     ) {
+        cache.available_size = ui.available_size();
+
         let max_image_width = cache.max_image_width(options);
         let available_width = ui.available_width();
 
@@ -468,6 +472,8 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         text: &str,
     ) {
+        let available_size = ui.available_size();
+
         let Some(page_size) = cache.page_size else {
             self.show(ui, cache, options, text, true);
             return;
@@ -535,6 +541,11 @@ impl CommonMarkViewerInternal {
                 }
             });
         });
+
+        // Forcing full re-render to repopulate split points for the new size
+        if available_size != cache.available_size {
+            cache.page_size = None;
+        }
     }
 
     fn fenced_code_block<'e>(
