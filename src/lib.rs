@@ -78,7 +78,17 @@ fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
     )
 }
 
+#[derive(Default)]
+struct ScrollableCache {
+    available_size: Vec2,
+    page_size: Option<Vec2>,
+    split_points: Vec<(usize, Pos2, Pos2)>,
+}
+
 type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
+
+// Everything stored here must take into account that the cache is for multiple
+// CommonMarkviewers with different source_ids.
 pub struct CommonMarkCache {
     images: ImageHashMap,
     #[cfg(feature = "syntax_highlighting")]
@@ -86,9 +96,7 @@ pub struct CommonMarkCache {
     #[cfg(feature = "syntax_highlighting")]
     ts: ThemeSet,
     link_hooks: HashMap<String, bool>,
-    available_size: Vec2,
-    page_size: Option<Vec2>,
-    split_points: Vec<(usize, Pos2, Pos2)>,
+    scroll: HashMap<Id, ScrollableCache>,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -101,9 +109,7 @@ impl Default for CommonMarkCache {
             #[cfg(feature = "syntax_highlighting")]
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
-            available_size: Vec2::ZERO,
-            page_size: None,
-            split_points: Vec::new(),
+            scroll: Default::default(),
         }
     }
 }
@@ -126,6 +132,11 @@ impl CommonMarkCache {
     /// Refetch all images
     pub fn reload_images(&mut self) {
         self.images.lock().unwrap().clear();
+    }
+
+    /// Clear the cache for scrollable elements
+    pub fn clear_scrollable(&mut self) {
+        self.scroll.clear();
     }
 
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
@@ -201,6 +212,13 @@ impl CommonMarkCache {
             }
         }
         max
+    }
+
+    fn scroll(&mut self, id: &Id) -> &mut ScrollableCache {
+        if !self.scroll.contains_key(id) {
+            self.scroll.insert(*id, Default::default());
+        }
+        self.scroll.get_mut(id).unwrap()
     }
 }
 
@@ -408,7 +426,7 @@ impl CommonMarkViewerInternal {
         text: &str,
         populate_split_points: bool,
     ) {
-        cache.available_size = ui.available_size();
+        cache.scroll(&self.source_id).available_size = ui.available_size();
 
         let max_width = self.max_width(cache, options, ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
@@ -436,19 +454,23 @@ impl CommonMarkViewerInternal {
                 self.table(&mut events, cache, options, ui, max_width);
 
                 if populate_split_points {
+                    let scroll_cache = cache.scroll(&self.source_id);
                     let end_position = ui.next_widget_position();
 
-                    let split_point_exists = cache.split_points.iter().any(|(i, _, _)| *i == index);
+                    let split_point_exists = scroll_cache
+                        .split_points
+                        .iter()
+                        .any(|(i, _, _)| *i == index);
 
                     if should_add_split_point && !split_point_exists {
-                        cache
+                        scroll_cache
                             .split_points
                             .push((index, start_position, end_position));
                     }
                 }
             }
 
-            cache.page_size = Some(ui.next_widget_position().to_vec2());
+            cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
         });
     }
 
@@ -461,7 +483,7 @@ impl CommonMarkViewerInternal {
     ) {
         let available_size = ui.available_size();
 
-        let Some(page_size) = cache.page_size else {
+        let Some(page_size) = cache.scroll(&self.source_id).page_size else {
             self.show(ui, cache, options, text, true);
             return;
         };
@@ -475,50 +497,55 @@ impl CommonMarkViewerInternal {
 
         let num_rows = events.len();
 
-        egui::ScrollArea::vertical().show_viewport(ui, |ui, viewport| {
-            ui.set_height(page_size.y);
-            let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
+        egui::ScrollArea::vertical()
+            .id_source(self.source_id.with("_scroll_area"))
+            .show_viewport(ui, |ui, viewport| {
+                ui.set_height(page_size.y);
+                let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
-            let max_width = self.max_width(cache, options, ui);
-            ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
-                // finding the first element that's not in the viewport anymore
-                let (first_event_index, _, first_end_position) = cache
-                    .split_points
-                    .iter()
-                    .filter(|(_, _, end_position)| end_position.y < viewport.min.y)
-                    .nth_back(1)
-                    .copied()
-                    .unwrap_or((0, Pos2::ZERO, Pos2::ZERO));
+                let max_width = self.max_width(cache, options, ui);
+                ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
+                    let scroll_cache = cache.scroll(&self.source_id);
 
-                // finding the last element that's just outside the viewport
-                let last_event_index = cache
-                    .split_points
-                    .iter()
-                    .filter(|(_, start_position, _)| start_position.y > viewport.max.y)
-                    .nth(1)
-                    .map(|(index, _, _)| *index)
-                    .unwrap_or(num_rows);
+                    // finding the first element that's not in the viewport anymore
+                    let (first_event_index, _, first_end_position) = scroll_cache
+                        .split_points
+                        .iter()
+                        .filter(|(_, _, end_position)| end_position.y < viewport.min.y)
+                        .nth_back(1)
+                        .copied()
+                        .unwrap_or((0, Pos2::ZERO, Pos2::ZERO));
 
-                ui.allocate_space(first_end_position.to_vec2());
+                    // finding the last element that's just outside the viewport
+                    let last_event_index = scroll_cache
+                        .split_points
+                        .iter()
+                        .filter(|(_, start_position, _)| start_position.y > viewport.max.y)
+                        .nth(1)
+                        .map(|(index, _, _)| *index)
+                        .unwrap_or(num_rows);
 
-                // only rendering the elements that are inside the viewport
-                let mut events = events
-                    .into_iter()
-                    .enumerate()
-                    .skip(first_event_index)
-                    .take(last_event_index - first_event_index);
+                    ui.allocate_space(first_end_position.to_vec2());
 
-                while let Some((_, e)) = events.next() {
-                    self.event(ui, e, cache, options, max_width);
-                    self.fenced_code_block(&mut events, max_width, cache, options, ui);
-                    self.table(&mut events, cache, options, ui, max_width);
-                }
+                    // only rendering the elements that are inside the viewport
+                    let mut events = events
+                        .into_iter()
+                        .enumerate()
+                        .skip(first_event_index)
+                        .take(last_event_index - first_event_index);
+
+                    while let Some((_, e)) = events.next() {
+                        self.event(ui, e, cache, options, max_width);
+                        self.fenced_code_block(&mut events, max_width, cache, options, ui);
+                        self.table(&mut events, cache, options, ui, max_width);
+                    }
+                });
             });
-        });
 
         // Forcing full re-render to repopulate split points for the new size
-        if available_size != cache.available_size {
-            cache.page_size = None;
+        let scroll_cache = cache.scroll(&self.source_id);
+        if available_size != scroll_cache.available_size {
+            scroll_cache.page_size = None;
         }
     }
 
