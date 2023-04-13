@@ -426,8 +426,6 @@ impl CommonMarkViewerInternal {
         text: &str,
         populate_split_points: bool,
     ) {
-        cache.scroll(&self.source_id).available_size = ui.available_size();
-
         let max_width = self.max_width(cache, options, ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
@@ -484,7 +482,9 @@ impl CommonMarkViewerInternal {
         let available_size = ui.available_size();
 
         let Some(page_size) = cache.scroll(&self.source_id).page_size else {
-            self.show(ui, cache, options, text, true);
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                self.show(ui, cache, options, text, true);
+            });
             return;
         };
 
@@ -545,6 +545,7 @@ impl CommonMarkViewerInternal {
         // Forcing full re-render to repopulate split points for the new size
         let scroll_cache = cache.scroll(&self.source_id);
         if available_size != scroll_cache.available_size {
+            scroll_cache.available_size = available_size;
             scroll_cache.page_size = None;
         }
     }
