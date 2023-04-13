@@ -384,6 +384,11 @@ struct Image {
     alt_text: Vec<RichText>,
 }
 
+struct FencedCodeBlock {
+    lang: String,
+    content: String,
+}
+
 struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
@@ -393,8 +398,7 @@ struct CommonMarkViewerInternal {
     indentation: i64,
     image: Option<Image>,
     should_insert_newline: bool,
-    fenced_code_block_lang: Option<String>,
-    fenced_code_block_contents: Option<String>,
+    fenced_code_block: Option<FencedCodeBlock>,
     is_table: bool,
 }
 
@@ -409,9 +413,8 @@ impl CommonMarkViewerInternal {
             indentation: -1,
             image: None,
             should_insert_newline: true,
-            fenced_code_block_lang: None,
+            fenced_code_block: None,
             is_table: false,
-            fenced_code_block_contents: None,
         }
     }
 }
@@ -580,7 +583,7 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &mut Ui,
     ) {
-        while self.fenced_code_block_lang.is_some() {
+        while self.fenced_code_block.is_some() {
             if let Some((_, e)) = events.next() {
                 self.event(ui, e, cache, options, max_width);
             } else {
@@ -722,10 +725,8 @@ impl CommonMarkViewerInternal {
             let rich_text = self.style_text(ui, &text);
             if let Some(image) = &mut self.image {
                 image.alt_text.push(rich_text);
-            } else if self.fenced_code_block_lang.is_some() {
-                if let Some(contents) = &mut self.fenced_code_block_contents {
-                    contents.push_str(&text);
-                }
+            } else if let Some(block) = &mut self.fenced_code_block {
+                block.content.push_str(&text);
             } else {
                 ui.label(rich_text);
             }
@@ -756,8 +757,11 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
                 if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
-                    self.fenced_code_block_lang = Some(lang.to_string());
-                    self.fenced_code_block_contents = Some("".to_string());
+                    self.fenced_code_block = Some(FencedCodeBlock {
+                        lang: lang.to_string(),
+                        content: "".to_string(),
+                    });
+
                     newline(ui);
                 }
 
@@ -947,20 +951,21 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
-        if let (Some(lang), Some(text)) = (
-            self.fenced_code_block_lang.take(),
-            self.fenced_code_block_contents.take(),
-        ) {
+        if let Some(block) = self.fenced_code_block.take() {
             ui.scope(|ui| {
                 ui.style_mut().visuals.extreme_bg_color = cache.background_colour(ui, options);
                 let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
-                    let mut job = self.syntax_highlighting(cache, options, &lang, ui, string);
+                    let mut job = self.syntax_highlighting(cache, options, &block.lang, ui, string);
                     job.wrap.max_width = wrap_width;
                     ui.fonts(|f| f.layout_job(job))
                 };
                 ui.add(
                     egui::TextEdit::multiline(
-                        &mut text.strip_suffix('\n').unwrap_or(&text).to_string(),
+                        &mut block
+                            .content
+                            .strip_suffix('\n')
+                            .unwrap_or(&block.content)
+                            .to_string(),
                     )
                     .layouter(&mut layout)
                     .desired_width(max_width)
