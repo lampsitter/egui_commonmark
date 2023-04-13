@@ -15,3 +15,5 @@ jobs:
       run: cargo clippy -- -Dwarnings
     - name: Check all features
       run: cargo check --all-features
+    - name: Cargo fmt
+      run: cargo fmt --check -q
