@@ -501,6 +501,10 @@ impl CommonMarkViewerInternal {
 
         egui::ScrollArea::vertical()
             .id_source(self.source_id.with("_scroll_area"))
+            // Elements have different widths, so the scroll area cannot try to shrink to the
+            // content, as that will mean that the scroll bar will move when loading elements
+            // with different widths.
+            .auto_shrink([false, true])
             .show_viewport(ui, |ui, viewport| {
                 ui.set_height(page_size.y);
                 let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
