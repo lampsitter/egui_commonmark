@@ -556,6 +556,7 @@ impl CommonMarkViewerInternal {
         if available_size != scroll_cache.available_size {
             scroll_cache.available_size = available_size;
             scroll_cache.page_size = None;
+            scroll_cache.split_points.clear();
         }
     }
 
