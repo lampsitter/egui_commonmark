@@ -546,6 +546,7 @@ impl CommonMarkViewerInternal {
         let scroll_cache = cache.scroll(&self.source_id);
         if available_size != scroll_cache.available_size {
             scroll_cache.page_size = None;
+            scroll_cache.split_points.clear();
         }
     }
 
