@@ -530,6 +530,7 @@ impl CommonMarkViewerInternal {
 
                 let max_width = self.max_width(cache, options, ui);
                 ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
+                    ui.spacing_mut().item_spacing.x = 0.0;
                     let scroll_cache = cache.scroll(&self.source_id);
 
                     // finding the first element that's not in the viewport anymore

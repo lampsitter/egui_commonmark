@@ -6,6 +6,10 @@
 
 - `CommonMarkCache::clear_scrollable_with_id` to clear the cache for only a single scrollable viewer.
 
+### Fixed
+
+- Removed added spacing between elements in `show_scrollable`
+
 ## 0.7.1 - 2023-04-21
 
 ### Added
