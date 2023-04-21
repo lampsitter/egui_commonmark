@@ -21,7 +21,7 @@
 
 use egui::{self, Id, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
 use egui::{ColorImage, TextureHandle};
-use pulldown_cmark::{CowStr, HeadingLevel};
+use pulldown_cmark::{CowStr, HeadingLevel, Options};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -382,6 +382,14 @@ impl CommonMarkViewer {
     }
 }
 
+/// Supported pulldown_cmark options
+fn parser_options() -> Options {
+    Options::ENABLE_TABLES
+        | Options::ENABLE_TASKLISTS
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_FOOTNOTES
+}
+
 #[derive(Default)]
 struct Style {
     heading: Option<pulldown_cmark::HeadingLevel>,
@@ -457,22 +465,14 @@ impl CommonMarkViewerInternal {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            use pulldown_cmark::Options;
-            let parser_options = Options::ENABLE_TABLES
-                | Options::ENABLE_TASKLISTS
-                | Options::ENABLE_STRIKETHROUGH
-                | Options::ENABLE_FOOTNOTES;
-            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options).enumerate();
+            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options()).enumerate();
 
             while let Some((index, e)) = events.next() {
                 let start_position = ui.next_widget_position();
                 let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
                 let should_add_split_point = self.indentation == -1 && is_element_end;
 
-                self.event(ui, e, cache, options, max_width);
-
-                self.fenced_code_block(&mut events, max_width, cache, options, ui);
-                self.table(&mut events, cache, options, ui, max_width);
+                self.process_event(ui, &mut events, e, cache, options, max_width);
 
                 if populate_split_points {
                     let scroll_cache = cache.scroll(&self.source_id);
@@ -503,27 +503,23 @@ impl CommonMarkViewerInternal {
         text: &str,
     ) {
         let available_size = ui.available_size();
+        let scroll_id = self.source_id.with("_scroll_area");
 
         let Some(page_size) = cache.scroll(&self.source_id).page_size else {
             egui::ScrollArea::vertical()
-                .id_source(self.source_id.with("_scroll_area"))
+                .id_source(scroll_id)
                 .show(ui, |ui| {
                 self.show(ui, cache, options, text, true);
             });
             return;
         };
 
-        use pulldown_cmark::Options;
-        let parser_options = Options::ENABLE_TABLES
-            | Options::ENABLE_TASKLISTS
-            | Options::ENABLE_STRIKETHROUGH
-            | Options::ENABLE_FOOTNOTES;
-        let events = pulldown_cmark::Parser::new_ext(text, parser_options).collect::<Vec<_>>();
+        let events = pulldown_cmark::Parser::new_ext(text, parser_options()).collect::<Vec<_>>();
 
         let num_rows = events.len();
 
         egui::ScrollArea::vertical()
-            .id_source(self.source_id.with("_scroll_area"))
+            .id_source(scroll_id)
             // Elements have different widths, so the scroll area cannot try to shrink to the
             // content, as that will mean that the scroll bar will move when loading elements
             // with different widths.
@@ -564,9 +560,7 @@ impl CommonMarkViewerInternal {
                         .take(last_event_index - first_event_index);
 
                     while let Some((_, e)) = events.next() {
-                        self.event(ui, e, cache, options, max_width);
-                        self.fenced_code_block(&mut events, max_width, cache, options, ui);
-                        self.table(&mut events, cache, options, ui, max_width);
+                        self.process_event(ui, &mut events, e, cache, options, max_width);
                     }
                 });
             });
@@ -578,6 +572,20 @@ impl CommonMarkViewerInternal {
             scroll_cache.page_size = None;
             scroll_cache.split_points.clear();
         }
+    }
+
+    fn process_event<'e>(
+        &mut self,
+        ui: &mut Ui,
+        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+        event: pulldown_cmark::Event,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        max_width: f32,
+    ) {
+        self.event(ui, event, cache, options, max_width);
+        self.fenced_code_block(events, max_width, cache, options, ui);
+        self.table(events, cache, options, ui, max_width);
     }
 
     fn max_width(&self, cache: &CommonMarkCache, options: &CommonMarkOptions, ui: &Ui) -> f32 {
