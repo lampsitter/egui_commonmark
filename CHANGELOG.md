@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.1 - 2023-04-21
+
 ### Added
 
 - Only render visible elements within a ScrollArea with `show_scrollable`
