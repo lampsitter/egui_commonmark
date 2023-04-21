@@ -87,9 +87,10 @@ struct ScrollableCache {
 
 type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
 
-// Everything stored here must take into account that the cache is for multiple
-// CommonMarkviewers with different source_ids.
+/// A cache used for storing content such as images.
 pub struct CommonMarkCache {
+    // Everything stored here must take into account that the cache is for multiple
+    // CommonMarkviewers with different source_ids.
     images: ImageHashMap,
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
@@ -134,9 +135,15 @@ impl CommonMarkCache {
         self.images.lock().unwrap().clear();
     }
 
-    /// Clear the cache for scrollable elements
+    /// Clear the cache for all scrollable elements
     pub fn clear_scrollable(&mut self) {
         self.scroll.clear();
+    }
+
+    /// Clear the cache for a specific scrollable viewer. Returns false if the
+    /// id was not in the cache.
+    pub fn clear_scrollable_with_id(&mut self, source_id: impl std::hash::Hash) -> bool {
+        self.scroll.remove(&Id::new(source_id)).is_some()
     }
 
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
@@ -332,25 +339,38 @@ impl CommonMarkViewer {
     }
 
     #[cfg(feature = "syntax_highlighting")]
+    /// Set the syntax theme to be used inside code blocks in light mode
     pub fn syntax_theme_light<S: Into<String>>(mut self, theme: S) -> Self {
         self.options.theme_light = theme.into();
         self
     }
 
     #[cfg(feature = "syntax_highlighting")]
+    /// Set the syntax theme to be used inside code blocks in dark mode
     pub fn syntax_theme_dark<S: Into<String>>(mut self, theme: S) -> Self {
         self.options.theme_dark = theme.into();
         self
     }
 
+    /// Shows rendered markdown
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.deactivate_link_hooks();
         CommonMarkViewerInternal::new(self.source_id).show(ui, cache, &self.options, text, false);
     }
 
-    /// Shows markdown file inside a ScrollArea
-    /// This function is much more performant than just calling show inside a ScrollArea,
+    /// Shows markdown inside a [`ScrollArea`].
+    /// This function is much more performant than just calling [`show`] inside a [`ScrollArea`],
     /// because it only renders elements that are visible.
+    ///
+    /// # Caveat
+    ///
+    /// This assumes that the markdown is static. If it does change, you have to clear the cache
+    /// by using [`clear_scrollable_with_id`](CommonMarkCache::clear_scrollable_with_id) or
+    /// [`clear_scrollable`](CommonMarkCache::clear_scrollable). If the content changes every frame,
+    /// it's faster to call [`show`] directly.
+    ///
+    /// [`ScrollArea`]: egui::ScrollArea
+    /// [`show`]: crate::CommonMarkViewer::show
     pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.deactivate_link_hooks();
         CommonMarkViewerInternal::new(self.source_id).show_scrollable(
