@@ -50,15 +50,21 @@ fn try_render_svg(_data: &[u8]) -> Option<ColorImage> {
 
 #[cfg(feature = "svg")]
 fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
-    let mut options = usvg::Options::default();
-    options.fontdb.load_system_fonts();
-    let tree = usvg::Tree::from_data(data, &options.to_ref()).ok()?;
-    let size = tree.svg_node().size.to_screen_size();
+    use usvg::{TreeParsing, TreeTextToPath};
+
+    let options = usvg::Options::default();
+    let mut fontdb = usvg::fontdb::Database::new();
+    fontdb.load_system_fonts();
+
+    let mut tree = usvg::Tree::from_data(data, &options).ok()?;
+    tree.convert_text(&fontdb);
+
+    let size = tree.size.to_screen_size();
 
     let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
     resvg::render(
         &tree,
-        usvg::FitTo::Original,
+        resvg::FitTo::Original,
         tiny_skia::Transform::default(),
         pixmap.as_mut(),
     );
