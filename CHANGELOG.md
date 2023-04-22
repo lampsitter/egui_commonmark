@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.2 - 2023-04-22
+
 ### Added
 
 - `CommonMarkCache::clear_scrollable_with_id` to clear the cache for only a single scrollable viewer.
