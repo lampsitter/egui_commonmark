@@ -508,6 +508,7 @@ impl CommonMarkViewerInternal {
         let Some(page_size) = cache.scroll(&self.source_id).page_size else {
             egui::ScrollArea::vertical()
                 .id_source(scroll_id)
+                .auto_shrink([false, true])
                 .show(ui, |ui| {
                 self.show(ui, cache, options, text, true);
             });
