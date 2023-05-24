@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.7.3 - 2023-05-24
+
+### Added
+
+- Support for egui 0.22. This release can also still be used with 0.21.
+An explicit dependency update might be needed to use egui 0.22: `cargo update -p egui_commonmark`
+
 ## 0.7.2 - 2023-04-22
 
 ### Added
