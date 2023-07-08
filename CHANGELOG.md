@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.7.4 - 2023-07-08
+
+### Changed
+
+- Better looking checkboxes
+
 ## 0.7.3 - 2023-05-24
 
 ### Added
