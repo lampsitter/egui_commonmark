@@ -19,7 +19,7 @@
 //!
 //! ```
 
-use egui::{self, Id, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
+use egui::{self, epaint, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
 use egui::{ColorImage, TextureHandle};
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
 use std::collections::hash_map::Entry;
@@ -747,12 +747,8 @@ impl CommonMarkViewerInternal {
                 newline(ui);
                 ui.add(egui::Separator::default().horizontal());
             }
-            pulldown_cmark::Event::TaskListMarker(checkbox) => {
-                if checkbox {
-                    checkbox_point(ui, "☑ ")
-                } else {
-                    checkbox_point(ui, "☐ ")
-                }
+            pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
+                ui.add(Checkbox::without_text(&mut checkbox));
             }
         }
     }
@@ -1106,20 +1102,6 @@ fn bullet_point_hollow(ui: &mut Ui) {
     );
 }
 
-fn checkbox_point(ui: &mut Ui, ty: &str) {
-    let (rect, _) = ui.allocate_exact_size(
-        egui::vec2(width_body_space(ui) * 5.0, height_body(ui)),
-        Sense::hover(),
-    );
-    ui.painter().text(
-        rect.right_center(),
-        egui::Align2::RIGHT_CENTER,
-        ty,
-        TextStyle::Body.resolve(ui.style()),
-        ui.visuals().text_color(),
-    );
-}
-
 fn number_point(ui: &mut Ui, number: &str) {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
@@ -1204,5 +1186,57 @@ fn default_theme(ui: &Ui) -> &str {
         DEFAULT_THEME_DARK
     } else {
         DEFAULT_THEME_LIGHT
+    }
+}
+
+// Stripped down version of egui's Checkbox. The only difference is that this
+// creates a noninteractive checkbox. ui.add_enabled could have been used instead,
+// but it makes the checkbox too grey.
+struct Checkbox<'a> {
+    checked: &'a mut bool,
+}
+
+impl<'a> Checkbox<'a> {
+    pub fn without_text(checked: &'a mut bool) -> Self {
+        Checkbox { checked }
+    }
+}
+
+impl<'a> egui::Widget for Checkbox<'a> {
+    fn ui(self, ui: &mut Ui) -> egui::Response {
+        let Checkbox { checked } = self;
+
+        let spacing = &ui.spacing();
+        let icon_width = spacing.icon_width;
+
+        let mut desired_size = egui::vec2(icon_width, 0.0);
+        desired_size = desired_size.at_least(Vec2::splat(spacing.interact_size.y));
+        desired_size.y = desired_size.y.max(icon_width);
+        let (rect, response) = ui.allocate_exact_size(desired_size, Sense::click());
+
+        if ui.is_rect_visible(rect) {
+            let visuals = ui.style().visuals.noninteractive();
+            let (small_icon_rect, big_icon_rect) = ui.spacing().icon_rectangles(rect);
+            ui.painter().add(epaint::RectShape {
+                rect: big_icon_rect.expand(visuals.expansion),
+                rounding: visuals.rounding,
+                fill: visuals.bg_fill,
+                stroke: visuals.bg_stroke,
+            });
+
+            if *checked {
+                // Check mark:
+                ui.painter().add(egui::Shape::line(
+                    vec![
+                        egui::pos2(small_icon_rect.left(), small_icon_rect.center().y),
+                        egui::pos2(small_icon_rect.center().x, small_icon_rect.bottom()),
+                        egui::pos2(small_icon_rect.right(), small_icon_rect.top()),
+                    ],
+                    visuals.fg_stroke,
+                ));
+            }
+        }
+
+        response
     }
 }
