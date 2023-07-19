@@ -50,38 +50,28 @@ fn try_render_svg(_data: &[u8]) -> Option<ColorImage> {
 
 #[cfg(feature = "svg")]
 fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
+    use resvg::tiny_skia;
     use usvg::{TreeParsing, TreeTextToPath};
 
-    let options = usvg::Options::default();
-    let mut fontdb = usvg::fontdb::Database::new();
-    fontdb.load_system_fonts();
+    let tree = {
+        let options = usvg::Options::default();
+        let mut fontdb = usvg::fontdb::Database::new();
+        fontdb.load_system_fonts();
 
-    let mut tree = usvg::Tree::from_data(data, &options).ok()?;
-    tree.convert_text(&fontdb);
+        let mut tree = usvg::Tree::from_data(data, &options).ok()?;
+        tree.convert_text(&fontdb);
+        resvg::Tree::from_usvg(&tree)
+    };
 
-    let size = tree.size.to_screen_size();
+    let size = tree.size.to_int_size();
 
     let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
-    resvg::render(
-        &tree,
-        resvg::FitTo::Original,
-        tiny_skia::Transform::default(),
-        pixmap.as_mut(),
-    );
+    tree.render(tiny_skia::Transform::default(), &mut pixmap.as_mut());
 
-    Some(
-        if let Some((_, _, pixmap)) = resvg::trim_transparency(pixmap.clone()) {
-            ColorImage::from_rgba_unmultiplied(
-                [pixmap.width() as usize, pixmap.height() as usize],
-                &pixmap.take(),
-            )
-        } else {
-            ColorImage::from_rgba_unmultiplied(
-                [pixmap.width() as usize, pixmap.height() as usize],
-                &pixmap.take(),
-            )
-        },
-    )
+    Some(ColorImage::from_rgba_unmultiplied(
+        [pixmap.width() as usize, pixmap.height() as usize],
+        &pixmap.take(),
+    ))
 }
 
 #[derive(Default)]

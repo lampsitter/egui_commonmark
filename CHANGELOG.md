@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- Updated dependencies.
+
+### Removed
+
+- Removed trimming of svg's transparency. The function has been removed from resvg.
+
 ## 0.7.4 - 2023-07-08
 
 ### Changed
