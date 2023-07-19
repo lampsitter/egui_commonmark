@@ -516,8 +516,8 @@ impl CommonMarkViewerInternal {
                 .id_source(scroll_id)
                 .auto_shrink([false, true])
                 .show(ui, |ui| {
-                self.show(ui, cache, options, text, true);
-            });
+                    self.show(ui, cache, options, text, true);
+                });
             // Prevent repopulating points twice at startup
             cache.scroll(&self.source_id).available_size = available_size;
             return;
