@@ -5,6 +5,7 @@ version = "0.7.4"
 edition = "2021"
 description = "Commonmark viewer for egui"
 keywords = ["commonmark", "egui"]
+categories = ["gui"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/lampsitter/egui_commonmark"
