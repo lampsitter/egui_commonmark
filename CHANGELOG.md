@@ -4,7 +4,7 @@
 
 ### Added
 
-- Code blocks now use the syntax hihlighting theme's carat and selection colors.
+- Code blocks now use the syntax hihlighting theme's caret and selection colors.
 
 ### Changed
 
