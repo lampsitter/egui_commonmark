@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Code blocks now use the syntax hihlighting theme's carat and selection colors.
+
 ### Changed
 
 - Updated dependencies.

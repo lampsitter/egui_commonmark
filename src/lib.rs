@@ -184,20 +184,6 @@ impl CommonMarkCache {
     }
 
     #[cfg(feature = "syntax_highlighting")]
-    fn background_colour(&mut self, ui: &Ui, options: &CommonMarkOptions) -> egui::Color32 {
-        if let Some(bg) = self.curr_theme(ui, options).settings.background {
-            egui::Color32::from_rgb(bg.r, bg.g, bg.b)
-        } else {
-            ui.visuals().extreme_bg_color
-        }
-    }
-
-    #[cfg(not(feature = "syntax_highlighting"))]
-    fn background_colour(&mut self, ui: &Ui, _options: &CommonMarkOptions) -> egui::Color32 {
-        ui.visuals().extreme_bg_color
-    }
-
-    #[cfg(feature = "syntax_highlighting")]
     fn curr_theme(&self, ui: &Ui, options: &CommonMarkOptions) -> &Theme {
         self.ts
             .themes
@@ -978,7 +964,8 @@ impl CommonMarkViewerInternal {
     ) {
         if let Some(block) = self.fenced_code_block.take() {
             ui.scope(|ui| {
-                ui.style_mut().visuals.extreme_bg_color = cache.background_colour(ui, options);
+                Self::pre_syntax_highlighting(cache, options, ui);
+
                 let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
                     let mut job = self.syntax_highlighting(cache, options, &block.lang, ui, string);
                     job.wrap.max_width = wrap_width;
@@ -1002,11 +989,60 @@ impl CommonMarkViewerInternal {
         self.text_style.code = false;
         newline(ui);
     }
+}
 
-    #[cfg(feature = "syntax_highlighting")]
+#[cfg(not(feature = "syntax_highlighting"))]
+impl CommonMarkViewerInternal {
+    fn pre_syntax_highlighting(
+        _cache: &mut CommonMarkCache,
+        _options: &CommonMarkOptions,
+        ui: &mut Ui,
+    ) {
+        ui.style_mut().visuals.extreme_bg_color = ui.visuals().extreme_bg_color;
+    }
+
     fn syntax_highlighting(
         &mut self,
+        _cache: &mut CommonMarkCache,
+        _options: &CommonMarkOptions,
+        _extension: &str,
+        ui: &Ui,
+        text: &str,
+    ) -> egui::text::LayoutJob {
+        plain_highlighting(ui, text)
+    }
+}
+
+#[cfg(feature = "syntax_highlighting")]
+impl CommonMarkViewerInternal {
+    fn pre_syntax_highlighting(
         cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        ui: &mut Ui,
+    ) {
+        let curr_theme = cache.curr_theme(ui, options);
+        let style = ui.style_mut();
+
+        style.visuals.extreme_bg_color = curr_theme
+            .settings
+            .background
+            .map(syntect_color_to_egui)
+            .unwrap_or(style.visuals.extreme_bg_color);
+
+        // This also changes the color around the border of the text edit.
+        // FIXME: Is this good or bad?
+        if let Some(color) = curr_theme.settings.caret {
+            style.visuals.selection.stroke.color = syntect_color_to_egui(color);
+        }
+
+        if let Some(color) = curr_theme.settings.selection_foreground {
+            style.visuals.selection.bg_fill = syntect_color_to_egui(color);
+        }
+    }
+
+    fn syntax_highlighting(
+        &mut self,
+        cache: &CommonMarkCache,
         options: &CommonMarkOptions,
         extension: &str,
         ui: &Ui,
@@ -1025,7 +1061,7 @@ impl CommonMarkViewerInternal {
                         0.0,
                         egui::TextFormat::simple(
                             TextStyle::Monospace.resolve(ui.style()),
-                            egui::Color32::from_rgb(front.r, front.g, front.b),
+                            syntect_color_to_egui(front),
                         ),
                     );
                 }
@@ -1035,18 +1071,6 @@ impl CommonMarkViewerInternal {
         } else {
             plain_highlighting(ui, text)
         }
-    }
-
-    #[cfg(not(feature = "syntax_highlighting"))]
-    fn syntax_highlighting(
-        &mut self,
-        _cache: &mut CommonMarkCache,
-        _options: &CommonMarkOptions,
-        _extension: &str,
-        ui: &Ui,
-        text: &str,
-    ) -> egui::text::LayoutJob {
-        plain_highlighting(ui, text)
     }
 }
 
@@ -1061,6 +1085,11 @@ fn plain_highlighting(ui: &Ui, text: &str) -> egui::text::LayoutJob {
         ),
     );
     job
+}
+
+#[cfg(feature = "syntax_highlighting")]
+fn syntect_color_to_egui(color: syntect::highlighting::Color) -> egui::Color32 {
+    egui::Color32::from_rgb(color.r, color.g, color.b)
 }
 
 fn newline(ui: &mut Ui) {
