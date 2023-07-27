@@ -74,7 +74,7 @@ fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
     ))
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct ScrollableCache {
     available_size: Vec2,
     page_size: Option<Vec2>,
@@ -94,6 +94,30 @@ pub struct CommonMarkCache {
     ts: ThemeSet,
     link_hooks: HashMap<String, bool>,
     scroll: HashMap<Id, ScrollableCache>,
+}
+
+#[cfg(not(feature = "syntax_highlighting"))]
+impl std::fmt::Debug for CommonMarkCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommonMarkCache")
+            .field("images", &format_args!(" {{ .. }} "))
+            .field("link_hooks", &self.link_hooks)
+            .field("scroll", &self.scroll)
+            .finish()
+    }
+}
+
+#[cfg(feature = "syntax_highlighting")]
+impl std::fmt::Debug for CommonMarkCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommonMarkCache")
+            .field("images", &format_args!(" {{ .. }}"))
+            .field("ps", &self.ps)
+            .field("ts", &self.ts)
+            .field("link_hooks", &self.link_hooks)
+            .field("scroll", &self.scroll)
+            .finish()
+    }
 }
 
 #[allow(clippy::derivable_impls)]
