@@ -476,9 +476,11 @@ impl CommonMarkViewerInternal {
             while let Some((index, e)) = events.next() {
                 let start_position = ui.next_widget_position();
                 let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
-                let should_add_split_point = self.indentation == -1 && is_element_end;
+                let mut should_add_split_point = self.indentation == -1 && is_element_end;
 
-                self.process_event(ui, &mut events, e, cache, options, max_width);
+                if self.process_event(ui, &mut events, e, cache, options, max_width) {
+                    should_add_split_point = true;
+                }
 
                 if populate_split_points {
                     let scroll_cache = cache.scroll(&self.source_id);
@@ -584,6 +586,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
+    /// returns true when a widget that must collect events has finished
     fn process_event<'e>(
         &mut self,
         ui: &mut Ui,
@@ -592,10 +595,16 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
-    ) {
+    ) -> bool {
         self.event(ui, event, cache, options, max_width);
-        self.fenced_code_block(events, max_width, cache, options, ui);
-        self.table(events, cache, options, ui, max_width);
+        let event_code = self.fenced_code_block(events, max_width, cache, options, ui);
+        let event_table = self.table(events, cache, options, ui, max_width);
+
+        if event_code && event_table {
+            panic!("bug in code block/table parsing");
+        }
+
+        event_code || event_table
     }
 
     fn max_width(&self, cache: &CommonMarkCache, options: &CommonMarkOptions, ui: &Ui) -> f32 {
@@ -621,14 +630,20 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
-    ) {
+    ) -> bool {
         while self.fenced_code_block.is_some() {
             if let Some((_, e)) = events.next() {
-                self.event(ui, e, cache, options, max_width);
+                let is_end = self.event(ui, e, cache, options, max_width);
+
+                if is_end {
+                    return true;
+                }
             } else {
                 break;
             }
         }
+
+        false
     }
 
     fn table<'e>(
@@ -638,8 +653,9 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &mut Ui,
         max_width: f32,
-    ) {
+    ) -> bool {
         if self.is_table {
+            let mut is_at_end = false;
             newline(ui);
             egui::Frame::group(ui.style()).show(ui, |ui| {
                 let id = self.source_id.with(self.curr_table);
@@ -648,7 +664,7 @@ impl CommonMarkViewerInternal {
                     while self.is_table {
                         if let Some((_, e)) = events.next() {
                             self.should_insert_newline = false;
-                            self.event(ui, e, cache, options, max_width);
+                            is_at_end = self.event(ui, e, cache, options, max_width);
                         } else {
                             break;
                         }
@@ -657,6 +673,9 @@ impl CommonMarkViewerInternal {
             });
 
             newline(ui);
+            is_at_end
+        } else {
+            false
         }
     }
 
@@ -718,6 +737,7 @@ impl CommonMarkViewerInternal {
         text
     }
 
+    /// returns true when a end tag has been reached
     fn event(
         &mut self,
         ui: &mut Ui,
@@ -725,10 +745,13 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
-    ) {
+    ) -> bool {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
+            pulldown_cmark::Event::End(tag) => {
+                self.end_tag(ui, tag, cache, options, max_width);
+                return true;
+            }
             pulldown_cmark::Event::Text(text) => {
                 self.event_text(text, ui);
             }
@@ -751,6 +774,8 @@ impl CommonMarkViewerInternal {
                 ui.add(Checkbox::without_text(&mut checkbox));
             }
         }
+
+        false
     }
 
     fn event_text(&mut self, text: CowStr, ui: &mut Ui) {
