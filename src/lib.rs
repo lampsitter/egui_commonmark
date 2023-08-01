@@ -523,11 +523,29 @@ impl CommonMarkViewerInternal {
                         scroll_cache
                             .split_points
                             .push((index, start_position, end_position));
+                        ui.painter().text(
+                            start_position,
+                            egui::Align2::CENTER_CENTER,
+                            format!("{index}"),
+                            TextStyle::Body.resolve(ui.style()),
+                            egui::Color32::BLUE,
+                        );
+                        ui.painter().text(
+                            end_position,
+                            egui::Align2::CENTER_CENTER,
+                            format!("{index}"),
+                            TextStyle::Body.resolve(ui.style()),
+                            egui::Color32::RED,
+                        );
                     }
                 }
             }
 
             cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
+
+            // rerender for testing.
+            cache.scroll(&self.source_id).page_size = None;
+            cache.scroll(&self.source_id).split_points.clear();
         });
     }
 
@@ -661,9 +679,7 @@ impl CommonMarkViewerInternal {
     ) -> bool {
         while self.fenced_code_block.is_some() {
             if let Some((_, e)) = events.next() {
-                let is_end = self.event(ui, e, cache, options, max_width);
-
-                if is_end {
+                if self.event(ui, e, cache, options, max_width) {
                     return true;
                 }
             } else {

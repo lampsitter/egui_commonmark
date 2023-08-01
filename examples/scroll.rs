@@ -23,20 +23,42 @@ This section will be repeated
 
 ```rs
 let mut vec = Vec::new();
+let x = 3;
 vec.push(5);
 ```
- 
+
+> Some smart quote here
+
 # Plans
 * Make a sandwich
 * Bake a cake
 * Conquer the world
-        "#;
-        text += &repeating.repeat(1024);
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+![Rust logo](examples/rust-logo-128x128.png)
+
+        "#;
+        text += &repeating.repeat(80);
+
+        egui::SidePanel::left("aa").show(ctx, |ui| {
             CommonMarkViewer::new("viewer")
                 .max_image_width(Some(512))
                 .show_scrollable(ui, &mut self.cache, &text);
+        });
+
+        use pulldown_cmark::Options;
+        fn parser_options() -> pulldown_cmark::Options {
+            Options::ENABLE_TABLES
+                | Options::ENABLE_TASKLISTS
+                | Options::ENABLE_STRIKETHROUGH
+                | Options::ENABLE_FOOTNOTES
+        }
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let mut events = pulldown_cmark::Parser::new_ext(&text, parser_options());
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                while let Some(e) = events.next() {
+                    ui.label(format!("{:#?}", e));
+                }
+            });
         });
     }
 }
