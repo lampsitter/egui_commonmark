@@ -1078,10 +1078,8 @@ impl CommonMarkViewerInternal {
             .map(syntect_color_to_egui)
             .unwrap_or(style.visuals.extreme_bg_color);
 
-        // This also changes the color around the border of the text edit.
-        // FIXME: Is this good or bad?
         if let Some(color) = curr_theme.settings.caret {
-            style.visuals.selection.stroke.color = syntect_color_to_egui(color);
+            style.visuals.text_cursor.color = syntect_color_to_egui(color);
         }
 
         if let Some(color) = curr_theme.settings.selection_foreground {

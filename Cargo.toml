@@ -13,7 +13,7 @@ documentation = "https://docs.rs/egui_commonmark"
 include = ["src/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]
-egui = ">=0.21, <0.23"
+egui = { git = "https://github.com/emilk/egui", rev = "98087029" }
 pulldown-cmark = { version = "0.9.3", default-features = false }
 image = { version = "0.24", default-features = false, features = ["png"] }
 
@@ -35,7 +35,7 @@ svg = ["resvg", "usvg"]
 fetch = ["ehttp", "url", "image/jpeg"]
 
 [dev-dependencies]
-eframe = ">=0.21, <0.23"
+eframe = { git = "https://github.com/emilk/egui", rev = "98087029" }
 
 [package.metadata.docs.rs]
 features = ["syntax_highlighting", "svg"]

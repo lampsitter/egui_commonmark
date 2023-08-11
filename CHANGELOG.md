@@ -6,7 +6,6 @@
 
 - Code blocks now use the syntax highlighting theme's caret and selection colors.
 - `CommonMarkCache` now implements `Debug` ([#7](https://github.com/lampsitter/egui_commonmark/pull/7) by [@ChristopherPerry6060](https://github.com/ChristopherPerry6060)).
-- Tables and code blocks are accounted for in `show_scrollable`.
 
 ### Changed
 
