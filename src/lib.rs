@@ -154,11 +154,27 @@ impl CommonMarkCache {
     /// Add more color themes for code blocks(.tmTheme files). Set the color theme with
     /// [`syntax_theme_dark`](CommonMarkViewer::syntax_theme_dark) and
     /// [`syntax_theme_light`](CommonMarkViewer::syntax_theme_light)
-    pub fn add_syntax_theme_from_folder(
+    pub fn add_syntax_themes_from_folder(
         &mut self,
         path: impl AsRef<std::path::Path>,
     ) -> Result<(), syntect::LoadingError> {
         self.ts.add_from_folder(path)
+    }
+
+    #[cfg(feature = "syntax_highlighting")]
+    /// Add color theme for code blocks(.tmTheme files). Set the color theme with
+    /// [`syntax_theme_dark`](CommonMarkViewer::syntax_theme_dark) and
+    /// [`syntax_theme_light`](CommonMarkViewer::syntax_theme_light)
+    pub fn add_syntax_theme_from_bytes(
+        &mut self,
+        name: impl Into<String>,
+        bytes: &[u8],
+    ) -> Result<(), syntect::LoadingError> {
+        let mut cursor = std::io::Cursor::new(bytes);
+        self.ts
+            .themes
+            .insert(name.into(), ThemeSet::load_from_reader(&mut cursor)?);
+        Ok(())
     }
 
     /// Refetch all images
