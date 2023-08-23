@@ -404,6 +404,7 @@ impl CommonMarkViewer {
     ///
     /// [`ScrollArea`]: egui::ScrollArea
     /// [`show`]: crate::CommonMarkViewer::show
+    #[doc(hidden)] // Buggy in scenarios more complex than the example application
     pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.deactivate_link_hooks();
         CommonMarkViewerInternal::new(self.source_id).show_scrollable(
