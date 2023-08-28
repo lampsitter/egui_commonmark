@@ -19,6 +19,7 @@
 //!
 //! ```
 
+mod fetch_data;
 mod image_loading;
 
 use egui::TextureHandle;
@@ -43,7 +44,7 @@ struct ScrollableCache {
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
 
-type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
+pub(crate) type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
 
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
@@ -951,7 +952,7 @@ impl CommonMarkViewerInternal {
             Entry::Occupied(o) => o.get().clone(),
             Entry::Vacant(v) => {
                 let ctx = ui.ctx();
-                let handle = get_image_data(&url, ctx, Arc::clone(&cache.images))
+                let handle = fetch_data::get_image_data(&url, ctx, Arc::clone(&cache.images))
                     .and_then(|data| parse_image(ctx, &url, &data));
 
                 v.insert(handle.clone());
@@ -1202,38 +1203,6 @@ fn width_body_space(ui: &Ui) -> f32 {
 fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Option<TextureHandle> {
     let image = image_loading::load_image(data);
     image.map(|image| ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
-}
-
-#[cfg(feature = "fetch")]
-fn get_image_data(path: &str, ctx: &egui::Context, images: ImageHashMap) -> Option<Vec<u8>> {
-    let url = url::Url::parse(path);
-    if url.is_ok() {
-        let ctx2 = ctx.clone();
-        let path = path.to_owned();
-        ehttp::fetch(ehttp::Request::get(&path), move |r| {
-            if let Ok(r) = r {
-                let data = r.bytes;
-                if let Some(handle) = parse_image(&ctx2, &path, &data) {
-                    // we only update if the image was loaded properly
-                    *images.lock().unwrap().get_mut(&path).unwrap() = Some(handle);
-                    ctx2.request_repaint();
-                }
-            }
-        });
-
-        None
-    } else {
-        get_image_data_from_file(path)
-    }
-}
-
-#[cfg(not(feature = "fetch"))]
-fn get_image_data(path: &str, _ctx: &egui::Context, _images: ImageHashMap) -> Option<Vec<u8>> {
-    get_image_data_from_file(path)
-}
-
-fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
-    std::fs::read(url).ok()
 }
 
 #[cfg(feature = "syntax_highlighting")]
