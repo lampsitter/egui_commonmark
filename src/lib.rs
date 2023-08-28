@@ -47,11 +47,11 @@ struct ScrollableCache {
 }
 
 #[derive(Default)]
-struct ImaheHandleCache {
+struct ImageHandleCache {
     cache: HashMap<String, Promise<Result<TextureHandle, String>>>,
 }
 
-impl ImaheHandleCache {
+impl ImageHandleCache {
     fn clear(&mut self) {
         self.cache.clear();
     }
@@ -86,13 +86,13 @@ impl ImaheHandleCache {
     }
 }
 
-impl ImaheHandleCache {}
+impl ImageHandleCache {}
 
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
     // Everything stored here must take into account that the cache is for multiple
     // CommonMarkviewers with different source_ids.
-    images: Arc<Mutex<ImaheHandleCache>>,
+    images: Arc<Mutex<ImageHandleCache>>,
 
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
