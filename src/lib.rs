@@ -22,12 +22,14 @@
 mod fetch_data;
 mod image_loading;
 
+use std::sync::Arc;
+use std::{collections::HashMap, task::Poll};
+
 use egui::TextureHandle;
 use egui::{self, epaint, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
+use parking_lot::Mutex;
+use poll_promise::Promise;
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "syntax_highlighting")]
 use syntect::{
@@ -44,18 +46,62 @@ struct ScrollableCache {
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
 
-pub(crate) type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
+#[derive(Default)]
+struct ImaheHandleCache {
+    cache: HashMap<String, Promise<Result<TextureHandle, String>>>,
+}
+
+impl ImaheHandleCache {
+    fn clear(&mut self) {
+        self.cache.clear();
+    }
+
+    fn load(&mut self, ctx: &egui::Context, url: String) -> Poll<Result<TextureHandle, String>> {
+        let promise = self.cache.entry(url.clone()).or_insert_with(|| {
+            let ctx = ctx.clone();
+            let (sender, promise) = Promise::new();
+            fetch_data::get_image_data(&url.clone(), move |result| {
+                match result {
+                    Ok(bytes) => {
+                        sender.send(parse_image(&ctx, &url, &bytes));
+                    }
+
+                    Err(err) => {
+                        sender.send(Err(err));
+                    }
+                };
+                ctx.request_repaint();
+            });
+            promise
+        });
+
+        promise.poll().map(|r| r.clone())
+    }
+
+    fn loaded(&self) -> impl Iterator<Item = &TextureHandle> {
+        self.cache
+            .values()
+            .flat_map(|p| p.ready())
+            .flat_map(|r| r.as_ref().ok())
+    }
+}
+
+impl ImaheHandleCache {}
 
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
     // Everything stored here must take into account that the cache is for multiple
     // CommonMarkviewers with different source_ids.
-    images: ImageHashMap,
+    images: Arc<Mutex<ImaheHandleCache>>,
+
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
+
     #[cfg(feature = "syntax_highlighting")]
     ts: ThemeSet,
+
     link_hooks: HashMap<String, bool>,
+
     scroll: HashMap<Id, ScrollableCache>,
 }
 
@@ -142,7 +188,7 @@ impl CommonMarkCache {
 
     /// Refetch all images
     pub fn reload_images(&mut self) {
-        self.images.lock().unwrap().clear();
+        self.images.lock().clear();
     }
 
     /// Clear the cache for all scrollable elements
@@ -208,7 +254,7 @@ impl CommonMarkCache {
 
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
         let mut max = 0.0;
-        for i in self.images.lock().unwrap().values().flatten() {
+        for i in self.images.lock().loaded() {
             let width = options.image_scaled(i)[0];
             if width >= max {
                 max = width;
@@ -404,7 +450,7 @@ struct Link {
 }
 
 struct Image {
-    handle: Option<TextureHandle>,
+    handle: Poll<Result<TextureHandle, String>>,
     url: String,
     alt_text: Vec<RichText>,
 }
@@ -948,17 +994,7 @@ impl CommonMarkViewerInternal {
     }
 
     fn start_image(&mut self, url: String, ui: &mut Ui, cache: &mut CommonMarkCache) {
-        let handle = match cache.images.lock().unwrap().entry(url.clone()) {
-            Entry::Occupied(o) => o.get().clone(),
-            Entry::Vacant(v) => {
-                let ctx = ui.ctx();
-                let handle = fetch_data::get_image_data(&url, ctx, Arc::clone(&cache.images))
-                    .and_then(|data| parse_image(ctx, &url, &data));
-
-                v.insert(handle.clone());
-                handle
-            }
-        };
+        let handle = cache.images.lock().load(ui.ctx(), url.clone());
 
         self.image = Some(Image {
             handle,
@@ -969,23 +1005,30 @@ impl CommonMarkViewerInternal {
 
     fn end_image(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
         if let Some(image) = self.image.take() {
-            if let Some(texture) = image.handle {
-                let size = options.image_scaled(&texture);
-                let response = ui.image(&texture, size);
+            let url = &image.url;
+            match image.handle {
+                Poll::Ready(Ok(texture)) => {
+                    let size = options.image_scaled(&texture);
+                    let response = ui.image(&texture, size);
 
-                if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
-                    response.on_hover_ui_at_pointer(|ui| {
-                        for alt in image.alt_text {
-                            ui.label(alt);
-                        }
-                    });
+                    if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
+                        response.on_hover_ui_at_pointer(|ui| {
+                            for alt in image.alt_text {
+                                ui.label(alt);
+                            }
+                        });
+                    }
                 }
-            } else {
-                ui.label("![");
-                for alt in image.alt_text {
-                    ui.label(alt);
+                Poll::Ready(Err(err)) => {
+                    ui.colored_label(
+                        ui.visuals().error_fg_color,
+                        format!("Error loading {url}: {err}"),
+                    );
                 }
-                ui.label(format!("]({})", image.url));
+                Poll::Pending => {
+                    ui.spinner();
+                    ui.label(format!("Loading {url}…"));
+                }
             }
 
             if self.should_insert_newline {
@@ -1200,9 +1243,9 @@ fn width_body_space(ui: &Ui) -> f32 {
     ui.fonts(|f| f.glyph_width(&id, ' '))
 }
 
-fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Option<TextureHandle> {
-    let image = image_loading::load_image(data);
-    image.map(|image| ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
+fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Result<TextureHandle, String> {
+    let image = image_loading::load_image(url, data)?;
+    Ok(ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
 }
 
 #[cfg(feature = "syntax_highlighting")]

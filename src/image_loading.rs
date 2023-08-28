@@ -1,7 +1,11 @@
 use egui::ColorImage;
 
-pub fn load_image(data: &[u8]) -> Option<ColorImage> {
-    try_load_image(data).ok().or_else(|| try_render_svg(data))
+pub fn load_image(url: &str, data: &[u8]) -> Result<ColorImage, String> {
+    if url.ends_with(".svg") {
+        try_render_svg(data)
+    } else {
+        try_load_image(data).map_err(|err| err.to_string())
+    }
 }
 
 fn try_load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
@@ -14,12 +18,12 @@ fn try_load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
 }
 
 #[cfg(not(feature = "svg"))]
-fn try_render_svg(_data: &[u8]) -> Option<ColorImage> {
-    None
+fn try_render_svg(_data: &[u8]) -> Result<ColorImage, String> {
+    Err("SVG support not enabled".to_owned())
 }
 
 #[cfg(feature = "svg")]
-fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
+fn try_render_svg(data: &[u8]) -> Result<ColorImage, String> {
     use resvg::tiny_skia;
     use usvg::{TreeParsing, TreeTextToPath};
 
@@ -28,17 +32,19 @@ fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
         let mut fontdb = usvg::fontdb::Database::new();
         fontdb.load_system_fonts();
 
-        let mut tree = usvg::Tree::from_data(data, &options).ok()?;
+        let mut tree = usvg::Tree::from_data(data, &options).map_err(|err| err.to_string())?;
         tree.convert_text(&fontdb);
         resvg::Tree::from_usvg(&tree)
     };
 
     let size = tree.size.to_int_size();
 
-    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
+    let (w, h) = (size.width(), size.height());
+    let mut pixmap = tiny_skia::Pixmap::new(w, h)
+        .ok_or_else(|| format!("Failed to create {w}x{h} SVG image"))?;
     tree.render(tiny_skia::Transform::default(), &mut pixmap.as_mut());
 
-    Some(ColorImage::from_rgba_unmultiplied(
+    Ok(ColorImage::from_rgba_unmultiplied(
         [pixmap.width() as usize, pixmap.height() as usize],
         &pixmap.take(),
     ))
