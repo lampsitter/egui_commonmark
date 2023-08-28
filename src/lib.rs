@@ -203,7 +203,7 @@ impl CommonMarkCache {
     }
 
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
-    /// specified with this method will be set to true. It's status can be aquired
+    /// specified with this method will be set to true. It's status can be acquired
     /// with [`get_link_hook`](Self::get_link_hook). Be aware that all hooks are reset once
     /// [`CommonMarkViewer::show`] gets called
     pub fn add_link_hook<S: Into<String>>(&mut self, name: S) {
@@ -491,7 +491,7 @@ impl CommonMarkViewerInternal {
 }
 
 impl CommonMarkViewerInternal {
-    /// Be aware that this aquires egui::Context internally.
+    /// Be aware that this acquires egui::Context internally.
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
