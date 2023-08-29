@@ -19,12 +19,17 @@
 //!
 //! ```
 
+mod fetch_data;
+mod image_loading;
+
+use std::sync::Arc;
+use std::{collections::HashMap, task::Poll};
+
+use egui::TextureHandle;
 use egui::{self, epaint, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
-use egui::{ColorImage, TextureHandle};
+use parking_lot::Mutex;
+use poll_promise::Promise;
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "syntax_highlighting")]
 use syntect::{
@@ -34,46 +39,6 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-fn load_image(data: &[u8]) -> image::ImageResult<ColorImage> {
-    let image = image::load_from_memory(data)?;
-    let image_buffer = image.to_rgba8();
-    let size = [image.width() as usize, image.height() as usize];
-    let pixels = image_buffer.as_flat_samples();
-
-    Ok(ColorImage::from_rgba_unmultiplied(size, pixels.as_slice()))
-}
-
-#[cfg(not(feature = "svg"))]
-fn try_render_svg(_data: &[u8]) -> Option<ColorImage> {
-    None
-}
-
-#[cfg(feature = "svg")]
-fn try_render_svg(data: &[u8]) -> Option<ColorImage> {
-    use resvg::tiny_skia;
-    use usvg::{TreeParsing, TreeTextToPath};
-
-    let tree = {
-        let options = usvg::Options::default();
-        let mut fontdb = usvg::fontdb::Database::new();
-        fontdb.load_system_fonts();
-
-        let mut tree = usvg::Tree::from_data(data, &options).ok()?;
-        tree.convert_text(&fontdb);
-        resvg::Tree::from_usvg(&tree)
-    };
-
-    let size = tree.size.to_int_size();
-
-    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
-    tree.render(tiny_skia::Transform::default(), &mut pixmap.as_mut());
-
-    Some(ColorImage::from_rgba_unmultiplied(
-        [pixmap.width() as usize, pixmap.height() as usize],
-        &pixmap.take(),
-    ))
-}
-
 #[derive(Default, Debug)]
 struct ScrollableCache {
     available_size: Vec2,
@@ -81,18 +46,62 @@ struct ScrollableCache {
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
 
-type ImageHashMap = Arc<Mutex<HashMap<String, Option<TextureHandle>>>>;
+#[derive(Default)]
+struct ImageHandleCache {
+    cache: HashMap<String, Promise<Result<TextureHandle, String>>>,
+}
+
+impl ImageHandleCache {
+    fn clear(&mut self) {
+        self.cache.clear();
+    }
+
+    fn load(&mut self, ctx: &egui::Context, url: String) -> Poll<Result<TextureHandle, String>> {
+        let promise = self.cache.entry(url.clone()).or_insert_with(|| {
+            let ctx = ctx.clone();
+            let (sender, promise) = Promise::new();
+            fetch_data::get_image_data(&url.clone(), move |result| {
+                match result {
+                    Ok(bytes) => {
+                        sender.send(parse_image(&ctx, &url, &bytes));
+                    }
+
+                    Err(err) => {
+                        sender.send(Err(err));
+                    }
+                };
+                ctx.request_repaint();
+            });
+            promise
+        });
+
+        promise.poll().map(|r| r.clone())
+    }
+
+    fn loaded(&self) -> impl Iterator<Item = &TextureHandle> {
+        self.cache
+            .values()
+            .flat_map(|p| p.ready())
+            .flat_map(|r| r.as_ref().ok())
+    }
+}
+
+impl ImageHandleCache {}
 
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
     // Everything stored here must take into account that the cache is for multiple
     // CommonMarkviewers with different source_ids.
-    images: ImageHashMap,
+    images: Arc<Mutex<ImageHandleCache>>,
+
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
+
     #[cfg(feature = "syntax_highlighting")]
     ts: ThemeSet,
+
     link_hooks: HashMap<String, bool>,
+
     scroll: HashMap<Id, ScrollableCache>,
 }
 
@@ -179,7 +188,7 @@ impl CommonMarkCache {
 
     /// Refetch all images
     pub fn reload_images(&mut self) {
-        self.images.lock().unwrap().clear();
+        self.images.lock().clear();
     }
 
     /// Clear the cache for all scrollable elements
@@ -194,7 +203,7 @@ impl CommonMarkCache {
     }
 
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
-    /// specified with this method will be set to true. It's status can be aquired
+    /// specified with this method will be set to true. It's status can be acquired
     /// with [`get_link_hook`](Self::get_link_hook). Be aware that all hooks are reset once
     /// [`CommonMarkViewer::show`] gets called
     pub fn add_link_hook<S: Into<String>>(&mut self, name: S) {
@@ -245,7 +254,7 @@ impl CommonMarkCache {
 
     fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
         let mut max = 0.0;
-        for i in self.images.lock().unwrap().values().flatten() {
+        for i in self.images.lock().loaded() {
             let width = options.image_scaled(i)[0];
             if width >= max {
                 max = width;
@@ -441,7 +450,7 @@ struct Link {
 }
 
 struct Image {
-    handle: Option<TextureHandle>,
+    handle: Poll<Result<TextureHandle, String>>,
     url: String,
     alt_text: Vec<RichText>,
 }
@@ -482,7 +491,7 @@ impl CommonMarkViewerInternal {
 }
 
 impl CommonMarkViewerInternal {
-    /// Be aware that this aquires egui::Context internally.
+    /// Be aware that this acquires egui::Context internally.
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
@@ -985,17 +994,7 @@ impl CommonMarkViewerInternal {
     }
 
     fn start_image(&mut self, url: String, ui: &mut Ui, cache: &mut CommonMarkCache) {
-        let handle = match cache.images.lock().unwrap().entry(url.clone()) {
-            Entry::Occupied(o) => o.get().clone(),
-            Entry::Vacant(v) => {
-                let ctx = ui.ctx();
-                let handle = get_image_data(&url, ctx, Arc::clone(&cache.images))
-                    .and_then(|data| parse_image(ctx, &url, &data));
-
-                v.insert(handle.clone());
-                handle
-            }
-        };
+        let handle = cache.images.lock().load(ui.ctx(), url.clone());
 
         self.image = Some(Image {
             handle,
@@ -1006,23 +1005,30 @@ impl CommonMarkViewerInternal {
 
     fn end_image(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
         if let Some(image) = self.image.take() {
-            if let Some(texture) = image.handle {
-                let size = options.image_scaled(&texture);
-                let response = ui.image(&texture, size);
+            let url = &image.url;
+            match image.handle {
+                Poll::Ready(Ok(texture)) => {
+                    let size = options.image_scaled(&texture);
+                    let response = ui.image(&texture, size);
 
-                if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
-                    response.on_hover_ui_at_pointer(|ui| {
-                        for alt in image.alt_text {
-                            ui.label(alt);
-                        }
-                    });
+                    if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
+                        response.on_hover_ui_at_pointer(|ui| {
+                            for alt in image.alt_text {
+                                ui.label(alt);
+                            }
+                        });
+                    }
                 }
-            } else {
-                ui.label("![");
-                for alt in image.alt_text {
-                    ui.label(alt);
+                Poll::Ready(Err(err)) => {
+                    ui.colored_label(
+                        ui.visuals().error_fg_color,
+                        format!("Error loading {url}: {err}"),
+                    );
                 }
-                ui.label(format!("]({})", image.url));
+                Poll::Pending => {
+                    ui.spinner();
+                    ui.label(format!("Loading {url}…"));
+                }
             }
 
             if self.should_insert_newline {
@@ -1237,41 +1243,9 @@ fn width_body_space(ui: &Ui) -> f32 {
     ui.fonts(|f| f.glyph_width(&id, ' '))
 }
 
-fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Option<TextureHandle> {
-    let image = load_image(data).ok().or_else(|| try_render_svg(data));
-    image.map(|image| ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
-}
-
-#[cfg(feature = "fetch")]
-fn get_image_data(path: &str, ctx: &egui::Context, images: ImageHashMap) -> Option<Vec<u8>> {
-    let url = url::Url::parse(path);
-    if url.is_ok() {
-        let ctx2 = ctx.clone();
-        let path = path.to_owned();
-        ehttp::fetch(ehttp::Request::get(&path), move |r| {
-            if let Ok(r) = r {
-                let data = r.bytes;
-                if let Some(handle) = parse_image(&ctx2, &path, &data) {
-                    // we only update if the image was loaded properly
-                    *images.lock().unwrap().get_mut(&path).unwrap() = Some(handle);
-                    ctx2.request_repaint();
-                }
-            }
-        });
-
-        None
-    } else {
-        get_image_data_from_file(path)
-    }
-}
-
-#[cfg(not(feature = "fetch"))]
-fn get_image_data(path: &str, _ctx: &egui::Context, _images: ImageHashMap) -> Option<Vec<u8>> {
-    get_image_data_from_file(path)
-}
-
-fn get_image_data_from_file(url: &str) -> Option<Vec<u8>> {
-    std::fs::read(url).ok()
+fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Result<TextureHandle, String> {
+    let image = image_loading::load_image(url, data)?;
+    Ok(ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
 }
 
 #[cfg(feature = "syntax_highlighting")]
