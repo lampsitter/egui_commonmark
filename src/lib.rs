@@ -86,8 +86,6 @@ impl ImageHandleCache {
     }
 }
 
-impl ImageHandleCache {}
-
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
     // Everything stored here must take into account that the cache is for multiple
@@ -519,7 +517,7 @@ impl CommonMarkViewerInternal {
                     should_add_split_point = true;
                 }
 
-                if populate_split_points {
+                if populate_split_points && should_add_split_point {
                     let scroll_cache = cache.scroll(&self.source_id);
                     let end_position = ui.next_widget_position();
 
@@ -528,7 +526,7 @@ impl CommonMarkViewerInternal {
                         .iter()
                         .any(|(i, _, _)| *i == index);
 
-                    if should_add_split_point && !split_point_exists {
+                    if !split_point_exists {
                         scroll_cache
                             .split_points
                             .push((index, start_position, end_position));
