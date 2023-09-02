@@ -18,6 +18,10 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 parking_lot = "0.12"
 poll-promise = "0.3"
 pulldown-cmark = { version = "0.9.3", default-features = false }
+# pulled in as a required dependency by poll-promise, so this crate might as well
+# do the same
+document-features = "0.2"
+
 
 syntect = { version = "5.0.0", optional = true, default-features = false, features = [
     "default-fancy",
@@ -30,16 +34,17 @@ url = { version = "2.4", optional = true }
 ehttp = { version = "0.3.0", optional = true }
 
 [features]
-# Syntax highlighting for code blocks
+## Syntax highlighting for code blocks
 syntax_highlighting = ["syntect"]
-# Support loading svg images
+
+## Support loading svg images
 svg = ["resvg", "usvg"]
 
-# Fetch images over http
+## Images with urls will be downloaded and displayed
 fetch = ["ehttp", "url", "image/jpeg"]
 
 [dev-dependencies]
 eframe = { git = "https://github.com/emilk/egui", rev = "2c7c598" }
 
 [package.metadata.docs.rs]
-features = ["syntax_highlighting", "svg"]
+features = ["syntax_highlighting", "svg", "document-features"]
