@@ -47,4 +47,4 @@ fetch = ["ehttp", "url", "image/jpeg"]
 eframe = { git = "https://github.com/emilk/egui", rev = "2c7c598" }
 
 [package.metadata.docs.rs]
-features = ["syntax_highlighting", "svg", "document-features"]
+features = ["syntax_highlighting", "svg"]

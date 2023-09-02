@@ -717,7 +717,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn style_text(&mut self, ui: &mut Ui, text: &str) -> RichText {
+    fn style_text(&mut self, ui: &Ui, text: &str) -> RichText {
         let mut text = RichText::new(text);
 
         if let Some(level) = self.text_style.heading {
@@ -994,7 +994,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn start_image(&mut self, url: String, ui: &mut Ui, cache: &mut CommonMarkCache) {
+    fn start_image(&mut self, url: String, ui: &Ui, cache: &CommonMarkCache) {
         let handle = cache.images.lock().load(ui.ctx(), url.clone());
 
         self.image = Some(Image {
