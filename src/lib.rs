@@ -19,7 +19,7 @@
 //!
 //! ```
 //!
-//! # Features
+#![cfg_attr(feature = "document-features", doc = "# Features")]
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 
 mod fetch_data;
