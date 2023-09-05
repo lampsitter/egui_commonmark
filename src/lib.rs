@@ -20,7 +20,7 @@
 //! ```
 //!
 //! # Features
-#![doc = document_features::document_features!()]
+#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 
 mod fetch_data;
 mod image_loading;
