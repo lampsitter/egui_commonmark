@@ -22,16 +22,9 @@
 #![cfg_attr(feature = "document-features", doc = "# Features")]
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 
-mod fetch_data;
-mod image_loading;
+use std::collections::HashMap;
 
-use std::sync::Arc;
-use std::{collections::HashMap, task::Poll};
-
-use egui::TextureHandle;
 use egui::{self, epaint, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
-use parking_lot::Mutex;
-use poll_promise::Promise;
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
 
 #[cfg(feature = "syntax_highlighting")]
@@ -49,52 +42,8 @@ struct ScrollableCache {
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
 
-#[derive(Default)]
-struct ImageHandleCache {
-    cache: HashMap<String, Promise<Result<TextureHandle, String>>>,
-}
-
-impl ImageHandleCache {
-    fn clear(&mut self) {
-        self.cache.clear();
-    }
-
-    fn load(&mut self, ctx: &egui::Context, url: String) -> Poll<Result<TextureHandle, String>> {
-        let promise = self.cache.entry(url.clone()).or_insert_with(|| {
-            let ctx = ctx.clone();
-            let (sender, promise) = Promise::new();
-            fetch_data::get_image_data(&url.clone(), move |result| {
-                match result {
-                    Ok(bytes) => {
-                        sender.send(parse_image(&ctx, &url, &bytes));
-                    }
-
-                    Err(err) => {
-                        sender.send(Err(err));
-                    }
-                };
-                ctx.request_repaint();
-            });
-            promise
-        });
-
-        promise.poll().map(|r| r.clone())
-    }
-
-    fn loaded(&self) -> impl Iterator<Item = &TextureHandle> {
-        self.cache
-            .values()
-            .flat_map(|p| p.ready())
-            .flat_map(|r| r.as_ref().ok())
-    }
-}
-
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
-    // Everything stored here must take into account that the cache is for multiple
-    // CommonMarkviewers with different source_ids.
-    images: Arc<Mutex<ImageHandleCache>>,
-
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
 
@@ -134,7 +83,6 @@ impl std::fmt::Debug for CommonMarkCache {
 impl Default for CommonMarkCache {
     fn default() -> Self {
         Self {
-            images: Default::default(),
             #[cfg(feature = "syntax_highlighting")]
             ps: SyntaxSet::load_defaults_newlines(),
             #[cfg(feature = "syntax_highlighting")]
@@ -188,8 +136,8 @@ impl CommonMarkCache {
     }
 
     /// Refetch all images
-    pub fn reload_images(&mut self) {
-        self.images.lock().clear();
+    pub fn reload_images(&mut self, ui: &Ui) {
+        ui.ctx().forget_all_images();
     }
 
     /// Clear the cache for all scrollable elements
@@ -253,17 +201,6 @@ impl CommonMarkCache {
             .unwrap_or_else(|| &self.ts.themes[default_theme(ui)])
     }
 
-    fn max_image_width(&self, options: &CommonMarkOptions) -> f32 {
-        let mut max = 0.0;
-        for i in self.images.lock().loaded() {
-            let width = options.image_scaled(i)[0];
-            if width >= max {
-                max = width;
-            }
-        }
-        max
-    }
-
     fn scroll(&mut self, id: &Id) -> &mut ScrollableCache {
         if !self.scroll.contains_key(id) {
             self.scroll.insert(*id, Default::default());
@@ -304,25 +241,6 @@ impl Default for CommonMarkOptions {
 }
 
 impl CommonMarkOptions {
-    fn image_scaled(&self, texture: &TextureHandle) -> egui::Vec2 {
-        let size = texture.size();
-        if let Some(max_width) = self.max_image_width {
-            let width = size[0];
-
-            if width > max_width {
-                let height = size[1] as f32;
-                let ratio = height / width as f32;
-
-                let scaled_height = ratio * max_width as f32;
-                egui::vec2(max_width as f32, scaled_height)
-            } else {
-                egui::vec2(width as f32, size[1] as f32)
-            }
-        } else {
-            egui::vec2(size[0] as f32, size[1] as f32)
-        }
-    }
-
     #[cfg(feature = "syntax_highlighting")]
     fn curr_theme(&self, ui: &Ui) -> &str {
         if ui.style().visuals.dark_mode {
@@ -451,7 +369,6 @@ struct Link {
 }
 
 struct Image {
-    handle: Poll<Result<TextureHandle, String>>,
     url: String,
     alt_text: Vec<RichText>,
 }
@@ -501,7 +418,7 @@ impl CommonMarkViewerInternal {
         text: &str,
         populate_split_points: bool,
     ) {
-        let max_width = self.max_width(cache, options, ui);
+        let max_width = self.max_width(options, ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
         ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
@@ -575,7 +492,7 @@ impl CommonMarkViewerInternal {
                 ui.set_height(page_size.y);
                 let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
-                let max_width = self.max_width(cache, options, ui);
+                let max_width = self.max_width(options, ui);
                 ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
                     let scroll_cache = cache.scroll(&self.source_id);
@@ -636,8 +553,8 @@ impl CommonMarkViewerInternal {
         self.table(events, cache, options, ui, max_width);
     }
 
-    fn max_width(&self, cache: &CommonMarkCache, options: &CommonMarkOptions, ui: &Ui) -> f32 {
-        let max_image_width = cache.max_image_width(options);
+    fn max_width(&self, options: &CommonMarkOptions, ui: &Ui) -> f32 {
+        let max_image_width = options.max_image_width.unwrap_or(0) as f32;
         let available_width = ui.available_width();
 
         let max_width = max_image_width.max(available_width);
@@ -765,7 +682,7 @@ impl CommonMarkViewerInternal {
         max_width: f32,
     ) {
         match event {
-            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
+            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
             pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
             pulldown_cmark::Event::Text(text) => {
                 self.event_text(text, ui);
@@ -806,13 +723,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn start_tag(
-        &mut self,
-        ui: &mut Ui,
-        tag: pulldown_cmark::Tag,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-    ) {
+    fn start_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 if self.should_insert_newline {
@@ -872,7 +783,14 @@ impl CommonMarkViewerInternal {
                     text: String::new(),
                 });
             }
-            pulldown_cmark::Tag::Image(_, url, _) => self.start_image(url.to_string(), ui, cache),
+            pulldown_cmark::Tag::Image(_, url, _) => {
+                let url = if url.starts_with("http://") {
+                    url.to_string()
+                } else {
+                    format!("file://{url}")
+                };
+                self.start_image(url);
+            }
         }
     }
 
@@ -969,11 +887,8 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn start_image(&mut self, url: String, ui: &Ui, cache: &CommonMarkCache) {
-        let handle = cache.images.lock().load(ui.ctx(), url.clone());
-
+    fn start_image(&mut self, url: String) {
         self.image = Some(Image {
-            handle,
             url,
             alt_text: Vec::new(),
         });
@@ -981,30 +896,17 @@ impl CommonMarkViewerInternal {
 
     fn end_image(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
         if let Some(image) = self.image.take() {
-            let url = &image.url;
-            match image.handle {
-                Poll::Ready(Ok(texture)) => {
-                    let size = options.image_scaled(&texture);
-                    let response = ui.image(&texture, size);
-
-                    if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
-                        response.on_hover_ui_at_pointer(|ui| {
-                            for alt in image.alt_text {
-                                ui.label(alt);
-                            }
-                        });
+            let response = ui.add(
+                egui::Image::from_uri(&image.url)
+                    .fit_to_original_size(None)
+                    .max_width(self.max_width(options, ui)),
+            );
+            if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
+                response.on_hover_ui_at_pointer(|ui| {
+                    for alt in image.alt_text {
+                        ui.label(alt);
                     }
-                }
-                Poll::Ready(Err(err)) => {
-                    ui.colored_label(
-                        ui.visuals().error_fg_color,
-                        format!("Error loading {url}: {err}"),
-                    );
-                }
-                Poll::Pending => {
-                    ui.spinner();
-                    ui.label(format!("Loading {url}…"));
-                }
+                });
             }
 
             if self.should_insert_newline {
@@ -1217,11 +1119,6 @@ fn height_body(ui: &Ui) -> f32 {
 fn width_body_space(ui: &Ui) -> f32 {
     let id = TextStyle::Body.resolve(ui.style());
     ui.fonts(|f| f.glyph_width(&id, ' '))
-}
-
-fn parse_image(ctx: &egui::Context, url: &str, data: &[u8]) -> Result<TextureHandle, String> {
-    let image = image_loading::load_image(url, data)?;
-    Ok(ctx.load_texture(url, image, egui::TextureOptions::LINEAR))
 }
 
 #[cfg(feature = "syntax_highlighting")]
