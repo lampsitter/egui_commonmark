@@ -79,9 +79,10 @@ impl std::fmt::Debug for CommonMarkCache {
     }
 }
 
-#[allow(clippy::derivable_impls)]
-impl Default for CommonMarkCache {
-    fn default() -> Self {
+impl CommonMarkCache {
+    pub fn new(ctx: &egui::Context) -> Self {
+        egui_extras::loaders::install(ctx);
+
         Self {
             #[cfg(feature = "syntax_highlighting")]
             ps: SyntaxSet::load_defaults_newlines(),

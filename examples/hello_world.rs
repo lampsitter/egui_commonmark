@@ -64,7 +64,7 @@ fn main() {
         "Markdown viewer",
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
-            egui_extras::loaders::install(&cc.egui_ctx);
+            // egui_extras::loaders::install(&cc.egui_ctx);
 
             cc.egui_ctx.set_visuals(if use_dark_theme {
                 egui::Visuals::dark()
@@ -73,7 +73,7 @@ fn main() {
             });
 
             Box::new(App {
-                cache: CommonMarkCache::default(),
+                cache: CommonMarkCache::new(&cc.egui_ctx),
             })
         }),
     )
