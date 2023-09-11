@@ -785,7 +785,7 @@ impl CommonMarkViewerInternal {
                 });
             }
             pulldown_cmark::Tag::Image(_, url, _) => {
-                let url = if url.starts_with("http://") {
+                let url = if url.starts_with("http://") || url.starts_with("https://") {
                     url.to_string()
                 } else {
                     format!("file://{url}")
