@@ -83,9 +83,29 @@ impl std::fmt::Debug for CommonMarkCache {
 }
 
 impl CommonMarkCache {
+    /// Create a new [`CommonMarkCache`]. This automatically sets up the needed egui image loaders
+    /// for you.
     pub fn new(ctx: &egui::Context) -> Self {
         egui_extras::loaders::install(ctx);
+        Self::without_image_loaders()
+    }
 
+    /// Alternative to [`new`](Self::new). Only use this if it is too difficult for you to provide
+    /// a [`egui::Context`] when creating the cache. Can also be useful when writing tests.
+    ///
+    /// # Beware!
+    ///
+    /// To be able to load images you must manually call the following somewhere in you
+    /// application:
+    ///
+    /// ```
+    /// # use egui_extras::*;
+    /// # use egui::__run_test_ctx;
+    /// # __run_test_ctx(|ctx| {
+    /// egui_extras::loaders::install(&ctx);
+    /// # });
+    /// ```
+    pub fn without_image_loaders() -> Self {
         Self {
             #[cfg(feature = "syntax_highlighting")]
             ps: SyntaxSet::load_defaults_newlines(),

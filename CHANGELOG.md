@@ -9,6 +9,7 @@
 - `CommonMarkCache` now implements `Debug` ([#7](https://github.com/lampsitter/egui_commonmark/pull/7) by [@ChristopherPerry6060](https://github.com/ChristopherPerry6060)).
 - `CommonMarkCache::add_syntax_themes_from_folder`
 - `CommonMarkCache::add_syntax_theme_from_bytes`
+- `CommonMarkCache::without_image_loaders`
 
 ### Changed
 
