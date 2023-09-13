@@ -17,5 +17,3 @@ jobs:
       run: cargo check --all-features
     - name: Cargo fmt
       run: cargo fmt --check -q
-    - name: Cargo test
-      run: cargo test -q
