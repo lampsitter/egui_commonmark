@@ -384,7 +384,7 @@ struct Link {
 }
 
 struct Image {
-    url: String,
+    uri: String,
     alt_text: Vec<RichText>,
 }
 
@@ -798,13 +798,15 @@ impl CommonMarkViewerInternal {
                     text: String::new(),
                 });
             }
-            pulldown_cmark::Tag::Image(_, url, _) => {
-                let url = if url.starts_with("http://") || url.starts_with("https://") {
-                    url.to_string()
+            pulldown_cmark::Tag::Image(_, uri, _) => {
+                let has_scheme = uri.contains("://");
+                let uri = if has_scheme {
+                    uri.to_string()
                 } else {
-                    format!("file://{url}")
+                    // Assume file scheme
+                    format!("file://{uri}")
                 };
-                self.start_image(url);
+                self.start_image(uri);
             }
         }
     }
@@ -902,9 +904,9 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn start_image(&mut self, url: String) {
+    fn start_image(&mut self, uri: String) {
         self.image = Some(Image {
-            url,
+            uri,
             alt_text: Vec::new(),
         });
     }
@@ -912,7 +914,7 @@ impl CommonMarkViewerInternal {
     fn end_image(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
         if let Some(image) = self.image.take() {
             let response = ui.add(
-                egui::Image::from_uri(&image.url)
+                egui::Image::from_uri(&image.uri)
                     .fit_to_original_size(1.0)
                     .max_width(self.max_width(options, ui)),
             );
