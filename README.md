@@ -13,7 +13,7 @@ Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
 ```toml
 # Specify the the ways you want to load images, check egui_extras features
 # for more info. Or use the feature "all-loaders" if you don't care.
-egui_extras = { version = "<to-be-released>", features = ["image", files"] }
+egui_extras = { version = "<to-be-released>", features = ["image", "files"] }
 
 # Opt into the image formats you want to load
 image = { version = "0.24", features = ["png"] }
