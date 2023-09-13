@@ -71,7 +71,7 @@ fn main() {
             });
 
             Box::new(App {
-                cache: CommonMarkCache::new(&cc.egui_ctx),
+                cache: CommonMarkCache::default(),
             })
         }),
     )

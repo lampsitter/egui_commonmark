@@ -13,8 +13,7 @@
 //! ";
 //! // Stores image handles between each frame
 //! # __run_test_ui(|ui| {
-//! # let ctx = ui.ctx();
-//! let mut cache = CommonMarkCache::new(&ctx);
+//! let mut cache = CommonMarkCache::default();
 //! CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 //! # });
 //!
@@ -56,6 +55,7 @@ pub struct CommonMarkCache {
     link_hooks: HashMap<String, bool>,
 
     scroll: HashMap<Id, ScrollableCache>,
+    has_installed_loaders: bool,
 }
 
 #[cfg(not(feature = "syntax_highlighting"))]
@@ -82,30 +82,8 @@ impl std::fmt::Debug for CommonMarkCache {
     }
 }
 
-impl CommonMarkCache {
-    /// Create a new [`CommonMarkCache`]. This automatically sets up the needed egui image loaders
-    /// for you.
-    pub fn new(ctx: &egui::Context) -> Self {
-        egui_extras::loaders::install(ctx);
-        Self::without_image_loaders()
-    }
-
-    /// Alternative to [`new`](Self::new). Only use this if it is too difficult for you to provide
-    /// a [`egui::Context`] when creating the cache. Can also be useful when writing tests.
-    ///
-    /// # Beware!
-    ///
-    /// To be able to load images you must manually call the following somewhere in you
-    /// application:
-    ///
-    /// ```
-    /// # use egui_extras::*;
-    /// # use egui::__run_test_ctx;
-    /// # __run_test_ctx(|ctx| {
-    /// egui_extras::loaders::install(&ctx);
-    /// # });
-    /// ```
-    pub fn without_image_loaders() -> Self {
+impl Default for CommonMarkCache {
+    fn default() -> Self {
         Self {
             #[cfg(feature = "syntax_highlighting")]
             ps: SyntaxSet::load_defaults_newlines(),
@@ -113,6 +91,7 @@ impl CommonMarkCache {
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
             scroll: Default::default(),
+            has_installed_loaders: false,
         }
     }
 }
@@ -226,6 +205,22 @@ impl CommonMarkCache {
         }
         self.scroll.get_mut(id).unwrap()
     }
+
+    /// Should be called before any rendering
+    fn prepare_show(&mut self, ctx: &egui::Context) {
+        if !self.has_installed_loaders {
+            // Even though the install function can be called multiple times, its not the cheapest
+            // so we ensure that we only call it once.
+            // This could be done at the creation of the cache, however it is better to keep the
+            // cache free from egui's Ui and Context types as this allows it to be created before
+            // any egui instances. It also keeps the API similar to before the introduction of the
+            // image loaders.
+            egui_extras::loaders::install(ctx);
+            self.has_installed_loaders = true;
+        }
+
+        self.deactivate_link_hooks();
+    }
 }
 
 #[cfg(feature = "syntax_highlighting")]
@@ -334,7 +329,7 @@ impl CommonMarkViewer {
 
     /// Shows rendered markdown
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
-        cache.deactivate_link_hooks();
+        cache.prepare_show(ui.ctx());
         CommonMarkViewerInternal::new(self.source_id).show(ui, cache, &self.options, text, false);
     }
 
@@ -353,7 +348,7 @@ impl CommonMarkViewer {
     /// [`show`]: crate::CommonMarkViewer::show
     #[doc(hidden)] // Buggy in scenarios more complex than the example application
     pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
-        cache.deactivate_link_hooks();
+        cache.prepare_show(ui.ctx());
         CommonMarkViewerInternal::new(self.source_id).show_scrollable(
             ui,
             cache,

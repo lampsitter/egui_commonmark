@@ -32,10 +32,11 @@ fn main() {
     eframe::run_native(
         "Markdown link hooks",
         eframe::NativeOptions::default(),
-        Box::new(|cc| {
-            let mut cache = CommonMarkCache::new(&cc.egui_ctx);
+        Box::new(|_| {
+            let mut cache = CommonMarkCache::default();
             cache.add_link_hook("#next");
             cache.add_link_hook("#prev");
+
             Box::new(App {
                 cache,
                 curr_page: 0,
