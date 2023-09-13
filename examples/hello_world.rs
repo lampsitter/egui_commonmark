@@ -19,7 +19,7 @@ A *bunch* ~~of~~ __different__ `text` styles.
 
 | __A table!__ |
 | -------- |
-| ![Rust logo](examples/rust-logo-128x128.png) |
+| ![Rust logo](file://examples/rust-logo-128x128.png) |
 | Some filler text |
 | [Link to repo](https://github.com/lampsitter/egui_commonmark) |
 
