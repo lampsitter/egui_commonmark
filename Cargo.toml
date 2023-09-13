@@ -24,7 +24,7 @@ syntect = { version = "5.0.0", optional = true, default-features = false, featur
 document-features = { version = "0.2", optional = true }
 
 [features]
-default = ["load-images"]
+default = ["load-images", "egui_extras/log"]
 ## Syntax highlighting for code blocks
 syntax_highlighting = ["syntect"]
 
