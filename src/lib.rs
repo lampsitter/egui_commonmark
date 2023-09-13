@@ -899,7 +899,7 @@ impl CommonMarkViewerInternal {
         if let Some(image) = self.image.take() {
             let response = ui.add(
                 egui::Image::from_uri(&image.url)
-                    .fit_to_original_size(None)
+                    .fit_to_original_size(1.0)
                     .max_width(self.max_width(options, ui)),
             );
             if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
