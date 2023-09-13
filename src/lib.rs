@@ -82,6 +82,7 @@ impl std::fmt::Debug for CommonMarkCache {
     }
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for CommonMarkCache {
     fn default() -> Self {
         Self {
