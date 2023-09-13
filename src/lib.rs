@@ -138,11 +138,6 @@ impl CommonMarkCache {
         Ok(())
     }
 
-    /// Refetch all images
-    pub fn reload_images(&mut self, ui: &Ui) {
-        ui.ctx().forget_all_images();
-    }
-
     /// Clear the cache for all scrollable elements
     pub fn clear_scrollable(&mut self) {
         self.scroll.clear();
