@@ -44,6 +44,8 @@ struct ScrollableCache {
 
 /// A cache used for storing content such as images.
 pub struct CommonMarkCache {
+    // Everything stored in `CommonMarkCache` must take into account that
+    // the cache is for multiple `CommonMarkviewer`s with different source_ids.
     #[cfg(feature = "syntax_highlighting")]
     ps: SyntaxSet,
 
