@@ -799,7 +799,14 @@ impl CommonMarkViewerInternal {
                 });
             }
             pulldown_cmark::Tag::Image(_, uri, _) => {
-                self.start_image(uri.to_string());
+                let has_scheme = uri.contains("://");
+                let uri = if has_scheme {
+                    uri.to_string()
+                } else {
+                    // Assume file scheme
+                    format!("file://{uri}")
+                };
+                self.start_image(uri);
             }
         }
     }
