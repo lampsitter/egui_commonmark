@@ -29,13 +29,13 @@ Check out the [previous](#prev) page."#;
 }
 
 fn main() {
-    let mut cache = CommonMarkCache::default();
-    cache.add_link_hook("#next");
-    cache.add_link_hook("#prev");
     eframe::run_native(
         "Markdown link hooks",
         eframe::NativeOptions::default(),
-        Box::new(|_| {
+        Box::new(|cc| {
+            let mut cache = CommonMarkCache::new(&cc.egui_ctx);
+            cache.add_link_hook("#next");
+            cache.add_link_hook("#prev");
             Box::new(App {
                 cache,
                 curr_page: 0,
