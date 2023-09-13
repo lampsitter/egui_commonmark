@@ -19,7 +19,7 @@ r"# Hello world
 * [ ] Checkbox
 ";
 // Stores image handles between each frame
-let mut cache = CommonMarkCache::default();
+let mut cache = CommonMarkCache::new(&ctx);
 CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 ```
 

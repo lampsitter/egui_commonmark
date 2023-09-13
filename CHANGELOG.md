@@ -12,10 +12,12 @@
 
 ### Changed
 
+- Use new image API from egui ([#8](https://github.com/lampsitter/egui_commonmark/pull/11) by [@jprochazk](https://github.com/jprochazk)).
 - Updated dependencies.
 
 ### Removed
 
+- `CommonMarkCache::reload_images`
 - Removed trimming of svg's transparency. The function has been removed from resvg.
 
 ## 0.7.4 - 2023-07-08

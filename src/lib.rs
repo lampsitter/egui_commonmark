@@ -12,8 +12,9 @@
 //! * [ ] Checkbox
 //! ";
 //! // Stores image handles between each frame
-//! let mut cache = CommonMarkCache::default();
 //! # __run_test_ui(|ui| {
+//! # let ctx = ui.ctx();
+//! let mut cache = CommonMarkCache::new(&ctx);
 //! CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 //! # });
 //!
