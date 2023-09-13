@@ -10,7 +10,13 @@ Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
 
 ## Usage
 
+In `Cargo.toml` add the following:
+
 ```toml
+egui_commonmark = "0.8"
+
+# If you don't need image loading you can ignore the dependencies below.
+
 # Specify the the ways you want to load images, check egui_extras features
 # for more info. Or use the feature "all-loaders" if you don't care.
 egui_extras = { version = "<to-be-released>", features = ["image", "files"] }
@@ -36,8 +42,6 @@ CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 
 * `syntax_highlighting`: Syntax highlighting inside code blocks with
   [`syntect`](https://crates.io/crates/syntect)
-* `svg`: Support for viewing svg images
-* `fetch`: Images with urls will be downloaded and displayed
 
 ## License
 
