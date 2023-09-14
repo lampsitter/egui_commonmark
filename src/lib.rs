@@ -238,6 +238,7 @@ struct CommonMarkOptions {
     theme_light: String,
     #[cfg(feature = "syntax_highlighting")]
     theme_dark: String,
+    use_explicit_uri_scheme: bool,
 }
 
 impl Default for CommonMarkOptions {
@@ -251,6 +252,7 @@ impl Default for CommonMarkOptions {
             theme_light: DEFAULT_THEME_LIGHT.to_owned(),
             #[cfg(feature = "syntax_highlighting")]
             theme_dark: DEFAULT_THEME_DARK.to_owned(),
+            use_explicit_uri_scheme: false,
         }
     }
 }
@@ -303,6 +305,15 @@ impl CommonMarkViewer {
     /// Show alt text when hovering over images. By default this is enabled.
     pub fn show_alt_text_on_hover(mut self, show: bool) -> Self {
         self.options.show_alt_text_on_hover = show;
+        self
+    }
+
+    /// By default any image without a uri scheme such as `foo://` is assumed to
+    /// be of the type `file://`. This assumption can sometimes be wrong or be done
+    /// incorrectly, so if you want to always be explicit with the scheme then set
+    /// this to `true`
+    pub fn explicit_image_uri_scheme(mut self, use_explicit: bool) -> Self {
+        self.options.use_explicit_uri_scheme = use_explicit;
         self
     }
 
@@ -800,12 +811,13 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::Image(_, uri, _) => {
                 let has_scheme = uri.contains("://");
-                let uri = if has_scheme {
+                let uri = if options.use_explicit_uri_scheme || has_scheme {
                     uri.to_string()
                 } else {
                     // Assume file scheme
                     format!("file://{uri}")
                 };
+
                 self.start_image(uri);
             }
         }

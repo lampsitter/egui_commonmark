@@ -9,10 +9,11 @@
 - `CommonMarkCache` now implements `Debug` ([#7](https://github.com/lampsitter/egui_commonmark/pull/7) by [@ChristopherPerry6060](https://github.com/ChristopherPerry6060)).
 - `CommonMarkCache::add_syntax_themes_from_folder`
 - `CommonMarkCache::add_syntax_theme_from_bytes`
+- `CommonMarkViewer::explicit_image_uri_scheme`
 
 ### Changed
 
-- Use new image API from egui ([#8](https://github.com/lampsitter/egui_commonmark/pull/11) by [@jprochazk](https://github.com/jprochazk)).
+- Use new image API from egui ([#11](https://github.com/lampsitter/egui_commonmark/pull/11) by [@jprochazk](https://github.com/jprochazk)).
 - Updated dependencies.
 
 ### Removed
