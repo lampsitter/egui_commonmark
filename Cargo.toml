@@ -13,9 +13,9 @@ documentation = "https://docs.rs/egui_commonmark"
 include = ["src/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]
-egui = { git = "https://github.com/emilk/egui", rev = "67a3fcae383044def7450b311ddc1f79e36eaae0" }
+egui = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
 pulldown-cmark = { version = "0.9.3", default-features = false }
-egui_extras = { git = "https://github.com/emilk/egui", rev = "67a3fcae383044def7450b311ddc1f79e36eaae0" }
+egui_extras = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
 
 syntect = { version = "5.0.0", optional = true, default-features = false, features = [
     "default-fancy",
@@ -24,7 +24,7 @@ syntect = { version = "5.0.0", optional = true, default-features = false, featur
 document-features = { version = "0.2", optional = true }
 
 [features]
-default = ["load-images", "egui_extras/log"]
+default = ["load-images"]
 ## Syntax highlighting for code blocks
 syntax_highlighting = ["syntect"]
 
@@ -37,7 +37,7 @@ svg = ["egui_extras/svg"]
 fetch = ["egui_extras/http", "image/jpeg"]
 
 [dev-dependencies]
-eframe = { git = "https://github.com/emilk/egui", rev = "67a3fcae383044def7450b311ddc1f79e36eaae0" }
+eframe = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
 image = { version = "0.24", default-features = false, features = ["png"] }
 
 [package.metadata.docs.rs]

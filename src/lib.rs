@@ -216,7 +216,7 @@ impl CommonMarkCache {
             // cache free from egui's Ui and Context types as this allows it to be created before
             // any egui instances. It also keeps the API similar to before the introduction of the
             // image loaders.
-            egui_extras::loaders::install(ctx);
+            egui_extras::loaders::install_image_loaders(ctx);
             self.has_installed_loaders = true;
         }
 
