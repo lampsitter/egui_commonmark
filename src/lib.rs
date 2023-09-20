@@ -995,11 +995,11 @@ impl CommonMarkViewerInternal {
         &mut self,
         _cache: &mut CommonMarkCache,
         _options: &CommonMarkOptions,
-        _extension: &str,
+        extension: &str,
         ui: &Ui,
         text: &str,
     ) -> egui::text::LayoutJob {
-        plain_highlighting(ui, text)
+        plain_highlighting(ui, text, extension)
     }
 }
 
@@ -1057,22 +1057,18 @@ impl CommonMarkViewerInternal {
 
             job
         } else {
-            plain_highlighting(ui, text)
+            plain_highlighting(ui, text, extension)
         }
     }
 }
 
-fn plain_highlighting(ui: &Ui, text: &str) -> egui::text::LayoutJob {
-    let mut job = egui::text::LayoutJob::default();
-    job.append(
+fn plain_highlighting(ui: &Ui, text: &str, extension: &str) -> egui::text::LayoutJob {
+    egui_extras::syntax_highlighting::highlight(
+        ui.ctx(),
+        &egui_extras::syntax_highlighting::CodeTheme::from_style(ui.style()),
         text,
-        0.0,
-        egui::TextFormat::simple(
-            TextStyle::Monospace.resolve(ui.style()),
-            ui.style().visuals.text_color(),
-        ),
-    );
-    job
+        extension,
+    )
 }
 
 #[cfg(feature = "syntax_highlighting")]
