@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use egui::{self, epaint, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
 
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 use syntect::{
     easy::HighlightLines,
     highlighting::{Theme, ThemeSet},
@@ -46,10 +46,10 @@ struct ScrollableCache {
 pub struct CommonMarkCache {
     // Everything stored in `CommonMarkCache` must take into account that
     // the cache is for multiple `CommonMarkviewer`s with different source_ids.
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     ps: SyntaxSet,
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     ts: ThemeSet,
 
     link_hooks: HashMap<String, bool>,
@@ -58,7 +58,7 @@ pub struct CommonMarkCache {
     has_installed_loaders: bool,
 }
 
-#[cfg(not(feature = "syntax_highlighting"))]
+#[cfg(not(feature = "better_syntax_highlighting"))]
 impl std::fmt::Debug for CommonMarkCache {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommonMarkCache")
@@ -69,7 +69,7 @@ impl std::fmt::Debug for CommonMarkCache {
     }
 }
 
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 impl std::fmt::Debug for CommonMarkCache {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommonMarkCache")
@@ -86,9 +86,9 @@ impl std::fmt::Debug for CommonMarkCache {
 impl Default for CommonMarkCache {
     fn default() -> Self {
         Self {
-            #[cfg(feature = "syntax_highlighting")]
+            #[cfg(feature = "better_syntax_highlighting")]
             ps: SyntaxSet::load_defaults_newlines(),
-            #[cfg(feature = "syntax_highlighting")]
+            #[cfg(feature = "better_syntax_highlighting")]
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
             scroll: Default::default(),
@@ -98,21 +98,21 @@ impl Default for CommonMarkCache {
 }
 
 impl CommonMarkCache {
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     pub fn add_syntax_from_folder(&mut self, path: &str) {
         let mut builder = self.ps.clone().into_builder();
         let _ = builder.add_from_folder(path, true);
         self.ps = builder.build();
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     pub fn add_syntax_from_str(&mut self, s: &str, fallback_name: Option<&str>) {
         let mut builder = self.ps.clone().into_builder();
         let _ = SyntaxDefinition::load_from_str(s, true, fallback_name).map(|d| builder.add(d));
         self.ps = builder.build();
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     /// Add more color themes for code blocks(.tmTheme files). Set the color theme with
     /// [`syntax_theme_dark`](CommonMarkViewer::syntax_theme_dark) and
     /// [`syntax_theme_light`](CommonMarkViewer::syntax_theme_light)
@@ -123,7 +123,7 @@ impl CommonMarkCache {
         self.ts.add_from_folder(path)
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     /// Add color theme for code blocks(.tmTheme files). Set the color theme with
     /// [`syntax_theme_dark`](CommonMarkViewer::syntax_theme_dark) and
     /// [`syntax_theme_light`](CommonMarkViewer::syntax_theme_light)
@@ -191,7 +191,7 @@ impl CommonMarkCache {
         }
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     fn curr_theme(&self, ui: &Ui, options: &CommonMarkOptions) -> &Theme {
         self.ts
             .themes
@@ -224,9 +224,9 @@ impl CommonMarkCache {
     }
 }
 
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
 struct CommonMarkOptions {
@@ -234,9 +234,9 @@ struct CommonMarkOptions {
     max_image_width: Option<usize>,
     show_alt_text_on_hover: bool,
     default_width: Option<usize>,
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     theme_light: String,
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     theme_dark: String,
     use_explicit_uri_scheme: bool,
 }
@@ -248,9 +248,9 @@ impl Default for CommonMarkOptions {
             max_image_width: None,
             show_alt_text_on_hover: true,
             default_width: None,
-            #[cfg(feature = "syntax_highlighting")]
+            #[cfg(feature = "better_syntax_highlighting")]
             theme_light: DEFAULT_THEME_LIGHT.to_owned(),
-            #[cfg(feature = "syntax_highlighting")]
+            #[cfg(feature = "better_syntax_highlighting")]
             theme_dark: DEFAULT_THEME_DARK.to_owned(),
             use_explicit_uri_scheme: false,
         }
@@ -258,7 +258,7 @@ impl Default for CommonMarkOptions {
 }
 
 impl CommonMarkOptions {
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     fn curr_theme(&self, ui: &Ui) -> &str {
         if ui.style().visuals.dark_mode {
             &self.theme_dark
@@ -317,7 +317,7 @@ impl CommonMarkViewer {
         self
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     #[deprecated(note = "use `syntax_theme_light` or `syntax_theme_dark` instead")]
     pub fn syntax_theme(mut self, theme: String) -> Self {
         self.options.theme_light = theme.clone();
@@ -325,14 +325,14 @@ impl CommonMarkViewer {
         self
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     /// Set the syntax theme to be used inside code blocks in light mode
     pub fn syntax_theme_light<S: Into<String>>(mut self, theme: S) -> Self {
         self.options.theme_light = theme.into();
         self
     }
 
-    #[cfg(feature = "syntax_highlighting")]
+    #[cfg(feature = "better_syntax_highlighting")]
     /// Set the syntax theme to be used inside code blocks in dark mode
     pub fn syntax_theme_dark<S: Into<String>>(mut self, theme: S) -> Self {
         self.options.theme_dark = theme.into();
@@ -981,7 +981,7 @@ impl CommonMarkViewerInternal {
     }
 }
 
-#[cfg(not(feature = "syntax_highlighting"))]
+#[cfg(not(feature = "better_syntax_highlighting"))]
 impl CommonMarkViewerInternal {
     fn pre_syntax_highlighting(
         _cache: &mut CommonMarkCache,
@@ -1003,7 +1003,7 @@ impl CommonMarkViewerInternal {
     }
 }
 
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 impl CommonMarkViewerInternal {
     fn pre_syntax_highlighting(
         cache: &mut CommonMarkCache,
@@ -1071,7 +1071,7 @@ fn plain_highlighting(ui: &Ui, text: &str, extension: &str) -> egui::text::Layou
     )
 }
 
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 fn syntect_color_to_egui(color: syntect::highlighting::Color) -> egui::Color32 {
     egui::Color32::from_rgb(color.r, color.g, color.b)
 }
@@ -1146,7 +1146,7 @@ fn width_body_space(ui: &Ui) -> f32 {
     ui.fonts(|f| f.glyph_width(&id, ' '))
 }
 
-#[cfg(feature = "syntax_highlighting")]
+#[cfg(feature = "better_syntax_highlighting")]
 fn default_theme(ui: &Ui) -> &str {
     if ui.style().visuals.dark_mode {
         DEFAULT_THEME_DARK

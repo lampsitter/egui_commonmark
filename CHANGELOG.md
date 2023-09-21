@@ -4,7 +4,9 @@
 
 ### Added
 
-- Code blocks now use the syntax highlighting theme's caret and selection colors.
+- Primitive syntax highlighting by default
+- Code blocks now use the syntax highlighting theme's caret and selection colors while using the
+`better_syntax_highlighting` feature.
 - Image loading errors are now shown ([#8](https://github.com/lampsitter/egui_commonmark/pull/8) by [@emilk](https://github.com/emilk)).
 - `CommonMarkCache` now implements `Debug` ([#7](https://github.com/lampsitter/egui_commonmark/pull/7) by [@ChristopherPerry6060](https://github.com/ChristopherPerry6060)).
 - `CommonMarkCache::add_syntax_themes_from_folder`
@@ -15,6 +17,7 @@
 
 - Use new image API from egui ([#11](https://github.com/lampsitter/egui_commonmark/pull/11) by [@jprochazk](https://github.com/jprochazk)).
 - Updated dependencies.
+- Feature `syntax_highlighting` has been renamed to `better_syntax_highlighting`.
 
 ### Removed
 

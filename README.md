@@ -25,7 +25,7 @@ CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 
 ## Features
 
-* `syntax_highlighting`: Syntax highlighting inside code blocks with
+* `better_syntax_highlighting`: Syntax highlighting inside code blocks with
   [`syntect`](https://crates.io/crates/syntect)
 * `svg`: Support for viewing svg images
 * `fetch`: Images with urls will be downloaded and displayed

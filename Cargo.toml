@@ -25,8 +25,8 @@ document-features = { version = "0.2", optional = true }
 
 [features]
 default = ["load-images"]
-## Syntax highlighting for code blocks
-syntax_highlighting = ["syntect"]
+## Syntax highlighting for code blocks using syntect
+better_syntax_highlighting = ["syntect"]
 
 load-images = ["egui_extras/image", "egui_extras/file", "image/png"]
 
@@ -42,4 +42,4 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 
 [package.metadata.docs.rs]
 # docs.rs build can fail with the fetch feature enabled
-features = ["syntax_highlighting", "svg", "document-features"]
+features = ["better_syntax_highlighting", "document-features"]
