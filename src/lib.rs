@@ -24,7 +24,7 @@
 
 use std::collections::HashMap;
 
-use egui::{self, epaint, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
+use egui::{self, epaint, text::LayoutJob, Id, NumExt, Pos2, RichText, Sense, TextStyle, Ui, Vec2};
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
 
 #[cfg(feature = "better_syntax_highlighting")]
@@ -391,7 +391,7 @@ struct Style {
 #[derive(Default)]
 struct Link {
     destination: String,
-    text: String,
+    text: Vec<RichText>,
 }
 
 struct Image {
@@ -693,7 +693,7 @@ impl CommonMarkViewerInternal {
         }
 
         if self.text_style.code {
-            text = text.font(TextStyle::Monospace.resolve(ui.style()))
+            text = text.code();
         }
 
         text
@@ -714,7 +714,9 @@ impl CommonMarkViewerInternal {
                 self.event_text(text, ui);
             }
             pulldown_cmark::Event::Code(text) => {
-                ui.code(text.as_ref());
+                self.text_style.code = true;
+                self.event_text(text, ui);
+                self.text_style.code = false;
             }
             pulldown_cmark::Event::Html(_) => {}
             pulldown_cmark::Event::FootnoteReference(footnote) => {
@@ -735,17 +737,15 @@ impl CommonMarkViewerInternal {
     }
 
     fn event_text(&mut self, text: CowStr, ui: &mut Ui) {
-        if let Some(link) = &mut self.link {
-            link.text += &text;
+        let rich_text = self.style_text(ui, &text);
+        if let Some(image) = &mut self.image {
+            image.alt_text.push(rich_text);
+        } else if let Some(block) = &mut self.fenced_code_block {
+            block.content.push_str(&text);
+        } else if let Some(link) = &mut self.link {
+            link.text.push(rich_text);
         } else {
-            let rich_text = self.style_text(ui, &text);
-            if let Some(image) = &mut self.image {
-                image.alt_text.push(rich_text);
-            } else if let Some(block) = &mut self.fenced_code_block {
-                block.content.push_str(&text);
-            } else {
-                ui.label(rich_text);
-            }
+            ui.label(rich_text);
         }
     }
 
@@ -806,7 +806,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::Link(_, destination, _) => {
                 self.link = Some(Link {
                     destination: destination.to_string(),
-                    text: String::new(),
+                    text: Vec::new(),
                 });
             }
             pulldown_cmark::Tag::Image(_, uri, _) => {
@@ -905,13 +905,22 @@ impl CommonMarkViewerInternal {
 
     fn end_link(&mut self, ui: &mut Ui, cache: &mut CommonMarkCache) {
         if let Some(link) = self.link.take() {
+            let mut layout_job = LayoutJob::default();
+            for t in link.text {
+                t.append_to(
+                    &mut layout_job,
+                    ui.style(),
+                    egui::FontSelection::Default,
+                    egui::Align::LEFT,
+                );
+            }
             if cache.link_hooks().contains_key(&link.destination) {
-                let ui_link = ui.link(link.text);
+                let ui_link = ui.link(layout_job);
                 if ui_link.clicked() || ui_link.middle_clicked() {
                     cache.link_hooks_mut().insert(link.destination, true);
                 }
             } else {
-                ui.hyperlink_to(link.text, link.destination);
+                ui.hyperlink_to(layout_job, link.destination);
             }
         }
     }
