@@ -19,9 +19,9 @@
 
 ### Changed
 
+- Image formats are no longer implicitly enabled.
 - Use new image API from egui ([#11](https://github.com/lampsitter/egui_commonmark/pull/11) by [@jprochazk](https://github.com/jprochazk)).
 - Feature `syntax_highlighting` has been renamed to `better_syntax_highlighting`.
-- Updated dependencies.
 
 ### Removed
 

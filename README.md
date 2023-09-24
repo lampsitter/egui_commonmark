@@ -10,6 +10,14 @@ Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
 
 ## Usage
 
+In Cargo.toml:
+
+```toml
+egui_commonmark = "0.8"
+# Specify what image formats you want to use
+image = { version = "0.24", default-features = false, features = ["png"] }
+```
+
 ```rust
 use egui_commonmark::*;
 let markdown =

@@ -19,6 +19,12 @@
 //!
 //! ```
 //!
+//! Remember to opt into the image formats you want to use!
+//!
+//! ```toml
+//! image = { version = "0.24", default-features = false, features = ["png"] }
+//! ```
+//!
 #![cfg_attr(feature = "document-features", doc = "# Features")]
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 

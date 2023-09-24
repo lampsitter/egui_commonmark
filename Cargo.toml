@@ -28,13 +28,15 @@ default = ["load-images"]
 ## Syntax highlighting for code blocks using syntect
 better_syntax_highlighting = ["syntect"]
 
-load-images = ["egui_extras/image", "egui_extras/file", "image/png"]
+## Enable loading of images. Make sure to also opt in to what image format you need
+## through the image crate.
+load-images = ["egui_extras/image", "egui_extras/file"]
 
 ## Support loading svg images
 svg = ["egui_extras/svg"]
 
 ## Images with urls will be downloaded and displayed
-fetch = ["egui_extras/http", "image/jpeg"]
+fetch = ["egui_extras/http"]
 
 [dev-dependencies]
 eframe = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
