@@ -229,6 +229,7 @@ const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
 #[cfg(feature = "better_syntax_highlighting")]
 const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
+#[derive(Debug)]
 struct CommonMarkOptions {
     indentation_spaces: usize,
     max_image_width: Option<usize>,
@@ -268,6 +269,7 @@ impl CommonMarkOptions {
     }
 }
 
+#[derive(Debug)]
 pub struct CommonMarkViewer {
     source_id: Id,
     options: CommonMarkOptions,
