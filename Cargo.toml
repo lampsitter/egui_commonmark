@@ -49,6 +49,6 @@ features = ["better_syntax_highlighting", "document-features"]
 
 [patch.crates-io]
 # Pathed until the next egui release:
-eframe = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
-egui = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
-egui_extras = { git = "https://github.com/emilk/egui", rev = "d949eaf" }
+eframe = { git = "https://github.com/emilk/egui", rev = "fdd493d48fd23047480ac5a0219fc5f206eb0dd3" }
+egui = { git = "https://github.com/emilk/egui", rev = "fdd493d48fd23047480ac5a0219fc5f206eb0dd3" }
+egui_extras = { git = "https://github.com/emilk/egui", rev = "fdd493d48fd23047480ac5a0219fc5f206eb0dd3" }
