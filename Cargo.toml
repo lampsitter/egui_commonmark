@@ -13,9 +13,9 @@ documentation = "https://docs.rs/egui_commonmark"
 include = ["src/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]
-egui.version = "0.22"
+egui.version = "0.23"
 pulldown-cmark = { version = "0.9.3", default-features = false }
-egui_extras.version = "0.22"
+egui_extras.version = "0.23"
 
 syntect = { version = "5.0.0", optional = true, default-features = false, features = [
     "default-fancy",
@@ -39,16 +39,9 @@ svg = ["egui_extras/svg"]
 fetch = ["egui_extras/http"]
 
 [dev-dependencies]
-eframe.version = "0.22"
+eframe.version = "0.23"
 image = { version = "0.24", default-features = false, features = ["png"] }
 
 [package.metadata.docs.rs]
 # docs.rs build can fail with the fetch feature enabled
 features = ["better_syntax_highlighting", "document-features"]
-
-
-[patch.crates-io]
-# Pathed until the next egui release:
-eframe = { git = "https://github.com/emilk/egui", rev = "fdd493d48fd23047480ac5a0219fc5f206eb0dd3" }
-egui = { git = "https://github.com/emilk/egui", rev = "fdd493d48fd23047480ac5a0219fc5f206eb0dd3" }
-egui_extras = { git = "https://github.com/emilk/egui", rev = "fdd493d48fd23047480ac5a0219fc5f206eb0dd3" }
