@@ -978,21 +978,54 @@ impl CommonMarkViewerInternal {
                     job.wrap.max_width = wrap_width;
                     ui.fonts(|f| f.layout_job(job))
                 };
-                ui.add(
-                    egui::TextEdit::multiline(
-                        &mut block
-                            .content
-                            .strip_suffix('\n')
-                            .unwrap_or(&block.content)
-                            .to_string(),
-                    )
+
+                let pre_text_edit_position = ui.next_widget_position();
+                let text = block.content.strip_suffix('\n').unwrap_or(&block.content);
+                let output = egui::TextEdit::multiline(&mut text.to_owned())
                     .layouter(&mut layout)
                     .desired_width(max_width)
                     // prevent trailing lines
-                    .desired_rows(1),
-                );
+                    .desired_rows(1)
+                    .show(ui);
+
+                // Copy icon
+                let spacing = &ui.style().spacing;
+                let position = pre_text_edit_position
+                    + egui::vec2(
+                        max_width - spacing.icon_width - spacing.button_padding.x,
+                        -spacing.icon_width + spacing.button_padding.y,
+                    );
+
+                if ui
+                    .put(
+                        egui::Rect {
+                            min: position,
+                            max: position,
+                        },
+                        egui::Button::new("🗐")
+                            .small()
+                            .frame(false)
+                            .fill(egui::Color32::TRANSPARENT),
+                    )
+                    .clicked()
+                {
+                    use egui::TextBuffer as _;
+                    let copy_text = if let Some(cursor) = output.cursor_range {
+                        let selected_chars = cursor.as_sorted_char_range();
+                        let selected_text = text.char_range(selected_chars);
+                        if selected_text.is_empty() {
+                            text.to_owned()
+                        } else {
+                            selected_text.to_owned()
+                        }
+                    } else {
+                        text.to_owned()
+                    };
+                    ui.ctx().copy_text(copy_text);
+                }
             });
         }
+
         self.text_style.code = false;
         newline(ui);
     }
