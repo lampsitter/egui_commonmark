@@ -1,5 +1,12 @@
 # egui_commomnark changelog
 
+## Unreleased
+
+
+### Added
+
+- Copy text button in code blocks
+
 ## 0.8.0 - 2023-09-28
 
 ### Added
