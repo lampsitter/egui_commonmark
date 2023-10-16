@@ -954,11 +954,6 @@ impl CommonMarkViewerInternal {
                     }
                 });
             }
-
-            if self.should_insert_newline {
-                newline(ui);
-                self.should_insert_newline = false;
-            }
         }
     }
 
