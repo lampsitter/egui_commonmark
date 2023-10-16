@@ -737,6 +737,8 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Event::Rule => {
                 newline(ui);
                 ui.add(egui::Separator::default().horizontal());
+                // This does not add a new line, but instead ends the separator
+                newline(ui);
             }
             pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
                 ui.add(Checkbox::without_text(&mut checkbox));
