@@ -1,5 +1,14 @@
 # egui_commomnark changelog
 
+## Unreleased
+
+## 0.9.1 - 2023-10-24
+
+### Fixed
+
+- Missing space after heading when preceded by an image
+- Missing space after separator
+
 ## 0.9.0 - 2023-10-14
 
 ### Added
