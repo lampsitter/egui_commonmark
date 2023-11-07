@@ -653,8 +653,16 @@ impl CommonMarkViewerInternal {
         let mut text = RichText::new(text);
 
         if let Some(level) = self.text_style.heading {
-            let max_height = ui.text_style_height(&TextStyle::Heading);
-            let min_height = ui.text_style_height(&TextStyle::Body);
+            let max_height = ui
+                .style()
+                .text_styles
+                .get(&egui::TextStyle::Heading)
+                .map_or(32.0, |d| d.size);
+            let min_height = ui
+                .style()
+                .text_styles
+                .get(&egui::TextStyle::Body)
+                .map_or(14.0, |d| d.size);
             let diff = max_height - min_height;
             match level {
                 HeadingLevel::H1 => {
