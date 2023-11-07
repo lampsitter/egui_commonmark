@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.9.2 - 2023-11-07
+
+### Fixed
+
+- Header sizing issues ([#20](https://github.com/lampsitter/egui_commonmark/pull/20) by [@abey79](https://github.com/abey79)).
+
 ## 0.9.1 - 2023-10-24
 
 ### Fixed
