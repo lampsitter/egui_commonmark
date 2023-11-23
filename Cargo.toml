@@ -1,7 +1,7 @@
 [package]
 name = "egui_commonmark"
 authors = ["Erlend Walstad"]
-version = "0.9.2"
+version = "0.10.0"
 edition = "2021"
 description = "Commonmark viewer for egui"
 keywords = ["commonmark", "egui"]
@@ -11,12 +11,12 @@ readme = "README.md"
 repository = "https://github.com/lampsitter/egui_commonmark"
 documentation = "https://docs.rs/egui_commonmark"
 include = ["src/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
-rust-version = "1.70" # Follow egui
+rust-version = "1.72" # Follow egui
 
 [dependencies]
-egui.version = "0.23"
+egui.version = "0.24"
 pulldown-cmark = { version = "0.9.3", default-features = false }
-egui_extras.version = "0.23"
+egui_extras = "0.24"
 
 syntect = { version = "5.0.0", optional = true, default-features = false, features = [
     "default-fancy",
@@ -40,7 +40,7 @@ svg = ["egui_extras/svg"]
 fetch = ["egui_extras/http"]
 
 [dev-dependencies]
-eframe = { version = "0.23", default-features = false, features = ["default_fonts", "glow"] }
+eframe = { version = "0.24", default-features = false, features = ["default_fonts", "glow"] }
 image = { version = "0.24", default-features = false, features = ["png"] }
 
 [package.metadata.docs.rs]

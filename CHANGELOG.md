@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.10.0 - 2023-11-23
+
+### Changed
+
+- Update to egui 0.24
+
 ## 0.9.2 - 2023-11-07
 
 ### Fixed
