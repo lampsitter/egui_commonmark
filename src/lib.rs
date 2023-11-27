@@ -985,8 +985,12 @@ impl CommonMarkViewerInternal {
                 };
 
                 let pre_text_edit_position = ui.next_widget_position();
-                let text = block.content.strip_suffix('\n').unwrap_or(&block.content);
-                let output = egui::TextEdit::multiline(&mut text.to_owned())
+                let mut text = block.content.strip_suffix('\n').unwrap_or(&block.content);
+
+                // We use a `TextEdit` to make the text selectable.
+                // Note that we take a `&mut` to a non-`mut` `&str`, which is
+                // the how to tell `egui` that the text is not editable.
+                let output = egui::TextEdit::multiline(&mut text)
                     .layouter(&mut layout)
                     .desired_width(max_width)
                     // prevent trailing lines
