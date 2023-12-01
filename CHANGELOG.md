@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed
+
+- Code block has borders.
+
+### Fixed
+
+- Make code blocks non-editable ([#22](https://github.com/lampsitter/egui_commonmark/pull/22) by [@emilk](https://github.com/emilk)).
+
+
 ## 0.10.0 - 2023-11-23
 
 ### Changed

@@ -987,6 +987,10 @@ impl CommonMarkViewerInternal {
                 let pre_text_edit_position = ui.next_widget_position();
                 let mut text = block.content.strip_suffix('\n').unwrap_or(&block.content);
 
+                // To manually add background color to the code block, we imitate what
+                // TextEdit does internally
+                let where_to_put_background = ui.painter().add(egui::Shape::Noop);
+
                 // We use a `TextEdit` to make the text selectable.
                 // Note that we take a `&mut` to a non-`mut` `&str`, which is
                 // the how to tell `egui` that the text is not editable.
@@ -996,6 +1000,18 @@ impl CommonMarkViewerInternal {
                     // prevent trailing lines
                     .desired_rows(1)
                     .show(ui);
+
+                // Background color + frame (This is lost when TextEdit it not editable)
+                let frame_rect = output.response.rect;
+                ui.painter().set(
+                    where_to_put_background,
+                    epaint::RectShape::new(
+                        frame_rect,
+                        ui.style().noninteractive().rounding,
+                        ui.visuals().extreme_bg_color,
+                        ui.visuals().widgets.noninteractive.bg_stroke,
+                    ),
+                );
 
                 // Copy icon
                 let spacing = &ui.style().spacing;
@@ -1077,10 +1093,6 @@ impl CommonMarkViewerInternal {
             .background
             .map(syntect_color_to_egui)
             .unwrap_or(style.visuals.extreme_bg_color);
-
-        if let Some(color) = curr_theme.settings.caret {
-            style.visuals.text_cursor.color = syntect_color_to_egui(color);
-        }
 
         if let Some(color) = curr_theme.settings.selection_foreground {
             style.visuals.selection.bg_fill = syntect_color_to_egui(color);
