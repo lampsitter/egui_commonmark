@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.10.1 - 2023-12-03
+
 ### Changed
 
 - Code block has borders.
