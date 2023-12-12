@@ -246,6 +246,7 @@ struct CommonMarkOptions {
     #[cfg(feature = "better_syntax_highlighting")]
     theme_dark: String,
     use_explicit_uri_scheme: bool,
+    default_implicit_uri_scheme: String,
 }
 
 impl Default for CommonMarkOptions {
@@ -260,6 +261,7 @@ impl Default for CommonMarkOptions {
             #[cfg(feature = "better_syntax_highlighting")]
             theme_dark: DEFAULT_THEME_DARK.to_owned(),
             use_explicit_uri_scheme: false,
+            default_implicit_uri_scheme: "file://".to_owned(),
         }
     }
 }
@@ -313,6 +315,19 @@ impl CommonMarkViewer {
     /// Show alt text when hovering over images. By default this is enabled.
     pub fn show_alt_text_on_hover(mut self, show: bool) -> Self {
         self.options.show_alt_text_on_hover = show;
+        self
+    }
+
+    /// Allows changing the default implicit `file://` uri scheme.
+    /// This does nothing if [`explicit_image_uri_scheme`](`Self::explicit_image_uri_scheme`) is enabled
+    ///
+    /// # Example
+    /// ```
+    /// # use egui_commonmark::CommonMarkViewer;
+    /// CommonMarkViewer::new("viewer").default_implicit_uri_scheme("https://example.org/");
+    /// ```
+    pub fn default_implicit_uri_scheme<S: Into<String>>(mut self, scheme: S) -> Self {
+        self.options.default_implicit_uri_scheme = scheme.into();
         self
     }
 
@@ -833,7 +848,7 @@ impl CommonMarkViewerInternal {
                     uri.to_string()
                 } else {
                     // Assume file scheme
-                    format!("file://{uri}")
+                    format!("{}{uri}", options.default_implicit_uri_scheme)
                 };
 
                 self.start_image(uri);
