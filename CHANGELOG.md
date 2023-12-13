@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.10.2 - 2023-12-13
+
+### Added
+
+- Option to change default implicit uri scheme [#24](https://github.com/lampsitter/egui_commonmark/pull/22)
+
 ## 0.10.1 - 2023-12-03
 
 ### Changed
