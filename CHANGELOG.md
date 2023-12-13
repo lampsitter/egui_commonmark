@@ -6,7 +6,7 @@
 
 ### Added
 
-- Option to change default implicit uri scheme [#24](https://github.com/lampsitter/egui_commonmark/pull/22)
+- Option to change default implicit uri scheme [#24](https://github.com/lampsitter/egui_commonmark/pull/24)
 
 ## 0.10.1 - 2023-12-03
 
