@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.11.0 - 2024-01-08
+
+### Changed
+
+- Update to egui 0.25 ([#27](https://github.com/lampsitter/egui_commonmark/pull/27) by [@emilk](https://github.com/emilk))
+
 ## 0.10.2 - 2023-12-13
 
 ### Added
