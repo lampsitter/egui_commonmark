@@ -2,11 +2,16 @@
 
 A *bunch* ~~of~~ __different__ `text` styles.
 
-| __A table!__ |
-| -------- |
-| ![Rust logo](examples/rust-logo-128x128.png) |
-| Some filler text |
-| [Link to repo](https://github.com/lampsitter/egui_commonmark) |
+
+ ![Rust logo](examples/rust-logo-128x128.png)
+
+<!-- | __A table!__ | -->
+<!-- | -------- | -->
+<!-- | Some filler text | -->
+<!-- | *yep | -->
+<!-- | aaha | -->
+
+[Link to repo](https://github.com/lampsitter/egui_commonmark)
 
 ```rs
 let mut vec = Vec::new();
