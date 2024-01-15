@@ -1,12 +1,6 @@
 # Code blocks
 
-
-```toml
-egui_commonmark = "0.10"
-image = { version = "0.24", default-features = false, features = ["png"] }
-```
-
-```rust
+```rs
 use egui_commonmark::*;
 let markdown =
 r"# Hello world
@@ -17,4 +11,12 @@ r"# Hello world
 
 let mut cache = CommonMarkCache::default();
 CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
+```
+
+The `better_syntax_highlighting` feature does not have toml highlighting by
+default. It will therefore fallback to default highlighting.
+
+```toml
+egui_commonmark = "0.10"
+image = { version = "0.24", default-features = false, features = ["png"] }
 ```
