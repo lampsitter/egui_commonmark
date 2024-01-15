@@ -97,7 +97,7 @@ fn main() {
 
             Box::new(App {
                 cache: CommonMarkCache::default(),
-                curr_tab: Some(0),
+                curr_tab: Some(1),
                 pages: vec![
                     Page {
                         name: "Hello World".to_owned(),

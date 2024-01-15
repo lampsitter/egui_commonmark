@@ -31,10 +31,9 @@
 use std::collections::HashMap;
 
 use egui::{self, text::LayoutJob, Id, Pos2, RichText, TextStyle, Ui, Vec2};
-use pulldown_cmark::{CowStr, HeadingLevel, Options};
 
 mod elements;
-use elements::*;
+mod parsers;
 
 #[cfg(feature = "better_syntax_highlighting")]
 use syntect::{
@@ -278,6 +277,22 @@ impl CommonMarkOptions {
             &self.theme_light
         }
     }
+
+    fn max_width(&self, ui: &Ui) -> f32 {
+        let max_image_width = self.max_image_width.unwrap_or(0) as f32;
+        let available_width = ui.available_width();
+
+        let max_width = max_image_width.max(available_width);
+        if let Some(default_width) = self.default_width {
+            if default_width as f32 > max_width {
+                default_width as f32
+            } else {
+                max_width
+            }
+        } else {
+            max_width
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -368,7 +383,14 @@ impl CommonMarkViewer {
     /// Shows rendered markdown
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.prepare_show(ui.ctx());
-        CommonMarkViewerInternal::new(self.source_id).show(ui, cache, &self.options, text, false);
+        // parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+        parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
+            ui,
+            cache,
+            &self.options,
+            text,
+            false,
+        );
     }
 
     /// Shows markdown inside a [`ScrollArea`].
@@ -387,7 +409,7 @@ impl CommonMarkViewer {
     #[doc(hidden)] // Buggy in scenarios more complex than the example application
     pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.prepare_show(ui.ctx());
-        CommonMarkViewerInternal::new(self.source_id).show_scrollable(
+        parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show_scrollable(
             ui,
             cache,
             &self.options,
@@ -396,17 +418,9 @@ impl CommonMarkViewer {
     }
 }
 
-/// Supported pulldown_cmark options
-fn parser_options() -> Options {
-    Options::ENABLE_TABLES
-        | Options::ENABLE_TASKLISTS
-        | Options::ENABLE_STRIKETHROUGH
-        | Options::ENABLE_FOOTNOTES
-}
-
 #[derive(Default)]
 struct Style {
-    heading: Option<pulldown_cmark::HeadingLevel>,
+    heading: Option<u8>,
     strong: bool,
     emphasis: bool,
     strikethrough: bool,
@@ -414,263 +428,11 @@ struct Style {
     code: bool,
 }
 
-#[derive(Default)]
-struct Link {
-    destination: String,
-    text: Vec<RichText>,
-}
-
-struct Image {
-    uri: String,
-    alt_text: Vec<RichText>,
-}
-
-struct FencedCodeBlock {
-    lang: String,
-    content: String,
-}
-
-struct CommonMarkViewerInternal {
-    source_id: Id,
-    curr_table: usize,
-    text_style: Style,
-    list_point: Option<u64>,
-    link: Option<Link>,
-    indentation: i64,
-    image: Option<Image>,
-    should_insert_newline: bool,
-    fenced_code_block: Option<FencedCodeBlock>,
-    is_table: bool,
-}
-
-impl CommonMarkViewerInternal {
-    fn new(source_id: Id) -> Self {
-        Self {
-            source_id,
-            curr_table: 0,
-            text_style: Style::default(),
-            list_point: None,
-            link: None,
-            indentation: -1,
-            image: None,
-            should_insert_newline: true,
-            fenced_code_block: None,
-            is_table: false,
-        }
-    }
-}
-
-impl CommonMarkViewerInternal {
-    /// Be aware that this acquires egui::Context internally.
-    pub fn show(
-        &mut self,
-        ui: &mut egui::Ui,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        text: &str,
-        populate_split_points: bool,
-    ) {
-        let max_width = self.max_width(options, ui);
-        let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
-
-        ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
-            ui.spacing_mut().item_spacing.x = 0.0;
-            let height = ui.text_style_height(&TextStyle::Body);
-            ui.set_row_height(height);
-
-            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options()).enumerate();
-
-            while let Some((index, e)) = events.next() {
-                let start_position = ui.next_widget_position();
-                let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
-                let should_add_split_point = self.indentation == -1 && is_element_end;
-
-                self.process_event(ui, &mut events, e, cache, options, max_width);
-
-                if populate_split_points && should_add_split_point {
-                    let scroll_cache = cache.scroll(&self.source_id);
-                    let end_position = ui.next_widget_position();
-
-                    let split_point_exists = scroll_cache
-                        .split_points
-                        .iter()
-                        .any(|(i, _, _)| *i == index);
-
-                    if !split_point_exists {
-                        scroll_cache
-                            .split_points
-                            .push((index, start_position, end_position));
-                    }
-                }
-            }
-
-            cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
-        });
-    }
-
-    pub fn show_scrollable(
-        &mut self,
-        ui: &mut egui::Ui,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        text: &str,
-    ) {
-        let available_size = ui.available_size();
-        let scroll_id = self.source_id.with("_scroll_area");
-
-        let Some(page_size) = cache.scroll(&self.source_id).page_size else {
-            egui::ScrollArea::vertical()
-                .id_source(scroll_id)
-                .auto_shrink([false, true])
-                .show(ui, |ui| {
-                    self.show(ui, cache, options, text, true);
-                });
-            // Prevent repopulating points twice at startup
-            cache.scroll(&self.source_id).available_size = available_size;
-            return;
-        };
-
-        let events = pulldown_cmark::Parser::new_ext(text, parser_options()).collect::<Vec<_>>();
-
-        let num_rows = events.len();
-
-        egui::ScrollArea::vertical()
-            .id_source(scroll_id)
-            // Elements have different widths, so the scroll area cannot try to shrink to the
-            // content, as that will mean that the scroll bar will move when loading elements
-            // with different widths.
-            .auto_shrink([false, true])
-            .show_viewport(ui, |ui, viewport| {
-                ui.set_height(page_size.y);
-                let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
-
-                let max_width = self.max_width(options, ui);
-                ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    let scroll_cache = cache.scroll(&self.source_id);
-
-                    // finding the first element that's not in the viewport anymore
-                    let (first_event_index, _, first_end_position) = scroll_cache
-                        .split_points
-                        .iter()
-                        .filter(|(_, _, end_position)| end_position.y < viewport.min.y)
-                        .nth_back(1)
-                        .copied()
-                        .unwrap_or((0, Pos2::ZERO, Pos2::ZERO));
-
-                    // finding the last element that's just outside the viewport
-                    let last_event_index = scroll_cache
-                        .split_points
-                        .iter()
-                        .filter(|(_, start_position, _)| start_position.y > viewport.max.y)
-                        .nth(1)
-                        .map(|(index, _, _)| *index)
-                        .unwrap_or(num_rows);
-
-                    ui.allocate_space(first_end_position.to_vec2());
-
-                    // only rendering the elements that are inside the viewport
-                    let mut events = events
-                        .into_iter()
-                        .enumerate()
-                        .skip(first_event_index)
-                        .take(last_event_index - first_event_index);
-
-                    while let Some((_, e)) = events.next() {
-                        self.process_event(ui, &mut events, e, cache, options, max_width);
-                    }
-                });
-            });
-
-        // Forcing full re-render to repopulate split points for the new size
-        let scroll_cache = cache.scroll(&self.source_id);
-        if available_size != scroll_cache.available_size {
-            scroll_cache.available_size = available_size;
-            scroll_cache.page_size = None;
-            scroll_cache.split_points.clear();
-        }
-    }
-
-    fn process_event<'e>(
-        &mut self,
-        ui: &mut Ui,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
-        event: pulldown_cmark::Event,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        max_width: f32,
-    ) {
-        self.event(ui, event, cache, options, max_width);
-        self.fenced_code_block(events, max_width, cache, options, ui);
-        self.table(events, cache, options, ui, max_width);
-    }
-
-    fn max_width(&self, options: &CommonMarkOptions, ui: &Ui) -> f32 {
-        let max_image_width = options.max_image_width.unwrap_or(0) as f32;
-        let available_width = ui.available_width();
-
-        let max_width = max_image_width.max(available_width);
-        if let Some(default_width) = options.default_width {
-            if default_width as f32 > max_width {
-                default_width as f32
-            } else {
-                max_width
-            }
-        } else {
-            max_width
-        }
-    }
-
-    fn fenced_code_block<'e>(
-        &mut self,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
-        max_width: f32,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        ui: &mut Ui,
-    ) {
-        while self.fenced_code_block.is_some() {
-            if let Some((_, e)) = events.next() {
-                self.event(ui, e, cache, options, max_width);
-            } else {
-                break;
-            }
-        }
-    }
-
-    fn table<'e>(
-        &mut self,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        ui: &mut Ui,
-        max_width: f32,
-    ) {
-        if self.is_table {
-            newline(ui);
-            egui::Frame::group(ui.style()).show(ui, |ui| {
-                let id = self.source_id.with(self.curr_table);
-                self.curr_table += 1;
-                egui::Grid::new(id).striped(true).show(ui, |ui| {
-                    while self.is_table {
-                        if let Some((_, e)) = events.next() {
-                            self.should_insert_newline = false;
-                            self.event(ui, e, cache, options, max_width);
-                        } else {
-                            break;
-                        }
-                    }
-                });
-            });
-
-            newline(ui);
-        }
-    }
-
-    fn style_text(&mut self, ui: &Ui, text: &str) -> RichText {
+impl Style {
+    fn to_richtext(&self, ui: &Ui, text: &str) -> RichText {
         let mut text = RichText::new(text);
 
-        if let Some(level) = self.text_style.heading {
+        if let Some(level) = self.heading {
             let max_height = ui
                 .style()
                 .text_styles
@@ -682,337 +444,185 @@ impl CommonMarkViewerInternal {
                 .get(&egui::TextStyle::Body)
                 .map_or(14.0, |d| d.size);
             let diff = max_height - min_height;
+
             match level {
-                HeadingLevel::H1 => {
+                0 => {
                     text = text.strong().heading();
                 }
-                HeadingLevel::H2 => {
+                1 => {
                     let size = min_height + diff * 0.835;
                     text = text.strong().size(size);
                 }
-                HeadingLevel::H3 => {
+                2 => {
                     let size = min_height + diff * 0.668;
                     text = text.strong().size(size);
                 }
-                HeadingLevel::H4 => {
+                3 => {
                     let size = min_height + diff * 0.501;
                     text = text.strong().size(size);
                 }
-                HeadingLevel::H5 => {
+                4 => {
                     let size = min_height + diff * 0.334;
                     text = text.size(size);
                 }
-                HeadingLevel::H6 => {
+                // We only support 6 levels
+                5.. => {
                     let size = min_height + diff * 0.167;
                     text = text.size(size);
                 }
             }
         }
 
-        if self.text_style.quote {
+        if self.quote {
             text = text.weak();
         }
 
-        if self.text_style.strong {
+        if self.strong {
             text = text.strong();
         }
 
-        if self.text_style.emphasis {
+        if self.emphasis {
             // FIXME: Might want to add some space between the next text
             text = text.italics();
         }
 
-        if self.text_style.strikethrough {
+        if self.strikethrough {
             text = text.strikethrough();
         }
 
-        if self.text_style.code {
+        if self.code {
             text = text.code();
         }
 
         text
     }
+}
 
-    fn event(
-        &mut self,
-        ui: &mut Ui,
-        event: pulldown_cmark::Event,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        max_width: f32,
-    ) {
-        match event {
-            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
-            pulldown_cmark::Event::Text(text) => {
-                self.event_text(text, ui);
-            }
-            pulldown_cmark::Event::Code(text) => {
-                self.text_style.code = true;
-                self.event_text(text, ui);
-                self.text_style.code = false;
-            }
-            pulldown_cmark::Event::Html(_) => {}
-            pulldown_cmark::Event::FootnoteReference(footnote) => {
-                footnote_start(ui, &footnote);
-            }
-            pulldown_cmark::Event::SoftBreak => {
-                ui.label(" ");
-            }
-            pulldown_cmark::Event::HardBreak => newline(ui),
-            pulldown_cmark::Event::Rule => {
-                newline(ui);
-                ui.add(egui::Separator::default().horizontal());
-                // This does not add a new line, but instead ends the separator
-                newline(ui);
-            }
-            pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
-                ui.add(Checkbox::without_text(&mut checkbox));
-            }
+// #[derive(Default)]
+// struct List {
+//     // if some it means that it is numbered
+//     list_point: Option<u64>,
+//     indentation: i64,
+// }
+
+// impl List {
+//     pub fn indent(&mut self, point: Option<u64>) {
+//         self.list_point = point;
+//         self.indentation += 1;
+//     }
+
+//     pub fn dedent(&mut self, ui: &mut Ui, point: Option<u64>) {
+//         self.indentation -= 1;
+//         if self.indentation == -1 {
+//             elements::newline(ui);
+//             // self.should_insert_newline = true;
+//         }
+//     }
+// }
+
+#[derive(Default)]
+struct Link {
+    destination: String,
+    text: Vec<RichText>,
+}
+
+impl Link {
+    fn end(self, ui: &mut Ui, cache: &mut CommonMarkCache) {
+        let Self { destination, text } = self;
+
+        let mut layout_job = LayoutJob::default();
+        for t in text {
+            t.append_to(
+                &mut layout_job,
+                ui.style(),
+                egui::FontSelection::Default,
+                egui::Align::LEFT,
+            );
         }
-    }
-
-    fn event_text(&mut self, text: CowStr, ui: &mut Ui) {
-        let rich_text = self.style_text(ui, &text);
-        if let Some(image) = &mut self.image {
-            image.alt_text.push(rich_text);
-        } else if let Some(block) = &mut self.fenced_code_block {
-            block.content.push_str(&text);
-        } else if let Some(link) = &mut self.link {
-            link.text.push(rich_text);
+        if cache.link_hooks().contains_key(&destination) {
+            let ui_link = ui.link(layout_job);
+            if ui_link.clicked() || ui_link.middle_clicked() {
+                cache.link_hooks_mut().insert(destination, true);
+            }
         } else {
-            ui.label(rich_text);
+            ui.hyperlink_to(layout_job, destination);
         }
     }
+}
 
-    fn start_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
-        match tag {
-            pulldown_cmark::Tag::Paragraph => {
-                if self.should_insert_newline {
-                    newline(ui);
-                }
-                self.should_insert_newline = true;
-            }
-            pulldown_cmark::Tag::Heading(l, _, _) => {
-                newline(ui);
-                self.text_style.heading = Some(l);
-            }
-            pulldown_cmark::Tag::BlockQuote => {
-                self.text_style.quote = true;
-                ui.add(egui::Separator::default().horizontal());
-            }
-            pulldown_cmark::Tag::CodeBlock(c) => {
-                if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
-                    self.fenced_code_block = Some(FencedCodeBlock {
-                        lang: lang.to_string(),
-                        content: "".to_string(),
-                    });
+struct Image {
+    uri: String,
+    alt_text: Vec<RichText>,
+}
 
-                    newline(ui);
-                }
-
-                self.text_style.code = true;
-            }
-            pulldown_cmark::Tag::List(number) => {
-                self.indentation += 1;
-                self.list_point = number;
-            }
-            pulldown_cmark::Tag::Item => {
-                self.start_item(ui, options);
-            }
-            pulldown_cmark::Tag::FootnoteDefinition(note) => {
-                self.should_insert_newline = false;
-                footnote(ui, &note);
-            }
-            pulldown_cmark::Tag::Table(_) => {
-                self.is_table = true;
-            }
-            pulldown_cmark::Tag::TableHead => {}
-            pulldown_cmark::Tag::TableRow => {}
-            pulldown_cmark::Tag::TableCell => {}
-            pulldown_cmark::Tag::Emphasis => {
-                self.text_style.emphasis = true;
-            }
-            pulldown_cmark::Tag::Strong => {
-                self.text_style.strong = true;
-            }
-            pulldown_cmark::Tag::Strikethrough => {
-                self.text_style.strikethrough = true;
-            }
-            pulldown_cmark::Tag::Link(_, destination, _) => {
-                self.link = Some(Link {
-                    destination: destination.to_string(),
-                    text: Vec::new(),
-                });
-            }
-            pulldown_cmark::Tag::Image(_, uri, _) => {
-                let has_scheme = uri.contains("://");
-                let uri = if options.use_explicit_uri_scheme || has_scheme {
-                    uri.to_string()
-                } else {
-                    // Assume file scheme
-                    format!("{}{uri}", options.default_implicit_uri_scheme)
-                };
-
-                self.start_image(uri);
-            }
-        }
-    }
-
-    fn end_tag(
-        &mut self,
-        ui: &mut Ui,
-        tag: pulldown_cmark::Tag,
-        cache: &mut CommonMarkCache,
-        options: &CommonMarkOptions,
-        max_width: f32,
-    ) {
-        match tag {
-            pulldown_cmark::Tag::Paragraph => {
-                newline(ui);
-            }
-            pulldown_cmark::Tag::Heading(_, _, _) => {
-                newline(ui);
-                self.text_style.heading = None;
-            }
-            pulldown_cmark::Tag::BlockQuote => {
-                self.text_style.quote = false;
-                ui.add(egui::Separator::default().horizontal());
-                newline(ui);
-            }
-            pulldown_cmark::Tag::CodeBlock(_) => {
-                self.end_code_block(ui, cache, options, max_width);
-            }
-            pulldown_cmark::Tag::List(_) => {
-                self.indentation -= 1;
-                if self.indentation == -1 {
-                    newline(ui);
-                    self.should_insert_newline = true;
-                }
-            }
-            pulldown_cmark::Tag::Item => {}
-            pulldown_cmark::Tag::FootnoteDefinition(_) => {}
-            pulldown_cmark::Tag::Table(_) => {
-                self.is_table = false;
-            }
-            pulldown_cmark::Tag::TableHead => {
-                ui.end_row();
-            }
-            pulldown_cmark::Tag::TableRow => {
-                ui.end_row();
-            }
-            pulldown_cmark::Tag::TableCell => {
-                // Ensure space between cells
-                ui.label("  ");
-            }
-            pulldown_cmark::Tag::Emphasis => {
-                self.text_style.emphasis = false;
-            }
-            pulldown_cmark::Tag::Strong => {
-                self.text_style.strong = false;
-            }
-            pulldown_cmark::Tag::Strikethrough => {
-                self.text_style.strikethrough = false;
-            }
-            pulldown_cmark::Tag::Link(_, _, _) => {
-                self.end_link(ui, cache);
-            }
-            pulldown_cmark::Tag::Image(_, _, _) => {
-                self.end_image(ui, options);
-            }
-        }
-    }
-
-    fn start_item(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
-        newline(ui);
-        ui.label(" ".repeat(self.indentation as usize * options.indentation_spaces));
-
-        self.should_insert_newline = false;
-        if let Some(mut number) = self.list_point.take() {
-            number_point(ui, &number.to_string());
-            number += 1;
-            self.list_point = Some(number);
-        } else if self.indentation >= 1 {
-            bullet_point_hollow(ui);
+impl Image {
+    // FIXME: string conversion
+    pub fn new(uri: &str, options: &CommonMarkOptions) -> Self {
+        let has_scheme = uri.contains("://");
+        let uri = if options.use_explicit_uri_scheme || has_scheme {
+            uri.to_string()
         } else {
-            bullet_point(ui);
-        }
-    }
+            // Assume file scheme
+            format!("{}{uri}", options.default_implicit_uri_scheme)
+        };
 
-    fn end_link(&mut self, ui: &mut Ui, cache: &mut CommonMarkCache) {
-        if let Some(link) = self.link.take() {
-            let mut layout_job = LayoutJob::default();
-            for t in link.text {
-                t.append_to(
-                    &mut layout_job,
-                    ui.style(),
-                    egui::FontSelection::Default,
-                    egui::Align::LEFT,
-                );
-            }
-            if cache.link_hooks().contains_key(&link.destination) {
-                let ui_link = ui.link(layout_job);
-                if ui_link.clicked() || ui_link.middle_clicked() {
-                    cache.link_hooks_mut().insert(link.destination, true);
-                }
-            } else {
-                ui.hyperlink_to(layout_job, link.destination);
-            }
-        }
-    }
-
-    fn start_image(&mut self, uri: String) {
-        self.image = Some(Image {
+        Self {
             uri,
             alt_text: Vec::new(),
-        });
-    }
-
-    fn end_image(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
-        if let Some(image) = self.image.take() {
-            let response = ui.add(
-                egui::Image::from_uri(&image.uri)
-                    .fit_to_original_size(1.0)
-                    .max_width(self.max_width(options, ui)),
-            );
-            if !image.alt_text.is_empty() && options.show_alt_text_on_hover {
-                response.on_hover_ui_at_pointer(|ui| {
-                    for alt in image.alt_text {
-                        ui.label(alt);
-                    }
-                });
-            }
         }
     }
 
-    fn end_code_block(
-        &mut self,
+    fn end(self, ui: &mut Ui, options: &CommonMarkOptions) {
+        let response = ui.add(
+            egui::Image::from_uri(&self.uri)
+                .fit_to_original_size(1.0)
+                .max_width(options.max_width(ui)),
+        );
+
+        if !self.alt_text.is_empty() && options.show_alt_text_on_hover {
+            response.on_hover_ui_at_pointer(|ui| {
+                for alt in self.alt_text {
+                    ui.label(alt);
+                }
+            });
+        }
+    }
+}
+
+struct FencedCodeBlock {
+    lang: String,
+    content: String,
+}
+
+impl FencedCodeBlock {
+    fn end(
+        &self,
         ui: &mut Ui,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
-        if let Some(block) = self.fenced_code_block.take() {
-            ui.scope(|ui| {
-                Self::pre_syntax_highlighting(cache, options, ui);
+        // if let Some(block) = self.fenced_code_block.take() {
+        ui.scope(|ui| {
+            Self::pre_syntax_highlighting(cache, options, ui);
 
-                let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
-                    let mut job = self.syntax_highlighting(cache, options, &block.lang, ui, string);
-                    job.wrap.max_width = wrap_width;
-                    ui.fonts(|f| f.layout_job(job))
-                };
+            let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
+                let mut job = self.syntax_highlighting(cache, options, &self.lang, ui, string);
+                job.wrap.max_width = wrap_width;
+                ui.fonts(|f| f.layout_job(job))
+            };
 
-                code_block(ui, max_width, &block.content, &mut layout);
-            });
-        }
+            elements::code_block(ui, max_width, &self.content, &mut layout);
+        });
+        // }
 
-        self.text_style.code = false;
-        newline(ui);
+        // self.text_style.code = false;
+        elements::newline(ui);
     }
 }
 
 #[cfg(not(feature = "better_syntax_highlighting"))]
-impl CommonMarkViewerInternal {
+impl FencedCodeBlock {
     fn pre_syntax_highlighting(
         _cache: &mut CommonMarkCache,
         _options: &CommonMarkOptions,
@@ -1022,19 +632,19 @@ impl CommonMarkViewerInternal {
     }
 
     fn syntax_highlighting(
-        &mut self,
+        &self,
         _cache: &mut CommonMarkCache,
         _options: &CommonMarkOptions,
         extension: &str,
         ui: &Ui,
         text: &str,
     ) -> egui::text::LayoutJob {
-        plain_highlighting(ui, text, extension)
+        crate::plain_highlighting(ui, text, extension)
     }
 }
 
 #[cfg(feature = "better_syntax_highlighting")]
-impl CommonMarkViewerInternal {
+impl FencedCodeBlock {
     fn pre_syntax_highlighting(
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -1046,16 +656,16 @@ impl CommonMarkViewerInternal {
         style.visuals.extreme_bg_color = curr_theme
             .settings
             .background
-            .map(syntect_color_to_egui)
+            .map(crate::syntect_color_to_egui)
             .unwrap_or(style.visuals.extreme_bg_color);
 
         if let Some(color) = curr_theme.settings.selection_foreground {
-            style.visuals.selection.bg_fill = syntect_color_to_egui(color);
+            style.visuals.selection.bg_fill = crate::syntect_color_to_egui(color);
         }
     }
 
     fn syntax_highlighting(
-        &mut self,
+        &self,
         cache: &CommonMarkCache,
         options: &CommonMarkOptions,
         extension: &str,
@@ -1075,7 +685,7 @@ impl CommonMarkViewerInternal {
                         0.0,
                         egui::TextFormat::simple(
                             TextStyle::Monospace.resolve(ui.style()),
-                            syntect_color_to_egui(front),
+                            crate::syntect_color_to_egui(front),
                         ),
                     );
                 }
@@ -1083,7 +693,7 @@ impl CommonMarkViewerInternal {
 
             job
         } else {
-            plain_highlighting(ui, text, extension)
+            crate::plain_highlighting(ui, text, extension)
         }
     }
 }

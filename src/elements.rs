@@ -61,6 +61,15 @@ pub(crate) fn footnote(ui: &mut Ui, text: &str) {
     );
 }
 
+// pub fn quote_block(ui: &mut Ui) {
+//     self.text_style.quote = true;
+//     ui.add(egui::Separator::default().horizontal());
+//     self.text_style.quote = false;
+//     ui.add(egui::Separator::default().horizontal());
+//     // this is to end the separator, not to make line separator
+//     newline(ui);
+// }
+
 fn height_body(ui: &Ui) -> f32 {
     ui.text_style_height(&TextStyle::Body)
 }
