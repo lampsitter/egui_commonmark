@@ -4,10 +4,7 @@ use crate::{CommonMarkCache, CommonMarkOptions};
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{parse_document, Arena, Options};
 
-use egui::{self, text::LayoutJob, Id, Pos2, RichText, TextStyle, Ui};
-
-#[cfg(feature = "better_syntax_highlighting")]
-use syntect::{easy::HighlightLines, util::LinesWithEndings};
+use egui::{self, Id, TextStyle, Ui};
 
 pub struct CommonMarkViewerInternal {
     source_id: Id,
@@ -19,7 +16,6 @@ pub struct CommonMarkViewerInternal {
     image: Option<crate::Image>,
     should_insert_newline: bool,
     fenced_code_block: Option<crate::FencedCodeBlock>,
-    is_table: bool,
 }
 
 impl CommonMarkViewerInternal {
@@ -34,7 +30,6 @@ impl CommonMarkViewerInternal {
             image: None,
             should_insert_newline: true,
             fenced_code_block: None,
-            is_table: false,
         }
     }
 }

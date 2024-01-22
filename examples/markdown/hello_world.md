@@ -5,11 +5,11 @@ A *bunch* ~~of~~ __different__ `text` styles.
 
  ![Rust logo](examples/rust-logo-128x128.png)
 
-<!-- | __A table!__ | -->
-<!-- | -------- | -->
-<!-- | Some filler text | -->
-<!-- | *yep | -->
-<!-- | aaha | -->
+| __A table!__ | heh|
+| -------- | -------|
+| Some filler text |   |
+| *yep* |  a |
+| aaha |    |
 
 [Link to repo](https://github.com/lampsitter/egui_commonmark)
 
