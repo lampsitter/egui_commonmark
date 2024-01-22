@@ -3,9 +3,16 @@
 use crate::elements::*;
 use crate::{CommonMarkCache, CommonMarkOptions};
 
-use egui::{self, Id, Pos2, TextStyle, Ui};
+use egui::{self, Id, Pos2, TextStyle, Ui, Vec2};
 
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
+
+#[derive(Default, Debug)]
+pub struct ScrollableCache {
+    available_size: Vec2,
+    page_size: Option<Vec2>,
+    split_points: Vec<(usize, Pos2, Pos2)>,
+}
 
 /// Supported pulldown_cmark options
 fn parser_options() -> Options {

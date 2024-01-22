@@ -30,7 +30,7 @@
 
 use std::collections::HashMap;
 
-use egui::{self, text::LayoutJob, Id, Pos2, RichText, TextStyle, Ui, Vec2};
+use egui::{self, text::LayoutJob, Id, RichText, TextStyle, Ui};
 
 mod elements;
 mod parsers;
@@ -49,14 +49,11 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-#[derive(Default, Debug)]
-struct ScrollableCache {
-    available_size: Vec2,
-    page_size: Option<Vec2>,
-    split_points: Vec<(usize, Pos2, Pos2)>,
-}
+#[cfg(feature = "pulldown_cmark")]
+pub use parsers::pulldown::ScrollableCache;
 
 /// A cache used for storing content such as images.
+#[derive(Debug)]
 pub struct CommonMarkCache {
     // Everything stored in `CommonMarkCache` must take into account that
     // the cache is for multiple `CommonMarkviewer`s with different source_ids.
@@ -68,32 +65,9 @@ pub struct CommonMarkCache {
 
     link_hooks: HashMap<String, bool>,
 
+    #[cfg(feature = "pulldown_cmark")]
     scroll: HashMap<Id, ScrollableCache>,
     has_installed_loaders: bool,
-}
-
-#[cfg(not(feature = "better_syntax_highlighting"))]
-impl std::fmt::Debug for CommonMarkCache {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CommonMarkCache")
-            .field("images", &format_args!(" {{ .. }} "))
-            .field("link_hooks", &self.link_hooks)
-            .field("scroll", &self.scroll)
-            .finish()
-    }
-}
-
-#[cfg(feature = "better_syntax_highlighting")]
-impl std::fmt::Debug for CommonMarkCache {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CommonMarkCache")
-            .field("images", &format_args!(" {{ .. }}"))
-            .field("ps", &self.ps)
-            .field("ts", &self.ts)
-            .field("link_hooks", &self.link_hooks)
-            .field("scroll", &self.scroll)
-            .finish()
-    }
 }
 
 #[allow(clippy::derivable_impls)]
@@ -105,6 +79,7 @@ impl Default for CommonMarkCache {
             #[cfg(feature = "better_syntax_highlighting")]
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
+            #[cfg(feature = "pulldown_cmark")]
             scroll: Default::default(),
             has_installed_loaders: false,
         }
@@ -154,12 +129,14 @@ impl CommonMarkCache {
     }
 
     /// Clear the cache for all scrollable elements
+    #[cfg(feature = "pulldown_cmark")]
     pub fn clear_scrollable(&mut self) {
         self.scroll.clear();
     }
 
     /// Clear the cache for a specific scrollable viewer. Returns false if the
     /// id was not in the cache.
+    #[cfg(feature = "pulldown_cmark")]
     pub fn clear_scrollable_with_id(&mut self, source_id: impl std::hash::Hash) -> bool {
         self.scroll.remove(&Id::new(source_id)).is_some()
     }
@@ -229,6 +206,7 @@ impl CommonMarkCache {
             .unwrap_or_else(|| &self.ts.themes[default_theme(ui)])
     }
 
+    #[cfg(feature = "pulldown_cmark")]
     fn scroll(&mut self, id: &Id) -> &mut ScrollableCache {
         if !self.scroll.contains_key(id) {
             self.scroll.insert(*id, Default::default());
@@ -420,7 +398,6 @@ impl CommonMarkViewer {
             cache,
             &self.options,
             text,
-            false,
         );
     }
 
