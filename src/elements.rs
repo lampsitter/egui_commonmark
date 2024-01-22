@@ -78,7 +78,7 @@ pub fn code_block<'t>(
     layouter: &'t mut dyn FnMut(&Ui, &str, f32) -> std::sync::Arc<egui::Galley>,
 ) {
     let pre_text_edit_position = ui.next_widget_position();
-    let mut text = text.strip_suffix('\n').unwrap_or(&text);
+    let mut text = text.strip_suffix('\n').unwrap_or(text);
 
     // To manually add background color to the code block, we imitate what
     // TextEdit does internally

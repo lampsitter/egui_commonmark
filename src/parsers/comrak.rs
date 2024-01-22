@@ -42,7 +42,6 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         text: &str,
-        populate_split_points: bool,
     ) {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
@@ -62,8 +61,6 @@ impl CommonMarkViewerInternal {
             let root = parse_document(&arena, text, &parse_opt);
 
             self.render(ui, cache, options, max_width, root);
-
-            cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
         });
     }
 
