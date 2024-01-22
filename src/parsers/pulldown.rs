@@ -3,7 +3,7 @@
 use crate::elements::*;
 use crate::{CommonMarkCache, CommonMarkOptions};
 
-use egui::{self, text::LayoutJob, Id, Pos2, TextStyle, Ui};
+use egui::{self, Id, Pos2, TextStyle, Ui};
 
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
 

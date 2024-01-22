@@ -436,12 +436,12 @@ impl Style {
             let max_height = ui
                 .style()
                 .text_styles
-                .get(&egui::TextStyle::Heading)
+                .get(&TextStyle::Heading)
                 .map_or(32.0, |d| d.size);
             let min_height = ui
                 .style()
                 .text_styles
-                .get(&egui::TextStyle::Body)
+                .get(&TextStyle::Body)
                 .map_or(14.0, |d| d.size);
             let diff = max_height - min_height;
 
