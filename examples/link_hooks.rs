@@ -11,7 +11,10 @@ impl eframe::App for App {
         let p1 = r#"# Page 1
 Check out the [next](#next) page."#;
         let p2 = r#"# Page 2
-Check out the [previous](#prev) page."#;
+Check out the [previous](#prev) page.
+
+Notice how the destination is not shown on [hover](#prev) unlike with [urls](https://www.example.org)
+"#;
 
         let p = [p1, p2];
         if self.cache.get_link_hook("#next").unwrap() {

@@ -166,8 +166,23 @@ impl CommonMarkCache {
 
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
     /// specified with this method will be set to true. It's status can be acquired
-    /// with [`get_link_hook`](Self::get_link_hook). Be aware that all hooks are reset once
+    /// with [`get_link_hook`](Self::get_link_hook). Be aware that all hook state is reset once
     /// [`CommonMarkViewer::show`] gets called
+    ///
+    /// # Why use link hooks
+    ///
+    /// egui provides a method for checking links afterwards so why use this instead?
+    ///
+    /// ```rust
+    /// # use egui::__run_test_ctx;
+    /// # __run_test_ctx(|ctx| {
+    /// ctx.output_mut(|o| o.open_url.is_some());
+    /// # });
+    /// ```
+    ///
+    /// The main difference is that link hooks allows egui_commonmark to check for link hooks
+    /// while rendering. Normally when hovering over a link, egui_commonmark will display the full
+    /// url. With link hooks this feature is disabled, but to do that all hooks must be known.
     pub fn add_link_hook<S: Into<String>>(&mut self, name: S) {
         self.link_hooks.insert(name.into(), false);
     }
