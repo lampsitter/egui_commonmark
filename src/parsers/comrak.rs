@@ -60,34 +60,8 @@ impl CommonMarkViewerInternal {
             parse_opt.extension.footnotes = true;
 
             let root = parse_document(&arena, text, &parse_opt);
-            // dbg!(root);
-            // panic!();
 
             self.render(ui, cache, options, max_width, root);
-
-            // while let Some((index, e)) = events.next() {
-            // let start_position = ui.next_widget_position();
-            // let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
-            // let should_add_split_point = self.indentation == -1 && is_element_end;
-
-            // self.process_event(ui, &mut events, e, cache, options, max_width);
-
-            // if populate_split_points && should_add_split_point {
-            //     let scroll_cache = cache.scroll(&self.source_id);
-            //     let end_position = ui.next_widget_position();
-
-            //     let split_point_exists = scroll_cache
-            //         .split_points
-            //         .iter()
-            //         .any(|(i, _, _)| *i == index);
-
-            //     if !split_point_exists {
-            //         scroll_cache
-            //             .split_points
-            //             .push((index, start_position, end_position));
-            //     }
-            // }
-            // }
 
             cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
         });

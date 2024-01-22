@@ -35,6 +35,12 @@ use egui::{self, text::LayoutJob, Id, Pos2, RichText, TextStyle, Ui, Vec2};
 mod elements;
 mod parsers;
 
+#[cfg(all(feature = "comrak", feature = "pulldown_cmark"))]
+compile_error!("Cannot have multiple different parsing backends enabled at the same time");
+
+#[cfg(not(any(feature = "comrak", feature = "pulldown_cmark")))]
+compile_error!("Either the pulldown_cmark or comrak backend must be enabled");
+
 #[cfg(feature = "better_syntax_highlighting")]
 use syntect::{
     easy::HighlightLines,
@@ -383,7 +389,17 @@ impl CommonMarkViewer {
     /// Shows rendered markdown
     pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.prepare_show(ui.ctx());
-        // parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+
+        #[cfg(feature = "pulldown_cmark")]
+        parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+            ui,
+            cache,
+            &self.options,
+            text,
+            false,
+        );
+
+        #[cfg(feature = "comrak")]
         parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
             ui,
             cache,
@@ -407,6 +423,7 @@ impl CommonMarkViewer {
     /// [`ScrollArea`]: egui::ScrollArea
     /// [`show`]: crate::CommonMarkViewer::show
     #[doc(hidden)] // Buggy in scenarios more complex than the example application
+    #[cfg(feature = "pulldown_cmark")]
     pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
         cache.prepare_show(ui.ctx());
         parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show_scrollable(

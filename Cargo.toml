@@ -26,7 +26,10 @@ document-features = { version = "0.2", optional = true }
 comrak = { version = "0.20.0", default-features = false }
 
 [features]
-default = ["load-images"]
+default = ["load-images", "pulldown_cmark"]
+
+pulldown_cmark = []
+comrak = []
 ## Syntax highlighting for code blocks using syntect
 better_syntax_highlighting = ["syntect"]
 
