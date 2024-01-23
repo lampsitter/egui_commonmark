@@ -50,7 +50,7 @@ use syntect::{
 };
 
 #[cfg(feature = "pulldown_cmark")]
-pub use parsers::pulldown::ScrollableCache;
+use parsers::pulldown::ScrollableCache;
 
 /// A cache used for storing content such as images.
 #[derive(Debug)]
