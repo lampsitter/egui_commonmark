@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Missing space after tables
+
 ## 0.11.0 - 2024-01-08
 
 ### Changed

@@ -239,6 +239,7 @@ impl CommonMarkViewerInternal {
                 });
             });
 
+            self.should_insert_newline = true;
             newline(ui);
         }
     }
