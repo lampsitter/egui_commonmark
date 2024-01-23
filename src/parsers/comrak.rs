@@ -116,8 +116,6 @@ impl CommonMarkViewerInternal {
 
                 NodeValue::CodeBlock(code_block) => {
                     if code_block.fenced {
-                        // FIXME:? the default setup is made to collect the events. This is not
-                        // needed here
                         self.fenced_code_block = Some(crate::FencedCodeBlock {
                             lang: code_block.info.to_string(),
                             content: code_block.literal.to_string(),
@@ -136,21 +134,21 @@ impl CommonMarkViewerInternal {
                 }
 
                 NodeValue::HtmlBlock(_) => {} // not supported
-                //
+
                 NodeValue::Paragraph => {
-                    // FIXME: Copy newline logic? based on image stuff, yes most definetly
                     if self.should_insert_newline {
                         newline(ui);
                         // we deliberately do not set it to false after this
                     }
 
                     self.render(ui, cache, options, max_width, c);
+
                     // To end the inlines
-                    // FIXME: Add to the end of all blocks that contain inlines
                     newline(ui);
                 }
 
                 NodeValue::Heading(heading) => {
+                    newline(ui);
                     self.text_style.heading = Some(heading.level);
                     self.render(ui, cache, options, max_width, c);
                     self.text_style.heading = None;
@@ -199,7 +197,7 @@ impl CommonMarkViewerInternal {
                     ui.label("  ");
                 }
                 NodeValue::TaskItem(item) => {
-                    // FIXME: support custom icon
+                    self.start_item(ui, options);
                     if item.is_some() {
                         ui.add(Checkbox::without_text(&mut true));
                     } else {
@@ -208,12 +206,11 @@ impl CommonMarkViewerInternal {
 
                     self.render(ui, cache, options, max_width, c);
                 }
-                // inlines
+
                 NodeValue::Text(text) => self.event_text(text, ui),
 
                 NodeValue::SoftBreak => {
-                    // FIXME: Abstract over backends
-                    ui.label(" ");
+                    soft_break(ui);
                 }
                 NodeValue::LineBreak => {
                     newline(ui);

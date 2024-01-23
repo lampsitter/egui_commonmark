@@ -1,5 +1,9 @@
 use egui::{self, epaint, NumExt, RichText, Sense, TextStyle, Ui, Vec2};
 
+pub(crate) fn soft_break(ui: &mut Ui) {
+    ui.label(" ");
+}
+
 pub(crate) fn newline(ui: &mut Ui) {
     ui.label("\n");
 }
