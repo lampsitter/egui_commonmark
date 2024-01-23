@@ -267,7 +267,7 @@ impl CommonMarkViewerInternal {
                 footnote_start(ui, &footnote);
             }
             pulldown_cmark::Event::SoftBreak => {
-                ui.label(" ");
+                soft_break(ui);
             }
             pulldown_cmark::Event::HardBreak => newline(ui),
             pulldown_cmark::Event::Rule => {
