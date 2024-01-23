@@ -144,7 +144,9 @@ impl CommonMarkViewerInternal {
                     self.render(ui, cache, options, max_width, c);
 
                     // To end the inlines
-                    newline(ui);
+                    if self.should_insert_newline {
+                        newline(ui);
+                    }
                 }
 
                 NodeValue::Heading(heading) => {
@@ -153,10 +155,7 @@ impl CommonMarkViewerInternal {
                     self.render(ui, cache, options, max_width, c);
                     self.text_style.heading = None;
 
-                    // end the line
-                    newline(ui);
-
-                    // add a new line
+                    // Add new line after
                     newline(ui);
                 }
 
@@ -174,17 +173,18 @@ impl CommonMarkViewerInternal {
                 }
 
                 NodeValue::Table(_table) => {
+                    self.should_insert_newline = false;
                     newline(ui);
                     egui::Frame::group(ui.style()).show(ui, |ui| {
                         let id = self.source_id.with(self.curr_table);
                         self.curr_table += 1;
                         egui::Grid::new(id).striped(true).show(ui, |ui| {
-                            self.should_insert_newline = false;
                             self.render(ui, cache, options, max_width, c);
                         });
                     });
 
                     newline(ui);
+                    self.should_insert_newline = true;
                 }
 
                 NodeValue::TableRow(_is_header) => {
