@@ -507,28 +507,6 @@ impl Style {
     }
 }
 
-// #[derive(Default)]
-// struct List {
-//     // if some it means that it is numbered
-//     list_point: Option<u64>,
-//     indentation: i64,
-// }
-
-// impl List {
-//     pub fn indent(&mut self, point: Option<u64>) {
-//         self.list_point = point;
-//         self.indentation += 1;
-//     }
-
-//     pub fn dedent(&mut self, ui: &mut Ui, point: Option<u64>) {
-//         self.indentation -= 1;
-//         if self.indentation == -1 {
-//             elements::newline(ui);
-//             // self.should_insert_newline = true;
-//         }
-//     }
-// }
-
 #[derive(Default)]
 struct Link {
     destination: String,
@@ -611,7 +589,6 @@ impl FencedCodeBlock {
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
-        // if let Some(block) = self.fenced_code_block.take() {
         ui.scope(|ui| {
             Self::pre_syntax_highlighting(cache, options, ui);
 
@@ -623,9 +600,7 @@ impl FencedCodeBlock {
 
             elements::code_block(ui, max_width, &self.content, &mut layout);
         });
-        // }
 
-        // self.text_style.code = false;
         elements::newline(ui);
     }
 }

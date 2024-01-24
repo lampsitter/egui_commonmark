@@ -108,6 +108,10 @@ fn main() {
                         content: include_str!("markdown/headers.md").to_owned(),
                     },
                     Page {
+                        name: "Lists".to_owned(),
+                        content: include_str!("markdown/lists.md").to_owned(),
+                    },
+                    Page {
                         name: "Code blocks".to_owned(),
                         content: include_str!("markdown/code-blocks.md").to_owned(),
                     },
