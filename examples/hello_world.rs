@@ -1,8 +1,8 @@
 //! Make sure to run this example from the repo directory and not the example
 //! directory. To see all the features in full effect, run this example with
-//! `cargo r --example hello_world --all-features`
+//! `cargo r --features better_syntax_highlighting,svg,fetch`
 //! Add `light` or `dark` to the end of the command to specify theme. Default
-//! is light. `cargo r --example hello_world --all-features dark`
+//! is light. `cargo r --features better_syntax_highlighting,svg,fetch -- dark`
 
 use eframe::egui;
 use egui_commonmark::*;
