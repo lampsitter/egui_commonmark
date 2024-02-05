@@ -4,7 +4,7 @@ egui_commonmark offers __experimental__ support for using [comrak](https://crate
 as parsing backend. By default pulldown_cmark is used. To use comrak instead do:
 
 ```toml
-egui_commonmark = { version = "0.11", default-features = false, features = ["load-images", "comrak"] }
+egui_commonmark = { version = "0.12", default-features = false, features = ["load-images", "comrak"] }
 ```
 
 ### Why two parsing backends?
