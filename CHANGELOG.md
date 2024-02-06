@@ -6,7 +6,7 @@
 
 ### Changed
 
-- Update to egui 0.26 ([#31](https://github.com/lampsitter/egui_commonmark/pull/31) by [@emilk](https://github.com/emilk))
+- Update to egui 0.26
 
 ### Fixed
 
