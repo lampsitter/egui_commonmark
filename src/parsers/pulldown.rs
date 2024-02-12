@@ -54,7 +54,7 @@ impl CommonMarkViewerInternal {
 
 impl CommonMarkViewerInternal {
     /// Be aware that this acquires egui::Context internally.
-    pub fn show(
+    pub(crate) fn show(
         &mut self,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
@@ -100,7 +100,7 @@ impl CommonMarkViewerInternal {
         });
     }
 
-    pub fn show_scrollable(
+    pub(crate) fn show_scrollable(
         &mut self,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
