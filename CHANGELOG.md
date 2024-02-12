@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.12.1 - 2024-02-12
+
+### Fixed
+
+- Build failure with 1.72
+
+
 ## 0.12.0 - 2024-02-05
 
 ### Changed
