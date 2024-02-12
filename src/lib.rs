@@ -237,7 +237,7 @@ const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
 const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
 #[derive(Debug)]
-struct CommonMarkOptions {
+pub struct CommonMarkOptions {
     indentation_spaces: usize,
     max_image_width: Option<usize>,
     show_alt_text_on_hover: bool,
