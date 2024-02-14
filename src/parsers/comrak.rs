@@ -10,9 +10,8 @@ pub struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
     text_style: crate::Style,
-    list_point: Option<u64>,
+    list: List,
     link: Option<crate::Link>,
-    indentation: i64,
     image: Option<crate::Image>,
     should_insert_newline: bool,
     fenced_code_block: Option<crate::FencedCodeBlock>,
@@ -24,9 +23,8 @@ impl CommonMarkViewerInternal {
             source_id,
             curr_table: 0,
             text_style: crate::Style::default(),
-            list_point: None,
+            list: List::default(),
             link: None,
-            indentation: -1,
             image: None,
             should_insert_newline: true,
             fenced_code_block: None,
@@ -90,23 +88,23 @@ impl CommonMarkViewerInternal {
                 }
 
                 NodeValue::List(list) => {
-                    self.indentation += 1;
                     if list.list_type == comrak::nodes::ListType::Ordered {
-                        self.list_point = Some(list.start as u64);
+                        self.list.start_level_with_number(list.start as u64);
+                    } else {
+                        self.list.start_level_without_number();
                     }
 
                     self.render(ui, cache, options, max_width, c);
-                    self.list_point = None;
 
-                    self.indentation -= 1;
-                    if self.indentation == -1 {
-                        newline(ui);
+                    self.list.end_level(ui);
+                    if self.list.is_inside_a_list() {
                         self.should_insert_newline = true;
                     }
                 }
 
                 NodeValue::Item(_item) => {
-                    self.start_item(ui, options);
+                    self.should_insert_newline = false;
+                    self.list.start_item(ui, options);
                     self.render(ui, cache, options, max_width, c);
                 }
 
@@ -198,10 +196,9 @@ impl CommonMarkViewerInternal {
                     ui.label("  ");
                 }
                 NodeValue::TaskItem(item) => {
-                    // prevent rendering with numbers
-                    let old_list_point = self.list_point.take();
+                    self.should_insert_newline = false;
+                    self.list.start_item(ui, options);
 
-                    self.start_item(ui, options);
                     if item.is_some() {
                         ui.add(Checkbox::without_text(&mut true));
                     } else {
@@ -209,8 +206,6 @@ impl CommonMarkViewerInternal {
                     }
 
                     self.render(ui, cache, options, max_width, c);
-
-                    self.list_point = old_list_point
                 }
 
                 NodeValue::Text(text) => self.event_text(text, ui),
@@ -296,23 +291,6 @@ impl CommonMarkViewerInternal {
             link.text.push(rich_text);
         } else {
             ui.label(rich_text);
-        }
-    }
-
-    // FIXME: Duplicate
-    fn start_item(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
-        newline(ui);
-        ui.label(" ".repeat(self.indentation as usize * options.indentation_spaces));
-
-        self.should_insert_newline = false;
-        if let Some(mut number) = self.list_point.take() {
-            number_point(ui, &number.to_string());
-            number += 1;
-            self.list_point = Some(number);
-        } else if self.indentation >= 1 {
-            bullet_point_hollow(ui);
-        } else {
-            bullet_point(ui);
         }
     }
 }

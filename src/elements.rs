@@ -197,3 +197,58 @@ impl<'a> egui::Widget for Checkbox<'a> {
         response
     }
 }
+
+pub(crate) struct ListLevel {
+    current_number: Option<u64>,
+}
+
+#[derive(Default)]
+pub(crate) struct List {
+    items: Vec<ListLevel>,
+}
+
+impl List {
+    pub fn start_level_with_number(&mut self, start_number: u64) {
+        self.items.push(ListLevel {
+            current_number: Some(start_number),
+        });
+    }
+
+    pub fn start_level_without_number(&mut self) {
+        self.items.push(ListLevel {
+            current_number: None,
+        });
+    }
+
+    pub fn is_inside_a_list(&self) -> bool {
+        !self.items.is_empty()
+    }
+
+    pub fn start_item(&mut self, ui: &mut Ui, options: &crate::CommonMarkOptions) {
+        // self.should_insert_newline = false;
+        let len = self.items.len();
+        if let Some(item) = self.items.last_mut() {
+            newline(ui);
+            ui.label(" ".repeat((len - 1) * options.indentation_spaces));
+
+            if let Some(number) = &mut item.current_number {
+                number_point(ui, &number.to_string());
+                *number += 1;
+            } else if len - 1 >= 1 {
+                bullet_point_hollow(ui);
+            } else {
+                bullet_point(ui);
+            }
+        } else {
+            unreachable!();
+        }
+    }
+
+    pub fn end_level(&mut self, ui: &mut Ui) {
+        self.items.pop();
+
+        if self.items.is_empty() {
+            newline(ui);
+        }
+    }
+}
