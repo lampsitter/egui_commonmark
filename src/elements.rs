@@ -225,7 +225,6 @@ impl List {
     }
 
     pub fn start_item(&mut self, ui: &mut Ui, options: &crate::CommonMarkOptions) {
-        // self.should_insert_newline = false;
         let len = self.items.len();
         if let Some(item) = self.items.last_mut() {
             newline(ui);

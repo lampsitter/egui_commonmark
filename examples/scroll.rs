@@ -26,7 +26,7 @@ This section will be repeated
 let mut vec = Vec::new();
 vec.push(5);
 ```
- 
+
 # Plans
 * Make a sandwich
 * Bake a cake
@@ -42,6 +42,11 @@ vec.push(5);
     }
 }
 
+#[cfg(feature = "comrak")]
+const BACKEND: &str = "comrak";
+#[cfg(feature = "pulldown_cmark")]
+const BACKEND: &str = "pulldown_cmark";
+
 fn main() {
     let mut args = std::env::args();
     args.next();
@@ -56,7 +61,7 @@ fn main() {
     };
 
     eframe::run_native(
-        "Markdown viewer",
+        &format!("Markdown viewer link (backend '{}')", BACKEND),
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
             cc.egui_ctx.set_visuals(if use_dark_theme {

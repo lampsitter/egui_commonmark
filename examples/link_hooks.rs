@@ -31,9 +31,14 @@ Notice how the destination is not shown on [hover](#prev) unlike with [urls](htt
     }
 }
 
+#[cfg(feature = "comrak")]
+const BACKEND: &str = "comrak";
+#[cfg(feature = "pulldown_cmark")]
+const BACKEND: &str = "pulldown_cmark";
+
 fn main() {
     eframe::run_native(
-        "Markdown link hooks",
+        &format!("Markdown viewer link hooks (backend '{}')", BACKEND),
         eframe::NativeOptions::default(),
         Box::new(|_| {
             let mut cache = CommonMarkCache::default();
