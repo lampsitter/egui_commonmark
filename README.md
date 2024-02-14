@@ -39,6 +39,11 @@ CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 * `fetch`: Images with urls will be downloaded and displayed
 
 
+## Examples
+
+For an easy intro check out the `hello_world` example. To see all the different
+features egui_commonmark has to offer check out the `book` example.
+
 ## License
 
 Licensed under either of

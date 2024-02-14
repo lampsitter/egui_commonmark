@@ -61,7 +61,7 @@ fn main() {
     };
 
     eframe::run_native(
-        &format!("Markdown viewer link (backend '{}')", BACKEND),
+        &format!("Markdown viewer (backend '{}')", BACKEND),
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
             cc.egui_ctx.set_visuals(if use_dark_theme {
