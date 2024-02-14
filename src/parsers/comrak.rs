@@ -96,6 +96,7 @@ impl CommonMarkViewerInternal {
                     }
 
                     self.render(ui, cache, options, max_width, c);
+                    self.list_point = None;
 
                     self.indentation -= 1;
                     if self.indentation == -1 {
@@ -197,6 +198,9 @@ impl CommonMarkViewerInternal {
                     ui.label("  ");
                 }
                 NodeValue::TaskItem(item) => {
+                    // prevent rendering with numbers
+                    let old_list_point = self.list_point.take();
+
                     self.start_item(ui, options);
                     if item.is_some() {
                         ui.add(Checkbox::without_text(&mut true));
@@ -205,6 +209,8 @@ impl CommonMarkViewerInternal {
                     }
 
                     self.render(ui, cache, options, max_width, c);
+
+                    self.list_point = old_list_point
                 }
 
                 NodeValue::Text(text) => self.event_text(text, ui),
