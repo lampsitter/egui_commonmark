@@ -234,7 +234,7 @@ impl List {
             if let Some(number) = &mut item.current_number {
                 number_point(ui, &number.to_string());
                 *number += 1;
-            } else if len - 1 >= 1 {
+            } else if len > 1 {
                 bullet_point_hollow(ui);
             } else {
                 bullet_point(ui);
