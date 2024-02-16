@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Changed
+
+- Prettier blockquotes
+    Before two simple horizontal lines were rendered. Now it's a single horizonal
+    line in front of the elements.
+
+- Upgraded to pulldown-cmark 0.10
+
+### Fixed
+
+- Ordered lists remember their number when mixing bullet and ordered lists
+
 ## 0.12.1 - 2024-02-12
 
 ### Fixed
