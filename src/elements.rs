@@ -251,3 +251,33 @@ impl List {
         }
     }
 }
+
+pub(crate) fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(&mut Ui)) {
+    newline(ui);
+    let start = ui.painter().add(egui::Shape::Noop);
+    let response = egui::Frame::none()
+        // offset the frame so that we can use the space for the horizontal line and other stuff
+        // By not using a separator we have better control
+        .outer_margin(egui::Margin {
+            left: 10.0,
+            ..Default::default()
+        })
+        .show(ui, add_contents)
+        .response;
+
+    // FIXME: Add some rounding
+
+    ui.painter().set(
+        start,
+        egui::epaint::Shape::LineSegment {
+            points: [
+                egui::pos2(response.rect.left_top().x, response.rect.left_top().y + 5.0),
+                egui::pos2(
+                    response.rect.left_bottom().x,
+                    response.rect.left_bottom().y - 5.0,
+                ),
+            ],
+            stroke: egui::Stroke::new(3.0, accent),
+        },
+    );
+}

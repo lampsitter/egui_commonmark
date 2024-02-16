@@ -77,13 +77,12 @@ impl CommonMarkViewerInternal {
                 NodeValue::FrontMatter(_front_matter) => {}
 
                 NodeValue::BlockQuote => {
-                    self.text_style.quote = true;
-                    ui.add(egui::Separator::default().horizontal());
+                    blockquote(ui, ui.visuals().weak_text_color(), |ui| {
+                        self.text_style.quote = true;
+                        self.render(ui, cache, options, max_width, c);
+                        self.text_style.quote = false;
+                    });
 
-                    self.render(ui, cache, options, max_width, c);
-
-                    self.text_style.quote = false;
-                    ui.add(egui::Separator::default().horizontal());
                     newline(ui);
                 }
 

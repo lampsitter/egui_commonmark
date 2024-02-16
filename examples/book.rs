@@ -120,6 +120,10 @@ fn main() {
                         name: "Code blocks".to_owned(),
                         content: include_str!("markdown/code-blocks.md").to_owned(),
                     },
+                    Page {
+                        name: "Block Quotes ".to_owned(),
+                        content: include_str!("markdown/blockquotes.md").to_owned(),
+                    },
                 ],
             })
         }),

@@ -14,6 +14,30 @@ pub struct ScrollableCache {
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
 
+/// Parse events until a desired end tag is reached or no more events are found.
+/// This is needed for multiple events that must be rendered inside a single widget
+fn delayed_events<'e>(
+    events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+    end_at: pulldown_cmark::TagEnd,
+) -> Vec<pulldown_cmark::Event<'e>> {
+    let mut curr_event = events.next();
+    let mut total_events = Vec::new();
+    loop {
+        if let Some(event) = curr_event.take() {
+            total_events.push(event.1.clone());
+            if let (_, pulldown_cmark::Event::End(tag)) = event {
+                if end_at == tag {
+                    return total_events;
+                }
+            }
+        } else {
+            return total_events;
+        }
+
+        curr_event = events.next();
+    }
+}
+
 /// Supported pulldown_cmark options
 fn parser_options() -> Options {
     Options::ENABLE_TABLES
@@ -32,6 +56,7 @@ pub struct CommonMarkViewerInternal {
     should_insert_newline: bool,
     fenced_code_block: Option<crate::FencedCodeBlock>,
     is_table: bool,
+    is_blockquote: bool,
 }
 
 impl CommonMarkViewerInternal {
@@ -46,6 +71,7 @@ impl CommonMarkViewerInternal {
             should_insert_newline: true,
             fenced_code_block: None,
             is_table: false,
+            is_blockquote: false,
         }
     }
 }
@@ -193,6 +219,31 @@ impl CommonMarkViewerInternal {
         self.event(ui, event, cache, options, max_width);
         self.fenced_code_block(events, max_width, cache, options, ui);
         self.table(events, cache, options, ui, max_width);
+        self.blockquote(events, max_width, cache, options, ui);
+    }
+
+    fn blockquote<'e>(
+        &mut self,
+        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+        max_width: f32,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        ui: &mut Ui,
+    ) {
+        if self.is_blockquote {
+            let collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
+            blockquote(ui, ui.visuals().weak_text_color(), |ui| {
+                self.text_style.quote = true;
+                for event in collected_events {
+                    self.event(ui, event, cache, options, max_width);
+                }
+                self.text_style.quote = false;
+            });
+
+            newline(ui);
+
+            self.is_blockquote = false;
+        }
     }
 
     fn fenced_code_block<'e>(
@@ -222,6 +273,7 @@ impl CommonMarkViewerInternal {
     ) {
         if self.is_table {
             newline(ui);
+
             egui::Frame::group(ui.style()).show(ui, |ui| {
                 let id = self.source_id.with(self.curr_table);
                 self.curr_table += 1;
@@ -315,8 +367,7 @@ impl CommonMarkViewerInternal {
                 });
             }
             pulldown_cmark::Tag::BlockQuote => {
-                self.text_style.quote = true;
-                ui.add(egui::Separator::default().horizontal());
+                self.is_blockquote = true;
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
                 if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
@@ -390,11 +441,7 @@ impl CommonMarkViewerInternal {
                 newline(ui);
                 self.text_style.heading = None;
             }
-            pulldown_cmark::TagEnd::BlockQuote => {
-                self.text_style.quote = false;
-                ui.add(egui::Separator::default().horizontal());
-                newline(ui);
-            }
+            pulldown_cmark::TagEnd::BlockQuote => {}
             pulldown_cmark::TagEnd::CodeBlock => {
                 self.end_code_block(ui, cache, options, max_width);
             }
