@@ -261,6 +261,7 @@ impl CommonMarkViewerInternal {
                 self.event_text(text, ui);
                 self.text_style.code = false;
             }
+            pulldown_cmark::Event::InlineHtml(_) => {}
             pulldown_cmark::Event::Html(_) => {}
             pulldown_cmark::Event::FootnoteReference(footnote) => {
                 footnote_start(ui, &footnote);
@@ -302,9 +303,9 @@ impl CommonMarkViewerInternal {
                 }
                 self.should_insert_newline = true;
             }
-            pulldown_cmark::Tag::Heading(l, _, _) => {
+            pulldown_cmark::Tag::Heading { level, .. } => {
                 newline(ui);
-                self.text_style.heading = Some(match l {
+                self.text_style.heading = Some(match level {
                     HeadingLevel::H1 => 0,
                     HeadingLevel::H2 => 1,
                     HeadingLevel::H3 => 2,
@@ -359,83 +360,87 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::Strikethrough => {
                 self.text_style.strikethrough = true;
             }
-            pulldown_cmark::Tag::Link(_, destination, _) => {
+            pulldown_cmark::Tag::Link { dest_url, .. } => {
                 self.link = Some(crate::Link {
-                    destination: destination.to_string(),
+                    destination: dest_url.to_string(),
                     text: Vec::new(),
                 });
             }
-            pulldown_cmark::Tag::Image(_, uri, _) => {
-                self.image = Some(crate::Image::new(&uri, options));
+            pulldown_cmark::Tag::Image { dest_url, .. } => {
+                self.image = Some(crate::Image::new(&dest_url, options));
             }
+            pulldown_cmark::Tag::HtmlBlock => {}
+            pulldown_cmark::Tag::MetadataBlock(_) => {}
         }
     }
 
     fn end_tag(
         &mut self,
         ui: &mut Ui,
-        tag: pulldown_cmark::Tag,
+        tag: pulldown_cmark::TagEnd,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
         match tag {
-            pulldown_cmark::Tag::Paragraph => {
+            pulldown_cmark::TagEnd::Paragraph => {
                 newline(ui);
             }
-            pulldown_cmark::Tag::Heading(_, _, _) => {
+            pulldown_cmark::TagEnd::Heading { .. } => {
                 newline(ui);
                 self.text_style.heading = None;
             }
-            pulldown_cmark::Tag::BlockQuote => {
+            pulldown_cmark::TagEnd::BlockQuote => {
                 self.text_style.quote = false;
                 ui.add(egui::Separator::default().horizontal());
                 newline(ui);
             }
-            pulldown_cmark::Tag::CodeBlock(_) => {
+            pulldown_cmark::TagEnd::CodeBlock => {
                 self.end_code_block(ui, cache, options, max_width);
             }
-            pulldown_cmark::Tag::List(_) => {
+            pulldown_cmark::TagEnd::List(_) => {
                 self.list.end_level(ui);
 
                 if self.list.is_inside_a_list() {
                     self.should_insert_newline = true;
                 }
             }
-            pulldown_cmark::Tag::Item => {}
-            pulldown_cmark::Tag::FootnoteDefinition(_) => {}
-            pulldown_cmark::Tag::Table(_) => {
+            pulldown_cmark::TagEnd::Item => {}
+            pulldown_cmark::TagEnd::FootnoteDefinition => {}
+            pulldown_cmark::TagEnd::Table => {
                 self.is_table = false;
             }
-            pulldown_cmark::Tag::TableHead => {
+            pulldown_cmark::TagEnd::TableHead => {
                 ui.end_row();
             }
-            pulldown_cmark::Tag::TableRow => {
+            pulldown_cmark::TagEnd::TableRow => {
                 ui.end_row();
             }
-            pulldown_cmark::Tag::TableCell => {
+            pulldown_cmark::TagEnd::TableCell => {
                 // Ensure space between cells
                 ui.label("  ");
             }
-            pulldown_cmark::Tag::Emphasis => {
+            pulldown_cmark::TagEnd::Emphasis => {
                 self.text_style.emphasis = false;
             }
-            pulldown_cmark::Tag::Strong => {
+            pulldown_cmark::TagEnd::Strong => {
                 self.text_style.strong = false;
             }
-            pulldown_cmark::Tag::Strikethrough => {
+            pulldown_cmark::TagEnd::Strikethrough => {
                 self.text_style.strikethrough = false;
             }
-            pulldown_cmark::Tag::Link(_, _, _) => {
+            pulldown_cmark::TagEnd::Link { .. } => {
                 if let Some(link) = self.link.take() {
                     link.end(ui, cache);
                 }
             }
-            pulldown_cmark::Tag::Image(_, _, _) => {
+            pulldown_cmark::TagEnd::Image { .. } => {
                 if let Some(image) = self.image.take() {
                     image.end(ui, options);
                 }
             }
+            pulldown_cmark::TagEnd::HtmlBlock => {}
+            pulldown_cmark::TagEnd::MetadataBlock(_) => {}
         }
     }
 
