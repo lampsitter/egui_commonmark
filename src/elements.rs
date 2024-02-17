@@ -81,7 +81,6 @@ pub fn code_block<'t>(
     text: &str,
     layouter: &'t mut dyn FnMut(&Ui, &str, f32) -> std::sync::Arc<egui::Galley>,
 ) {
-    let pre_text_edit_position = ui.next_widget_position();
     let mut text = text.strip_suffix('\n').unwrap_or(text);
 
     // To manually add background color to the code block, we imitate what
@@ -112,11 +111,10 @@ pub fn code_block<'t>(
 
     // Copy icon
     let spacing = &ui.style().spacing;
-    let position = pre_text_edit_position
-        + egui::vec2(
-            max_width - spacing.icon_width - spacing.button_padding.x,
-            -spacing.icon_width + spacing.button_padding.y,
-        );
+    let position = egui::pos2(
+        frame_rect.right_top().x - spacing.icon_width * 0.5 - spacing.button_padding.x,
+        frame_rect.right_top().y + spacing.button_padding.y * 2.0,
+    );
 
     let copy_button = ui.put(
         egui::Rect {
