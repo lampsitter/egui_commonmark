@@ -6,11 +6,11 @@ use std::collections::HashMap;
 pub struct Alert {
     /// The color that will be used to put emphasis to the alert
     pub accent_color: egui::Color32,
-    /// The icon that will be rendered
+    /// The icon that will be displayed
     pub icon: char,
-    /// The identifier that will be look for in the blockquote
+    /// The identifier that will be used to look for the blockquote such as NOTE and TIP
     pub identifier: String,
-    /// The identifier that will be shown when rendering
+    /// The identifier that will be shown when rendering. E.g: Note and Tip
     pub identifier_rendered: String,
 }
 
@@ -62,31 +62,31 @@ impl AlertBundle {
     pub fn gfm() -> Self {
         Self::from_alerts(vec![
             Alert {
-                accent_color: egui::Color32::BLUE,
+                accent_color: egui::Color32::from_rgb(10, 80, 210),
                 icon: '❕',
                 identifier: "NOTE".to_owned(),
                 identifier_rendered: "Note".to_owned(),
             },
             Alert {
-                accent_color: egui::Color32::LIGHT_GREEN,
+                accent_color: egui::Color32::from_rgb(0, 130, 20),
                 icon: '💡',
                 identifier: "TIP".to_owned(),
                 identifier_rendered: "Tip".to_owned(),
             },
             Alert {
-                accent_color: egui::Color32::DARK_GREEN, // FIXME: Purple
+                accent_color: egui::Color32::from_rgb(150, 30, 140),
                 icon: '💬',
                 identifier: "IMPORTANT".to_owned(),
                 identifier_rendered: "Important".to_owned(),
             },
             Alert {
-                accent_color: egui::Color32::YELLOW,
+                accent_color: egui::Color32::from_rgb(200, 120, 0),
                 icon: '⚠',
                 identifier: "WARNING".to_owned(),
                 identifier_rendered: "Warning".to_owned(),
             },
             Alert {
-                accent_color: egui::Color32::RED,
+                accent_color: egui::Color32::from_rgb(220, 0, 0),
                 icon: '🔴',
                 identifier: "CAUTION".to_owned(),
                 identifier_rendered: "Caution".to_owned(),
