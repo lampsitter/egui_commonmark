@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- Alerts ([#32](https://github.com/lampsitter/egui_commonmark/pull/32))
+
+> [!TIP]
+> Alerts like this can be used
+
 ### Changed
 
 - Prettier blockquotes
+
     Before two simple horizontal lines were rendered. Now it's a single horizonal
     line in front of the elements.
 

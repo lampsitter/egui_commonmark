@@ -32,8 +32,11 @@ use std::collections::HashMap;
 
 use egui::{self, text::LayoutJob, Id, RichText, TextStyle, Ui};
 
+mod alerts;
 mod elements;
 mod parsers;
+
+pub use alerts::*;
 
 #[cfg(all(feature = "comrak", feature = "pulldown_cmark"))]
 compile_error!("Cannot have multiple different parsing backends enabled at the same time");
@@ -248,6 +251,7 @@ struct CommonMarkOptions {
     theme_dark: String,
     use_explicit_uri_scheme: bool,
     default_implicit_uri_scheme: String,
+    alerts: AlertBundle,
 }
 
 impl Default for CommonMarkOptions {
@@ -263,6 +267,7 @@ impl Default for CommonMarkOptions {
             theme_dark: DEFAULT_THEME_DARK.to_owned(),
             use_explicit_uri_scheme: false,
             default_implicit_uri_scheme: "file://".to_owned(),
+            alerts: AlertBundle::gfm(),
         }
     }
 }
@@ -376,6 +381,16 @@ impl CommonMarkViewer {
     /// Set the syntax theme to be used inside code blocks in dark mode
     pub fn syntax_theme_dark<S: Into<String>>(mut self, theme: S) -> Self {
         self.options.theme_dark = theme.into();
+        self
+    }
+
+    #[cfg(not(feature = "comrak"))] // not supported by the backend atm.
+    /// Specify what kind of alerts are supported. This can also be used to localize alerts.
+    ///
+    /// By default [github flavoured markdown style alerts](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts)
+    /// are used
+    pub fn alerts(mut self, alerts: AlertBundle) -> Self {
+        self.options.alerts = alerts;
         self
     }
 
