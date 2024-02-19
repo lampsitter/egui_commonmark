@@ -49,13 +49,17 @@ fn parse_alerts<'a>(
     if !alerts.is_empty() {
         let mut alert_ident = "".to_owned();
         let mut alert_ident_ends_at = 0;
+        let mut has_extra_line = false;
 
         for (i, e) in events.iter().enumerate() {
             if let pulldown_cmark::Event::End(_) = e {
                 // > [!TIP]
                 // >
                 // > Detect the first paragraph
+                // In this case the next text will be within a paragraph so it is better to remove
+                // the entire paragraph
                 alert_ident_ends_at = i;
+                has_extra_line = true;
                 break;
             }
 
@@ -85,10 +89,15 @@ fn parse_alerts<'a>(
             // render
             //
             // FIMXE: performance improvement potential
-            //
-            for _ in 0..alert_ident_ends_at {
-                // the first element must be kept as it _should_ be Paragraph
-                events.remove(1);
+            if has_extra_line {
+                for _ in 0..=alert_ident_ends_at {
+                    events.remove(0);
+                }
+            } else {
+                for _ in 0..alert_ident_ends_at {
+                    // the first element must be kept as it _should_ be Paragraph
+                    events.remove(1);
+                }
             }
         }
 
