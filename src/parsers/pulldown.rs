@@ -1,6 +1,6 @@
 //! Duplicates a lot of stuff for now.
 
-use crate::elements::*;
+use crate::{elements::*, Alert, AlertBundle};
 use crate::{CommonMarkCache, CommonMarkOptions};
 
 use egui::{self, Id, Pos2, TextStyle, Ui, Vec2};
@@ -35,6 +35,66 @@ fn delayed_events<'e>(
         }
 
         curr_event = events.next();
+    }
+}
+
+/// try to parse events as an alert quote block. This ill modify the events
+/// to remove the parsed text that should not be rendered.
+/// Assumes that the first element is a Paragraph
+fn parse_alerts<'a>(
+    alerts: &'a AlertBundle,
+    events: &mut Vec<pulldown_cmark::Event<'_>>,
+) -> Option<&'a Alert> {
+    // no point in parsing if there are no alerts to render
+    if !alerts.is_empty() {
+        let mut alert_ident = "".to_owned();
+        let mut alert_ident_ends_at = 0;
+
+        for (i, e) in events.iter().enumerate() {
+            if let pulldown_cmark::Event::End(_) = e {
+                // > [!TIP]
+                // >
+                // > Detect the first paragraph
+                alert_ident_ends_at = i;
+                break;
+            }
+
+            if let pulldown_cmark::Event::SoftBreak = e {
+                // > [!NOTE]
+                // > this is valid and will produce a soft break
+                alert_ident_ends_at = i;
+                break;
+            }
+
+            if let pulldown_cmark::Event::HardBreak = e {
+                // > [!NOTE]<whitespace>
+                // > this is valid and will produce a hard break
+                alert_ident_ends_at = i;
+                break;
+            }
+
+            if let pulldown_cmark::Event::Text(text) = e {
+                alert_ident += text;
+            }
+        }
+
+        let alert = alerts.try_get_alert(&alert_ident);
+
+        if alert.is_some() {
+            // remove the text that identifies it as an alert so that it won't end up in the
+            // render
+            //
+            // FIMXE: performance improvement potential
+            //
+            for _ in 0..alert_ident_ends_at {
+                // the first element must be kept as it _should_ be Paragraph
+                events.remove(1);
+            }
+        }
+
+        alert
+    } else {
+        None
     }
 }
 
@@ -231,14 +291,23 @@ impl CommonMarkViewerInternal {
         ui: &mut Ui,
     ) {
         if self.is_blockquote {
-            let collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
-            blockquote(ui, ui.visuals().weak_text_color(), |ui| {
-                self.text_style.quote = true;
-                for event in collected_events {
-                    self.event(ui, event, cache, options, max_width);
-                }
-                self.text_style.quote = false;
-            });
+            let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
+
+            if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
+                alert.ui(ui, |ui| {
+                    for event in collected_events.into_iter() {
+                        self.event(ui, event, cache, options, max_width);
+                    }
+                })
+            } else {
+                blockquote(ui, ui.visuals().weak_text_color(), |ui| {
+                    self.text_style.quote = true;
+                    for event in collected_events {
+                        self.event(ui, event, cache, options, max_width);
+                    }
+                    self.text_style.quote = false;
+                });
+            }
 
             newline(ui);
 
