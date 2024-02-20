@@ -35,7 +35,7 @@ pub struct AlertBundle {
 }
 
 impl AlertBundle {
-    fn from_alerts(alerts: Vec<Alert>) -> Self {
+    pub fn from_alerts(alerts: Vec<Alert>) -> Self {
         let mut map = HashMap::with_capacity(alerts.len());
         for alert in alerts {
             // Store it the way it will be in text to make lookup easier
@@ -43,6 +43,13 @@ impl AlertBundle {
         }
 
         Self { alerts: map }
+    }
+
+    pub fn into_alerts(self) -> Vec<Alert> {
+        // since the rendered field can be changed it is better to force creation of
+        // a new bundle with from_alerts after a potential modification
+
+        self.alerts.into_values().collect::<Vec<_>>()
     }
 
     pub(crate) fn try_get_alert(&self, text: &str) -> Option<&Alert> {
