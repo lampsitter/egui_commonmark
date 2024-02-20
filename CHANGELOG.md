@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.0 - 2024-02-20
+
 ### Added
 
 - Alerts ([#32](https://github.com/lampsitter/egui_commonmark/pull/32))
