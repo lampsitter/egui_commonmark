@@ -38,8 +38,8 @@ fn delayed_events<'e>(
     }
 }
 
-struct Column<'e>(Vec<pulldown_cmark::Event<'e>>);
-struct Row<'e>(Vec<Column<'e>>);
+type Column<'e> = Vec<pulldown_cmark::Event<'e>>;
+type Row<'e> = Vec<Column<'e>>;
 
 struct Table<'e> {
     header: Row<'e>,
@@ -52,7 +52,7 @@ fn parse_row<'e>(events: &mut impl Iterator<Item = pulldown_cmark::Event<'e>>) -
 
     for e in events.by_ref() {
         if let pulldown_cmark::Event::End(pulldown_cmark::TagEnd::TableCell) = e {
-            row.push(Column(column));
+            row.push(column);
             column = Vec::new();
         }
 
@@ -82,13 +82,10 @@ fn parse_table<'e>(
     let mut rows = Vec::new();
     while all_events.peek().is_some() {
         let row = parse_row(&mut all_events);
-        rows.push(Row(row));
+        rows.push(row);
     }
 
-    Table {
-        header: Row(header),
-        rows,
-    }
+    Table { header, rows }
 }
 
 /// try to parse events as an alert quote block. This ill modify the events
@@ -408,13 +405,13 @@ impl CommonMarkViewerInternal {
             let id = self.source_id.with(self.curr_table);
             self.curr_table += 1;
 
-            ui.push_id(id, |ui| {
+            egui::Frame::group(ui.style()).show(ui, |ui| {
                 let Table { header, rows } = parse_table(events);
 
                 egui::Grid::new(id).striped(true).show(ui, |ui| {
-                    for col in header.0 {
+                    for col in header {
                         ui.horizontal(|ui| {
-                            for e in col.0 {
+                            for e in col {
                                 self.should_insert_newline = false;
                                 self.event(ui, e, cache, options, max_width);
                             }
@@ -424,9 +421,9 @@ impl CommonMarkViewerInternal {
                     ui.end_row();
 
                     for row in rows {
-                        for col in row.0 {
+                        for col in row {
                             ui.horizontal(|ui| {
-                                for e in col.0 {
+                                for e in col {
                                     self.should_insert_newline = false;
                                     self.event(ui, e, cache, options, max_width);
                                 }
@@ -438,6 +435,7 @@ impl CommonMarkViewerInternal {
                 });
             });
 
+            self.is_table = false;
             self.should_insert_newline = true;
             newline(ui);
         }
@@ -603,9 +601,7 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::TagEnd::Item => {}
             pulldown_cmark::TagEnd::FootnoteDefinition => {}
-            pulldown_cmark::TagEnd::Table => {
-                self.is_table = false;
-            }
+            pulldown_cmark::TagEnd::Table => {}
             pulldown_cmark::TagEnd::TableHead => {}
             pulldown_cmark::TagEnd::TableRow => {}
             pulldown_cmark::TagEnd::TableCell => {
