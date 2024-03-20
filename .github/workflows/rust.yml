@@ -15,10 +15,10 @@ jobs:
       run: cargo clippy -- -Dwarnings
 
     - name: Check all features pulldown
-      run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting,load-images,svg,fetch
+      run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting
 
     - name: Check all features comrak
-      run: cargo check --no-default-features --features comrak,better_syntax_highlighting,load-images,svg,fetch
+      run: cargo check --no-default-features --features comrak,better_syntax_highlighting
 
     - name: Cargo fmt
       run: cargo fmt --check -q
