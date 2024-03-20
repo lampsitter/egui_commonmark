@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A single table cell split into multiple cells ([#35](https://github.com/lampsitter/egui_commonmark/pull/35))
+
 ## 0.13.0 - 2024-02-20
 
 ### Added
