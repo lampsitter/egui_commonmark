@@ -124,6 +124,10 @@ fn main() {
                         name: "Block Quotes ".to_owned(),
                         content: include_str!("markdown/blockquotes.md").to_owned(),
                     },
+                    Page {
+                        name: "Tables ".to_owned(),
+                        content: include_str!("markdown/tables.md").to_owned(),
+                    },
                 ],
             })
         }),

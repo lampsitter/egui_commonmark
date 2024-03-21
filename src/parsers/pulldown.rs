@@ -38,6 +38,56 @@ fn delayed_events<'e>(
     }
 }
 
+type Column<'e> = Vec<pulldown_cmark::Event<'e>>;
+type Row<'e> = Vec<Column<'e>>;
+
+struct Table<'e> {
+    header: Row<'e>,
+    rows: Vec<Row<'e>>,
+}
+
+fn parse_row<'e>(events: &mut impl Iterator<Item = pulldown_cmark::Event<'e>>) -> Vec<Column<'e>> {
+    let mut row = Vec::new();
+    let mut column = Vec::new();
+
+    for e in events.by_ref() {
+        if let pulldown_cmark::Event::End(pulldown_cmark::TagEnd::TableCell) = e {
+            row.push(column);
+            column = Vec::new();
+        }
+
+        if let pulldown_cmark::Event::End(pulldown_cmark::TagEnd::TableHead) = e {
+            break;
+        }
+
+        if let pulldown_cmark::Event::End(pulldown_cmark::TagEnd::TableRow) = e {
+            break;
+        }
+
+        column.push(e);
+    }
+
+    row
+}
+
+fn parse_table<'e>(
+    events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+) -> Table<'e> {
+    let mut all_events = delayed_events(events, pulldown_cmark::TagEnd::Table)
+        .into_iter()
+        .peekable();
+
+    let header = parse_row(&mut all_events);
+
+    let mut rows = Vec::new();
+    while all_events.peek().is_some() {
+        let row = parse_row(&mut all_events);
+        rows.push(row);
+    }
+
+    Table { header, rows }
+}
+
 /// try to parse events as an alert quote block. This ill modify the events
 /// to remove the parsed text that should not be rendered.
 /// Assumes that the first element is a Paragraph
@@ -352,21 +402,40 @@ impl CommonMarkViewerInternal {
         if self.is_table {
             newline(ui);
 
+            let id = self.source_id.with(self.curr_table);
+            self.curr_table += 1;
+
             egui::Frame::group(ui.style()).show(ui, |ui| {
-                let id = self.source_id.with(self.curr_table);
-                self.curr_table += 1;
+                let Table { header, rows } = parse_table(events);
+
                 egui::Grid::new(id).striped(true).show(ui, |ui| {
-                    while self.is_table {
-                        if let Some((_, e)) = events.next() {
-                            self.should_insert_newline = false;
-                            self.event(ui, e, cache, options, max_width);
-                        } else {
-                            break;
+                    for col in header {
+                        ui.horizontal(|ui| {
+                            for e in col {
+                                self.should_insert_newline = false;
+                                self.event(ui, e, cache, options, max_width);
+                            }
+                        });
+                    }
+
+                    ui.end_row();
+
+                    for row in rows {
+                        for col in row {
+                            ui.horizontal(|ui| {
+                                for e in col {
+                                    self.should_insert_newline = false;
+                                    self.event(ui, e, cache, options, max_width);
+                                }
+                            });
                         }
+
+                        ui.end_row();
                     }
                 });
             });
 
+            self.is_table = false;
             self.should_insert_newline = true;
             newline(ui);
         }
@@ -532,15 +601,9 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::TagEnd::Item => {}
             pulldown_cmark::TagEnd::FootnoteDefinition => {}
-            pulldown_cmark::TagEnd::Table => {
-                self.is_table = false;
-            }
-            pulldown_cmark::TagEnd::TableHead => {
-                ui.end_row();
-            }
-            pulldown_cmark::TagEnd::TableRow => {
-                ui.end_row();
-            }
+            pulldown_cmark::TagEnd::Table => {}
+            pulldown_cmark::TagEnd::TableHead => {}
+            pulldown_cmark::TagEnd::TableRow => {}
             pulldown_cmark::TagEnd::TableCell => {
                 // Ensure space between cells
                 ui.label("  ");
