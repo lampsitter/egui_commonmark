@@ -190,7 +190,9 @@ impl CommonMarkViewerInternal {
                     ui.end_row();
                 }
                 NodeValue::TableCell => {
-                    self.render(ui, cache, options, max_width, c);
+                    ui.horizontal(|ui| {
+                        self.render(ui, cache, options, max_width, c);
+                    });
                     // Ensure space between cells
                     ui.label("  ");
                 }
