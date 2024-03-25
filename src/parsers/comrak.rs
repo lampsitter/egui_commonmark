@@ -40,7 +40,7 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         text: &str,
-    ) {
+    ) -> egui::InnerResponse<()> {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
@@ -59,7 +59,7 @@ impl CommonMarkViewerInternal {
             let root = parse_document(&arena, text, &parse_opt);
 
             self.render(ui, cache, options, max_width, root);
-        });
+        })
     }
 
     // FIXME: recursion limit...

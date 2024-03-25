@@ -204,7 +204,7 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         text: &str,
         populate_split_points: bool,
-    ) {
+    ) -> egui::InnerResponse<()> {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
@@ -240,7 +240,7 @@ impl CommonMarkViewerInternal {
             }
 
             cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
-        });
+        })
     }
 
     pub(crate) fn show_scrollable(
