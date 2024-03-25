@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- `AlertBundle::from_alerts`
+- `AlertBundle::into_alerts`
+
 ### Fixed
 
 - A single table cell split into multiple cells ([#35](https://github.com/lampsitter/egui_commonmark/pull/35))
