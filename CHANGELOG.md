@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.14.0 - 2024-03-26
+
 ### Added
 
 - `AlertBundle::from_alerts`
