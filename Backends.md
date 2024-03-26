@@ -4,7 +4,7 @@ egui_commonmark offers __experimental__ support for using [comrak](https://crate
 as parsing backend. By default pulldown_cmark is used. To use comrak instead do:
 
 ```toml
-egui_commonmark = { version = "0.12", default-features = false, features = ["load-images", "comrak"] }
+egui_commonmark = { version = "0.14", default-features = false, features = ["load-images", "comrak"] }
 ```
 
 ### Why two parsing backends?
@@ -17,11 +17,13 @@ style markdown.
 pulldown_cmark has fewer dependencies and should theoretically be faster.
 
 Due to these reasons both backends are supported. At least for now.
+If you are unsure of what to use, just use pulldown_cmark the default backend.
 
 
 ### Differences in support
 
-Currently both support the same feature set
+The comrak backend does not support Alerts due do them being difficult to
+implement with comrak
 
 ### Known rendering differences
 
@@ -29,5 +31,4 @@ Currently both support the same feature set
 |---------|----------------|--------|
 | Footers | Placed when they appear | Placed at the end |
 | Spec incompatibilities | Blocks such as images can be rendered inside tables. This is against the spec | Disallowed |
-
 
