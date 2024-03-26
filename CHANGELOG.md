@@ -7,6 +7,11 @@
 - `AlertBundle::from_alerts`
 - `AlertBundle::into_alerts`
 
+### Changed
+
+- `CommonmarkMarkViewer::show` returns `InnerResponse<()>`
+([#36](https://github.com/lampsitter/egui_commonmark/pull/36) by [@ElhamAryanpur](https://github.com/ElhamAryanpur))
+
 ### Fixed
 
 - A single table cell split into multiple cells ([#35](https://github.com/lampsitter/egui_commonmark/pull/35))
