@@ -30,7 +30,7 @@
 
 - Prettier blockquotes
 
-    Before two simple horizontal lines were rendered. Now it's a single horizonal
+    Before two simple horizontal lines were rendered. Now it's a single horizontal
     line in front of the elements.
 
 - Upgraded to pulldown-cmark 0.10

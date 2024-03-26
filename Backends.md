@@ -28,6 +28,6 @@ Currently both support the same feature set
 | Type    | pulldown_cmark | comrak |
 |---------|----------------|--------|
 | Footers | Placed when they appear | Placed at the end |
-| Spec incompatibilies | Blocks such as images can be rendered inside tables. This is against the spec | Disallowed |
+| Spec incompatibilities | Blocks such as images can be rendered inside tables. This is against the spec | Disallowed |
 
 
