@@ -9,7 +9,7 @@
 
 ### Changed
 
-- Update to egui 0.27
+- Update to egui 0.27 ([#37](https://github.com/lampsitter/egui_commonmark/pull/37) by [@emilk](https://github.com/emilk))
 - `CommonMarkViewer::show` returns `InnerResponse<()>`
 ([#36](https://github.com/lampsitter/egui_commonmark/pull/36) by [@ElhamAryanpur](https://github.com/ElhamAryanpur))
 
