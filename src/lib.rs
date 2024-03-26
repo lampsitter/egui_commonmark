@@ -395,11 +395,16 @@ impl CommonMarkViewer {
     }
 
     /// Shows rendered markdown
-    pub fn show(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
+    pub fn show(
+        self,
+        ui: &mut egui::Ui,
+        cache: &mut CommonMarkCache,
+        text: &str,
+    ) -> egui::InnerResponse<()> {
         cache.prepare_show(ui.ctx());
 
         #[cfg(feature = "pulldown_cmark")]
-        parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+        let response = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
             ui,
             cache,
             &self.options,
@@ -408,12 +413,14 @@ impl CommonMarkViewer {
         );
 
         #[cfg(feature = "comrak")]
-        parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
+        let response = parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
             ui,
             cache,
             &self.options,
             text,
         );
+
+        response
     }
 
     /// Shows markdown inside a [`ScrollArea`].
