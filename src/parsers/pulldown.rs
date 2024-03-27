@@ -180,10 +180,10 @@ pub struct CommonMarkViewerInternal {
     fenced_code_block: Option<crate::FencedCodeBlock>,
     is_table: bool,
     is_blockquote: bool,
-    checkmark_spans: Vec<CheckmarkClickEvent>,
+    checkbox_events: Vec<CheckboxClickEvent>,
 }
 
-pub(crate) struct CheckmarkClickEvent {
+pub(crate) struct CheckboxClickEvent {
     pub(crate) checked: bool,
     pub(crate) span: Range<usize>,
 }
@@ -201,7 +201,7 @@ impl CommonMarkViewerInternal {
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
-            checkmark_spans: Vec::new(),
+            checkbox_events: Vec::new(),
         }
     }
 }
@@ -215,7 +215,7 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         text: &str,
         populate_split_points: bool,
-    ) -> (egui::InnerResponse<()>, Vec<CheckmarkClickEvent>) {
+    ) -> (egui::InnerResponse<()>, Vec<CheckboxClickEvent>) {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
@@ -254,7 +254,7 @@ impl CommonMarkViewerInternal {
 
             cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
         });
-        (re, std::mem::take(&mut self.checkmark_spans))
+        (re, std::mem::take(&mut self.checkbox_events))
     }
 
     pub(crate) fn show_scrollable(
@@ -499,7 +499,7 @@ impl CommonMarkViewerInternal {
                         .add(egui::Checkbox::without_text(&mut checkbox))
                         .clicked()
                     {
-                        self.checkmark_spans.push(CheckmarkClickEvent {
+                        self.checkbox_events.push(CheckboxClickEvent {
                             checked: checkbox,
                             span: src_span,
                         });
