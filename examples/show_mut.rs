@@ -67,6 +67,6 @@ const EXAMPLE_TEXT: &str = "
 # Todo list
 - [x] Exist
 - [ ] Visit [`egui_commonmark` repo](https://github.com/lampsitter/egui_commonmark)
-- [ ] Notice how the text changes in response to clicking the checkmarks.
-    - [ ] Make up your own list items
+- [ ] Notice how the top markdown text changes in response to clicking the checkmarks.
+    - [ ] Make up your own list items, by using the editor on the top.
 ";
