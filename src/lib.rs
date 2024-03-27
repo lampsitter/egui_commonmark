@@ -439,7 +439,7 @@ impl CommonMarkViewer {
         cache.prepare_show(ui.ctx());
 
         #[cfg(feature = "pulldown_cmark")]
-        let (response, checkmark_ev) = parsers::pulldown::CommonMarkViewerInternal::new(
+        let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new(
             self.source_id,
         )
         .show(ui, cache, &self.options, text, false);
@@ -451,8 +451,8 @@ impl CommonMarkViewer {
             &self.options,
             text,
         );
-
-        for ev in checkmark_ev {
+        // Update source text for checkmarks that were clicked
+        for ev in checkmark_events {
             if ev.checked {
                 text.replace_range(ev.span, "[x]")
             } else {
