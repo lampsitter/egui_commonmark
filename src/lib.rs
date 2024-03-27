@@ -71,7 +71,6 @@ pub struct CommonMarkCache {
     #[cfg(feature = "pulldown_cmark")]
     scroll: HashMap<Id, ScrollableCache>,
     has_installed_loaders: bool,
-    pub checkmark_clicks: Vec<(bool, std::ops::Range<usize>)>,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -86,7 +85,6 @@ impl Default for CommonMarkCache {
             #[cfg(feature = "pulldown_cmark")]
             scroll: Default::default(),
             has_installed_loaders: false,
-            checkmark_clicks: Vec::new(),
         }
     }
 }
@@ -421,6 +419,42 @@ impl CommonMarkViewer {
             &self.options,
             text,
         );
+
+        response.0
+    }
+
+    /// Shows rendered markdown, and allows the rendered ui to mutate the source text.
+    ///
+    /// The only currently implemented mutation is allowing checkboxes to be toggled through the ui.
+    pub fn show_mut(
+        self,
+        ui: &mut egui::Ui,
+        cache: &mut CommonMarkCache,
+        text: &mut String,
+    ) -> egui::InnerResponse<()> {
+        cache.prepare_show(ui.ctx());
+
+        #[cfg(feature = "pulldown_cmark")]
+        let (response, checkmark_ev) = parsers::pulldown::CommonMarkViewerInternal::new(
+            self.source_id,
+        )
+        .show(ui, cache, &self.options, text, false);
+
+        #[cfg(feature = "comrak")]
+        let response = parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
+            ui,
+            cache,
+            &self.options,
+            text,
+        );
+
+        for ev in checkmark_ev {
+            if ev.checked {
+                text.replace_range(ev.span, "[x]")
+            } else {
+                text.replace_range(ev.span, "[ ]")
+            }
+        }
 
         response
     }

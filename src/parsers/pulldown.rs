@@ -180,6 +180,12 @@ pub struct CommonMarkViewerInternal {
     fenced_code_block: Option<crate::FencedCodeBlock>,
     is_table: bool,
     is_blockquote: bool,
+    checkmark_spans: Vec<CheckmarkClickEvent>,
+}
+
+pub(crate) struct CheckmarkClickEvent {
+    pub(crate) checked: bool,
+    pub(crate) span: Range<usize>,
 }
 
 impl CommonMarkViewerInternal {
@@ -195,6 +201,7 @@ impl CommonMarkViewerInternal {
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
+            checkmark_spans: Vec::new(),
         }
     }
 }
@@ -208,11 +215,11 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         text: &str,
         populate_split_points: bool,
-    ) -> egui::InnerResponse<()> {
+    ) -> (egui::InnerResponse<()>, Vec<CheckmarkClickEvent>) {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
-        ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
+        let re = ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
@@ -246,7 +253,8 @@ impl CommonMarkViewerInternal {
             }
 
             cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
-        })
+        });
+        (re, std::mem::take(&mut self.checkmark_spans))
     }
 
     pub(crate) fn show_scrollable(
@@ -490,7 +498,10 @@ impl CommonMarkViewerInternal {
                     .add(egui::Checkbox::without_text(&mut checkbox))
                     .clicked()
                 {
-                    cache.checkmark_clicks.push((checkbox, src_span));
+                    self.checkmark_spans.push(CheckmarkClickEvent {
+                        checked: checkbox,
+                        span: src_span,
+                    });
                 }
             }
         }
