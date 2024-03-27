@@ -71,6 +71,7 @@ pub struct CommonMarkCache {
     #[cfg(feature = "pulldown_cmark")]
     scroll: HashMap<Id, ScrollableCache>,
     has_installed_loaders: bool,
+    pub checkmark_clicks: Vec<(bool, std::ops::Range<usize>)>,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -85,6 +86,7 @@ impl Default for CommonMarkCache {
             #[cfg(feature = "pulldown_cmark")]
             scroll: Default::default(),
             has_installed_loaders: false,
+            checkmark_clicks: Vec::new(),
         }
     }
 }

@@ -1,5 +1,7 @@
 //! Duplicates a lot of stuff for now.
 
+use std::ops::Range;
+
 use crate::{elements::*, Alert, AlertBundle};
 use crate::{CommonMarkCache, CommonMarkOptions};
 
@@ -17,15 +19,15 @@ pub struct ScrollableCache {
 /// Parse events until a desired end tag is reached or no more events are found.
 /// This is needed for multiple events that must be rendered inside a single widget
 fn delayed_events<'e>(
-    events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+    events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
     end_at: pulldown_cmark::TagEnd,
-) -> Vec<pulldown_cmark::Event<'e>> {
+) -> Vec<(pulldown_cmark::Event<'e>, Range<usize>)> {
     let mut curr_event = events.next();
     let mut total_events = Vec::new();
     loop {
         if let Some(event) = curr_event.take() {
             total_events.push(event.1.clone());
-            if let (_, pulldown_cmark::Event::End(tag)) = event {
+            if let (_, (pulldown_cmark::Event::End(tag), _range)) = event {
                 if end_at == tag {
                     return total_events;
                 }
@@ -38,7 +40,7 @@ fn delayed_events<'e>(
     }
 }
 
-type Column<'e> = Vec<pulldown_cmark::Event<'e>>;
+type Column<'e> = Vec<(pulldown_cmark::Event<'e>, Range<usize>)>;
 type Row<'e> = Vec<Column<'e>>;
 
 struct Table<'e> {
@@ -46,11 +48,13 @@ struct Table<'e> {
     rows: Vec<Row<'e>>,
 }
 
-fn parse_row<'e>(events: &mut impl Iterator<Item = pulldown_cmark::Event<'e>>) -> Vec<Column<'e>> {
+fn parse_row<'e>(
+    events: &mut impl Iterator<Item = (pulldown_cmark::Event<'e>, Range<usize>)>,
+) -> Vec<Column<'e>> {
     let mut row = Vec::new();
     let mut column = Vec::new();
 
-    for e in events.by_ref() {
+    for (e, src_span) in events.by_ref() {
         if let pulldown_cmark::Event::End(pulldown_cmark::TagEnd::TableCell) = e {
             row.push(column);
             column = Vec::new();
@@ -64,14 +68,14 @@ fn parse_row<'e>(events: &mut impl Iterator<Item = pulldown_cmark::Event<'e>>) -
             break;
         }
 
-        column.push(e);
+        column.push((e, src_span));
     }
 
     row
 }
 
 fn parse_table<'e>(
-    events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+    events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
 ) -> Table<'e> {
     let mut all_events = delayed_events(events, pulldown_cmark::TagEnd::Table)
         .into_iter()
@@ -93,7 +97,7 @@ fn parse_table<'e>(
 /// Assumes that the first element is a Paragraph
 fn parse_alerts<'a>(
     alerts: &'a AlertBundle,
-    events: &mut Vec<pulldown_cmark::Event<'_>>,
+    events: &mut Vec<(pulldown_cmark::Event<'_>, Range<usize>)>,
 ) -> Option<&'a Alert> {
     // no point in parsing if there are no alerts to render
     if !alerts.is_empty() {
@@ -101,7 +105,7 @@ fn parse_alerts<'a>(
         let mut alert_ident_ends_at = 0;
         let mut has_extra_line = false;
 
-        for (i, e) in events.iter().enumerate() {
+        for (i, (e, _src_span)) in events.iter().enumerate() {
             if let pulldown_cmark::Event::End(_) = e {
                 // > [!TIP]
                 // >
@@ -213,14 +217,16 @@ impl CommonMarkViewerInternal {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options()).enumerate();
+            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options())
+                .into_offset_iter()
+                .enumerate();
 
-            while let Some((index, e)) = events.next() {
+            while let Some((index, (e, src_span))) = events.next() {
                 let start_position = ui.next_widget_position();
                 let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
                 let should_add_split_point = self.list.is_inside_a_list() && is_element_end;
 
-                self.process_event(ui, &mut events, e, cache, options, max_width);
+                self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
                 if populate_split_points && should_add_split_point {
                     let scroll_cache = cache.scroll(&self.source_id);
@@ -265,7 +271,9 @@ impl CommonMarkViewerInternal {
             return;
         };
 
-        let events = pulldown_cmark::Parser::new_ext(text, parser_options()).collect::<Vec<_>>();
+        let events = pulldown_cmark::Parser::new_ext(text, parser_options())
+            .into_offset_iter()
+            .collect::<Vec<_>>();
 
         let num_rows = events.len();
 
@@ -311,8 +319,8 @@ impl CommonMarkViewerInternal {
                         .skip(first_event_index)
                         .take(last_event_index - first_event_index);
 
-                    while let Some((_, e)) = events.next() {
-                        self.process_event(ui, &mut events, e, cache, options, max_width);
+                    while let Some((_, (e, src_span))) = events.next() {
+                        self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
                     }
                 });
             });
@@ -329,13 +337,14 @@ impl CommonMarkViewerInternal {
     fn process_event<'e>(
         &mut self,
         ui: &mut Ui,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
         event: pulldown_cmark::Event,
+        src_span: Range<usize>,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
-        self.event(ui, event, cache, options, max_width);
+        self.event(ui, event, src_span, cache, options, max_width);
         self.fenced_code_block(events, max_width, cache, options, ui);
         self.table(events, cache, options, ui, max_width);
         self.blockquote(events, max_width, cache, options, ui);
@@ -343,7 +352,7 @@ impl CommonMarkViewerInternal {
 
     fn blockquote<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
         max_width: f32,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -354,15 +363,15 @@ impl CommonMarkViewerInternal {
 
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 alert.ui(ui, |ui| {
-                    for event in collected_events.into_iter() {
-                        self.event(ui, event, cache, options, max_width);
+                    for (event, src_span) in collected_events.into_iter() {
+                        self.event(ui, event, src_span, cache, options, max_width);
                     }
                 })
             } else {
                 blockquote(ui, ui.visuals().weak_text_color(), |ui| {
                     self.text_style.quote = true;
-                    for event in collected_events {
-                        self.event(ui, event, cache, options, max_width);
+                    for (event, src_span) in collected_events {
+                        self.event(ui, event, src_span, cache, options, max_width);
                     }
                     self.text_style.quote = false;
                 });
@@ -376,15 +385,15 @@ impl CommonMarkViewerInternal {
 
     fn fenced_code_block<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
         max_width: f32,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
     ) {
         while self.fenced_code_block.is_some() {
-            if let Some((_, e)) = events.next() {
-                self.event(ui, e, cache, options, max_width);
+            if let Some((_, (e, src_span))) = events.next() {
+                self.event(ui, e, src_span, cache, options, max_width);
             } else {
                 break;
             }
@@ -393,7 +402,7 @@ impl CommonMarkViewerInternal {
 
     fn table<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = (usize, pulldown_cmark::Event<'e>)>,
+        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
@@ -411,9 +420,9 @@ impl CommonMarkViewerInternal {
                 egui::Grid::new(id).striped(true).show(ui, |ui| {
                     for col in header {
                         ui.horizontal(|ui| {
-                            for e in col {
+                            for (e, src_span) in col {
                                 self.should_insert_newline = false;
-                                self.event(ui, e, cache, options, max_width);
+                                self.event(ui, e, src_span, cache, options, max_width);
                             }
                         });
                     }
@@ -423,9 +432,9 @@ impl CommonMarkViewerInternal {
                     for row in rows {
                         for col in row {
                             ui.horizontal(|ui| {
-                                for e in col {
+                                for (e, src_span) in col {
                                     self.should_insert_newline = false;
-                                    self.event(ui, e, cache, options, max_width);
+                                    self.event(ui, e, src_span, cache, options, max_width);
                                 }
                             });
                         }
@@ -445,6 +454,7 @@ impl CommonMarkViewerInternal {
         &mut self,
         ui: &mut Ui,
         event: pulldown_cmark::Event,
+        src_span: Range<usize>,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
@@ -476,7 +486,12 @@ impl CommonMarkViewerInternal {
                 newline(ui);
             }
             pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
-                ui.add(Checkbox::without_text(&mut checkbox));
+                if ui
+                    .add(egui::Checkbox::without_text(&mut checkbox))
+                    .clicked()
+                {
+                    cache.checkmark_clicks.push((checkbox, src_span));
+                }
             }
         }
     }
