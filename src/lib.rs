@@ -407,7 +407,7 @@ impl CommonMarkViewer {
         cache.prepare_show(ui.ctx());
 
         #[cfg(feature = "pulldown_cmark")]
-        let response = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+        let (response, _) = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
             ui,
             cache,
             &self.options,
@@ -423,7 +423,7 @@ impl CommonMarkViewer {
             text,
         );
 
-        response.0
+        response
     }
 
     /// Shows rendered markdown, and allows the rendered ui to mutate the source text.
