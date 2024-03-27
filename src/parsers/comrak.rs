@@ -201,9 +201,9 @@ impl CommonMarkViewerInternal {
                     self.list.start_item(ui, options);
 
                     if item.is_some() {
-                        ui.add(Checkbox::without_text(&mut true));
+                        ui.add(ImmutableCheckbox::without_text(&mut true));
                     } else {
-                        ui.add(Checkbox::without_text(&mut false));
+                        ui.add(ImmutableCheckbox::without_text(&mut false));
                     }
 
                     self.render(ui, cache, options, max_width, c);

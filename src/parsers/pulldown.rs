@@ -505,7 +505,7 @@ impl CommonMarkViewerInternal {
                         });
                     }
                 } else {
-                    ui.add(Checkbox::without_text(&mut checkbox));
+                    ui.add(ImmutableCheckbox::without_text(&mut checkbox));
                 }
             }
         }

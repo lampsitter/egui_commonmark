@@ -147,19 +147,19 @@ pub fn code_block<'t>(
 // Stripped down version of egui's Checkbox. The only difference is that this
 // creates a noninteractive checkbox. ui.add_enabled could have been used instead,
 // but it makes the checkbox too grey.
-pub(crate) struct Checkbox<'a> {
+pub(crate) struct ImmutableCheckbox<'a> {
     checked: &'a mut bool,
 }
 
-impl<'a> Checkbox<'a> {
+impl<'a> ImmutableCheckbox<'a> {
     pub fn without_text(checked: &'a mut bool) -> Self {
-        Checkbox { checked }
+        ImmutableCheckbox { checked }
     }
 }
 
-impl<'a> egui::Widget for Checkbox<'a> {
+impl<'a> egui::Widget for ImmutableCheckbox<'a> {
     fn ui(self, ui: &mut Ui) -> egui::Response {
-        let Checkbox { checked } = self;
+        let ImmutableCheckbox { checked } = self;
 
         let spacing = &ui.spacing();
         let icon_width = spacing.icon_width;
