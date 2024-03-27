@@ -494,14 +494,18 @@ impl CommonMarkViewerInternal {
                 newline(ui);
             }
             pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
-                if ui
-                    .add(egui::Checkbox::without_text(&mut checkbox))
-                    .clicked()
-                {
-                    self.checkmark_spans.push(CheckmarkClickEvent {
-                        checked: checkbox,
-                        span: src_span,
-                    });
+                if options.mutable {
+                    if ui
+                        .add(egui::Checkbox::without_text(&mut checkbox))
+                        .clicked()
+                    {
+                        self.checkmark_spans.push(CheckmarkClickEvent {
+                            checked: checkbox,
+                            span: src_span,
+                        });
+                    }
+                } else {
+                    ui.add(Checkbox::without_text(&mut checkbox));
                 }
             }
         }

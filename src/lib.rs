@@ -252,6 +252,8 @@ struct CommonMarkOptions {
     use_explicit_uri_scheme: bool,
     default_implicit_uri_scheme: String,
     alerts: AlertBundle,
+    /// Whether to present a mutable ui for things like checkboxes
+    mutable: bool,
 }
 
 impl Default for CommonMarkOptions {
@@ -268,6 +270,7 @@ impl Default for CommonMarkOptions {
             use_explicit_uri_scheme: false,
             default_implicit_uri_scheme: "file://".to_owned(),
             alerts: AlertBundle::gfm(),
+            mutable: false,
         }
     }
 }
@@ -427,11 +430,12 @@ impl CommonMarkViewer {
     ///
     /// The only currently implemented mutation is allowing checkboxes to be toggled through the ui.
     pub fn show_mut(
-        self,
+        mut self,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         text: &mut String,
     ) -> egui::InnerResponse<()> {
+        self.options.mutable = true;
         cache.prepare_show(ui.ctx());
 
         #[cfg(feature = "pulldown_cmark")]
