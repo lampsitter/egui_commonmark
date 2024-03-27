@@ -429,6 +429,7 @@ impl CommonMarkViewer {
     /// Shows rendered markdown, and allows the rendered ui to mutate the source text.
     ///
     /// The only currently implemented mutation is allowing checkboxes to be toggled through the ui.
+    #[cfg(feature = "pulldown_cmark")]
     pub fn show_mut(
         mut self,
         ui: &mut egui::Ui,
@@ -438,19 +439,11 @@ impl CommonMarkViewer {
         self.options.mutable = true;
         cache.prepare_show(ui.ctx());
 
-        #[cfg(feature = "pulldown_cmark")]
         let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new(
             self.source_id,
         )
         .show(ui, cache, &self.options, text, false);
 
-        #[cfg(feature = "comrak")]
-        let response = parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
-            ui,
-            cache,
-            &self.options,
-            text,
-        );
         // Update source text for checkmarks that were clicked
         for ev in checkmark_events {
             if ev.checked {
