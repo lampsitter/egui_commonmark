@@ -252,6 +252,8 @@ struct CommonMarkOptions {
     use_explicit_uri_scheme: bool,
     default_implicit_uri_scheme: String,
     alerts: AlertBundle,
+    /// Whether to present a mutable ui for things like checkboxes
+    mutable: bool,
 }
 
 impl Default for CommonMarkOptions {
@@ -268,6 +270,7 @@ impl Default for CommonMarkOptions {
             use_explicit_uri_scheme: false,
             default_implicit_uri_scheme: "file://".to_owned(),
             alerts: AlertBundle::gfm(),
+            mutable: false,
         }
     }
 }
@@ -404,7 +407,7 @@ impl CommonMarkViewer {
         cache.prepare_show(ui.ctx());
 
         #[cfg(feature = "pulldown_cmark")]
-        let response = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+        let (response, _) = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
             ui,
             cache,
             &self.options,
@@ -419,6 +422,36 @@ impl CommonMarkViewer {
             &self.options,
             text,
         );
+
+        response
+    }
+
+    /// Shows rendered markdown, and allows the rendered ui to mutate the source text.
+    ///
+    /// The only currently implemented mutation is allowing checkboxes to be toggled through the ui.
+    #[cfg(feature = "pulldown_cmark")]
+    pub fn show_mut(
+        mut self,
+        ui: &mut egui::Ui,
+        cache: &mut CommonMarkCache,
+        text: &mut String,
+    ) -> egui::InnerResponse<()> {
+        self.options.mutable = true;
+        cache.prepare_show(ui.ctx());
+
+        let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new(
+            self.source_id,
+        )
+        .show(ui, cache, &self.options, text, false);
+
+        // Update source text for checkmarks that were clicked
+        for ev in checkmark_events {
+            if ev.checked {
+                text.replace_range(ev.span, "[x]")
+            } else {
+                text.replace_range(ev.span, "[ ]")
+            }
+        }
 
         response
     }
