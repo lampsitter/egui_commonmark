@@ -341,7 +341,7 @@ impl CommonMarkViewerInternal {
             scroll_cache.split_points.clear();
         }
     }
-
+    #[allow(clippy::too_many_arguments)]
     fn process_event<'e>(
         &mut self,
         ui: &mut Ui,
