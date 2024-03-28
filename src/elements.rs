@@ -116,16 +116,26 @@ pub fn code_block<'t>(
         frame_rect.right_top().y + spacing.button_padding.y * 2.0,
     );
 
-    let copy_button = ui.put(
-        egui::Rect {
-            min: position,
-            max: position,
-        },
-        egui::Button::new("🗐")
-            .small()
-            .frame(false)
-            .fill(egui::Color32::TRANSPARENT),
-    );
+    // Check if we should show ✔ instead of 🗐 if the text was copied and the mouse is hovered
+    let persistent_id = ui.make_persistent_id(output.response.id);
+    let mut copied_icon = ui.memory_mut(|m| *m.data.get_temp_mut_or_default::<bool>(persistent_id));
+
+    let copy_button = ui
+        .put(
+            egui::Rect {
+                min: position,
+                max: position,
+            },
+            egui::Button::new(if copied_icon { "✔" } else { "🗐" })
+                .small()
+                .frame(false)
+                .fill(egui::Color32::TRANSPARENT),
+        )
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+
+    // Update `copied_icon` and write it back to the persistent storage
+    copied_icon = (copied_icon || copy_button.clicked()) && copy_button.hovered();
+    ui.memory_mut(|m| *m.data.get_temp_mut_or_default(persistent_id) = copied_icon);
 
     if copy_button.clicked() {
         use egui::TextBuffer as _;
