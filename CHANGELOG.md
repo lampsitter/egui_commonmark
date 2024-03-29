@@ -4,6 +4,9 @@
 
 ### Added
 
+- Replace copy icon with checkmark when clicking copy button in code blocks
+([#42](https://github.com/lampsitter/egui_commonmark/pull/42) by [@zeozeozeo](https://github.com/zeozeozeo))
+
 - Interactive tasklists with `CommonMarkViewer::show_mut`
 ([#40](https://github.com/lampsitter/egui_commonmark/pull/40) by [@crumblingstatue](https://github.com/crumblingstatue))
 
