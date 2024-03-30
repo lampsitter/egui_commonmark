@@ -41,7 +41,7 @@ pub(crate) fn number_point(ui: &mut Ui, number: &str) {
     ui.painter().text(
         rect.right_center(),
         egui::Align2::RIGHT_CENTER,
-        format!("{number}. "),
+        format!("{number}."),
         TextStyle::Body.resolve(ui.style()),
         ui.visuals().strong_text_color(),
     );
@@ -240,14 +240,19 @@ impl List {
             newline(ui);
             ui.label(" ".repeat((len - 1) * options.indentation_spaces));
 
-            if let Some(number) = &mut item.current_number {
-                number_point(ui, &number.to_string());
-                *number += 1;
-            } else if len > 1 {
-                bullet_point_hollow(ui);
-            } else {
-                bullet_point(ui);
-            }
+            ui.horizontal(|ui| {
+                if let Some(number) = &mut item.current_number {
+                    number_point(ui, &number.to_string());
+                    *number += 1;
+                } else if len > 1 {
+                    bullet_point_hollow(ui);
+                } else {
+                    bullet_point(ui);
+                }
+
+                // Add some space between the bullet point and the text that follows it
+                ui.add_space(4.0);
+            });
         } else {
             unreachable!();
         }

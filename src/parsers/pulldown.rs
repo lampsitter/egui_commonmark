@@ -512,16 +512,21 @@ impl CommonMarkViewerInternal {
     }
 
     fn event_text(&mut self, text: CowStr, ui: &mut Ui) {
-        let rich_text = self.text_style.to_richtext(ui, &text);
-        if let Some(image) = &mut self.image {
-            image.alt_text.push(rich_text);
-        } else if let Some(block) = &mut self.fenced_code_block {
-            block.content.push_str(&text);
-        } else if let Some(link) = &mut self.link {
-            link.text.push(rich_text);
-        } else {
-            ui.label(rich_text);
-        }
+        // Use horizontal layout so when it wraps inside lists the next line
+        // starts after the bullet point (https://github.com/lampsitter/egui_commonmark/issues/39)
+        ui.horizontal(|ui| {
+            let rich_text = self.text_style.to_richtext(ui, &text);
+            if let Some(image) = &mut self.image {
+                image.alt_text.push(rich_text);
+            } else if let Some(block) = &mut self.fenced_code_block {
+                block.content.push_str(&text);
+            } else if let Some(link) = &mut self.link {
+                link.text.push(rich_text);
+            } else {
+                // Text does not wrap by default in horizontal layout
+                ui.add(egui::Label::new(rich_text).wrap(true));
+            }
+        });
     }
 
     fn start_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
