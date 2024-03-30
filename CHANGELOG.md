@@ -10,6 +10,10 @@
 - Interactive tasklists with `CommonMarkViewer::show_mut`
 ([#40](https://github.com/lampsitter/egui_commonmark/pull/40) by [@crumblingstatue](https://github.com/crumblingstatue))
 
+### Changed
+
+- Alerts are case insensetive
+
 
 ## 0.14.0 - 2024-03-26
 

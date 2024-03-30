@@ -53,7 +53,7 @@ impl AlertBundle {
     }
 
     pub(crate) fn try_get_alert(&self, text: &str) -> Option<&Alert> {
-        self.alerts.get(text)
+        self.alerts.get(&text.to_uppercase())
     }
 
     pub fn empty() -> Self {

@@ -36,8 +36,8 @@ will be displayed as:
 > tip alert
 
 <!-- The trailing whitespaces are deliberate on important and warning -->
-
-> [!IMPORTANT] 
+<!-- Case insensetivity --->
+> [!imporTant] 
 > important alert
 
 > [!WARNING] 
