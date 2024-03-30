@@ -12,7 +12,7 @@
 
 ### Changed
 
-- Alerts are case insensetive
+- Alerts are case-insensitive
 
 
 ## 0.14.0 - 2024-03-26
