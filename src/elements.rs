@@ -265,7 +265,6 @@ impl List {
 }
 
 pub(crate) fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(&mut Ui)) {
-    newline(ui);
     let start = ui.painter().add(egui::Shape::Noop);
     let response = egui::Frame::none()
         // offset the frame so that we can use the space for the horizontal line and other stuff

@@ -20,3 +20,8 @@ default. It will therefore fallback to default highlighting.
 egui_commonmark = "0.10"
 image = { version = "0.24", default-features = false, features = ["png"] }
 ```
+
+- ```rs
+  let x = 3.14;
+  ```
+- Code blocks can be in lists too :)

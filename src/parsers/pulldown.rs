@@ -437,6 +437,9 @@ impl CommonMarkViewerInternal {
                     }
                 })
             } else {
+                if self.should_insert_newline {
+                    newline(ui)
+                }
                 blockquote(ui, ui.visuals().weak_text_color(), |ui| {
                     self.text_style.quote = true;
                     for (event, src_span) in collected_events {
@@ -446,7 +449,9 @@ impl CommonMarkViewerInternal {
                 });
             }
 
-            newline(ui);
+            if self.should_insert_newline {
+                newline(ui);
+            }
 
             self.is_blockquote = false;
         }
@@ -614,7 +619,9 @@ impl CommonMarkViewerInternal {
                         content: "".to_string(),
                     });
 
-                    newline(ui);
+                    if self.should_insert_newline {
+                        newline(ui);
+                    }
                 }
 
                 self.text_style.code = true;
@@ -734,6 +741,9 @@ impl CommonMarkViewerInternal {
         if let Some(block) = self.fenced_code_block.take() {
             block.end(ui, cache, options, max_width);
             self.text_style.code = false;
+            if self.should_insert_newline {
+                newline(ui);
+            }
         }
     }
 }

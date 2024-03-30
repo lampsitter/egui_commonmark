@@ -655,8 +655,6 @@ impl FencedCodeBlock {
 
             elements::code_block(ui, max_width, &self.content, &mut layout);
         });
-
-        elements::newline(ui);
     }
 }
 

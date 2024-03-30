@@ -77,13 +77,18 @@ impl CommonMarkViewerInternal {
                 NodeValue::FrontMatter(_front_matter) => {}
 
                 NodeValue::BlockQuote => {
+                    if self.should_insert_newline {
+                        newline(ui)
+                    }
                     blockquote(ui, ui.visuals().weak_text_color(), |ui| {
                         self.text_style.quote = true;
                         self.render(ui, cache, options, max_width, c);
                         self.text_style.quote = false;
                     });
 
-                    newline(ui);
+                    if self.should_insert_newline {
+                        newline(ui);
+                    }
                 }
 
                 NodeValue::List(list) => {
@@ -119,7 +124,9 @@ impl CommonMarkViewerInternal {
                             content: code_block.literal.to_string(),
                         });
 
-                        newline(ui);
+                        if self.should_insert_newline {
+                            newline(ui);
+                        }
                     }
 
                     self.text_style.code = true;
@@ -127,6 +134,10 @@ impl CommonMarkViewerInternal {
 
                     if let Some(block) = self.fenced_code_block.take() {
                         block.end(ui, cache, options, max_width);
+
+                        if self.should_insert_newline {
+                            newline(ui);
+                        }
                     }
                     self.text_style.code = false;
                 }
