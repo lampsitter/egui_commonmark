@@ -51,7 +51,7 @@ impl App {
                 .inner_margin(egui::Margin::symmetric(5.0, 0.0))
                 .show(ui, |ui| {
                     CommonMarkViewer::new("viewer")
-                        .default_width(Some(512))
+                        .default_width(Some(200))
                         .max_image_width(Some(512))
                         .show(
                             ui,
