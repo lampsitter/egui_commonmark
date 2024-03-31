@@ -139,7 +139,9 @@ impl CommonMarkViewerInternal {
                         // we deliberately do not set it to false after this
                     }
 
-                    self.render(ui, cache, options, max_width, c);
+                    ui.horizontal_wrapped(|ui| {
+                        self.render(ui, cache, options, max_width, c);
+                    });
 
                     // To end the inlines
                     if self.should_insert_newline {
