@@ -302,18 +302,27 @@ impl CommonMarkOptions {
     }
 }
 
-#[derive(Debug)]
-pub struct CommonMarkViewer {
+/// Takes [`egui::Ui`], the math text to be rendered and whether it is inline
+type RenderMathFn = dyn Fn(&mut Ui, &str, bool);
+
+pub struct CommonMarkViewer<'a> {
     source_id: Id,
     options: CommonMarkOptions,
+    math_fn: Option<&'a RenderMathFn>,
 }
 
-impl CommonMarkViewer {
+impl<'a> CommonMarkViewer<'a> {
     pub fn new(source_id: impl std::hash::Hash) -> Self {
         Self {
             source_id: Id::new(source_id),
             options: CommonMarkOptions::default(),
+            math_fn: None,
         }
+    }
+
+    pub fn render_math_fn(mut self, math_fn: Option<&'a RenderMathFn>) -> Self {
+        self.math_fn = math_fn;
+        self
     }
 
     /// The amount of spaces a bullet point is indented. By default this is 4
@@ -413,6 +422,7 @@ impl CommonMarkViewer {
             &self.options,
             text,
             false,
+            self.math_fn,
         );
 
         #[cfg(feature = "comrak")]
@@ -421,6 +431,7 @@ impl CommonMarkViewer {
             cache,
             &self.options,
             text,
+            self.math_fn,
         );
 
         response
@@ -442,7 +453,7 @@ impl CommonMarkViewer {
         let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new(
             self.source_id,
         )
-        .show(ui, cache, &self.options, text, false);
+        .show(ui, cache, &self.options, text, false, self.math_fn);
 
         // Update source text for checkmarks that were clicked
         for ev in checkmark_events {
@@ -478,6 +489,7 @@ impl CommonMarkViewer {
             cache,
             &self.options,
             text,
+            self.math_fn,
         );
     }
 }

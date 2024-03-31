@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use crate::{elements::*, Alert, AlertBundle};
+use crate::{elements::*, Alert, AlertBundle, RenderMathFn};
 use crate::{CommonMarkCache, CommonMarkOptions};
 
 use egui::{self, Id, Pos2, TextStyle, Ui, Vec2};
@@ -187,12 +187,23 @@ fn parse_alerts<'a>(
 
 /// Supported pulldown_cmark options
 #[inline]
+#[cfg(feature = "math")]
 fn parser_options() -> Options {
     Options::ENABLE_TABLES
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_FOOTNOTES
         | Options::ENABLE_MATH
+}
+
+/// Supported pulldown_cmark options
+#[inline]
+#[cfg(not(feature = "math"))]
+fn parser_options() -> Options {
+    Options::ENABLE_TABLES
+        | Options::ENABLE_TASKLISTS
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_FOOTNOTES
 }
 
 pub struct CommonMarkViewerInternal {
@@ -243,6 +254,7 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         text: &str,
         populate_split_points: bool,
+        math_fn: Option<&RenderMathFn>,
     ) -> (egui::InnerResponse<()>, Vec<CheckboxClickEvent>) {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
@@ -261,7 +273,16 @@ impl CommonMarkViewerInternal {
                 let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
                 let should_add_split_point = self.list.is_inside_a_list() && is_element_end;
 
-                self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
+                self.process_event(
+                    ui,
+                    &mut events,
+                    e,
+                    src_span,
+                    cache,
+                    options,
+                    max_width,
+                    math_fn,
+                );
 
                 if populate_split_points && should_add_split_point {
                     let scroll_cache = cache.scroll(&self.source_id);
@@ -291,6 +312,7 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         text: &str,
+        math_fn: Option<&RenderMathFn>,
     ) {
         let available_size = ui.available_size();
         let scroll_id = self.source_id.with("_scroll_area");
@@ -300,7 +322,7 @@ impl CommonMarkViewerInternal {
                 .id_source(scroll_id)
                 .auto_shrink([false, true])
                 .show(ui, |ui| {
-                    self.show(ui, cache, options, text, true);
+                    self.show(ui, cache, options, text, true, math_fn);
                 });
             // Prevent repopulating points twice at startup
             cache.scroll(&self.source_id).available_size = available_size;
@@ -356,7 +378,16 @@ impl CommonMarkViewerInternal {
                         .take(last_event_index - first_event_index);
 
                     while let Some((_, (e, src_span))) = events.next() {
-                        self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
+                        self.process_event(
+                            ui,
+                            &mut events,
+                            e,
+                            src_span,
+                            cache,
+                            options,
+                            max_width,
+                            math_fn,
+                        );
                     }
                 });
             });
@@ -380,13 +411,14 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
+        math_fn: Option<&RenderMathFn>,
     ) {
-        self.event(ui, event, src_span, cache, options, max_width);
+        self.event(ui, event, src_span, cache, options, max_width, math_fn);
 
-        self.item_list_wrapping(events, max_width, cache, options, ui);
-        self.fenced_code_block(events, max_width, cache, options, ui);
-        self.table(events, cache, options, ui, max_width);
-        self.blockquote(events, max_width, cache, options, ui);
+        self.item_list_wrapping(events, max_width, cache, options, ui, math_fn);
+        self.fenced_code_block(events, max_width, cache, options, ui, math_fn);
+        self.table(events, cache, options, ui, max_width, math_fn);
+        self.blockquote(events, max_width, cache, options, ui, math_fn);
     }
 
     fn item_list_wrapping<'e>(
@@ -396,6 +428,7 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
+        math_fn: Option<&RenderMathFn>,
     ) {
         if self.is_list_item {
             self.is_list_item = false;
@@ -415,6 +448,7 @@ impl CommonMarkViewerInternal {
                         cache,
                         options,
                         max_width,
+                        math_fn,
                     );
                 }
             });
@@ -428,6 +462,7 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
+        math_fn: Option<&RenderMathFn>,
     ) {
         if self.is_blockquote {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
@@ -439,14 +474,14 @@ impl CommonMarkViewerInternal {
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 alert.ui(ui, |ui| {
                     for (event, src_span) in collected_events.into_iter() {
-                        self.event(ui, event, src_span, cache, options, max_width);
+                        self.event(ui, event, src_span, cache, options, max_width, math_fn);
                     }
                 })
             } else {
                 blockquote(ui, ui.visuals().weak_text_color(), |ui| {
                     self.text_style.quote = true;
                     for (event, src_span) in collected_events {
-                        self.event(ui, event, src_span, cache, options, max_width);
+                        self.event(ui, event, src_span, cache, options, max_width, math_fn);
                     }
                     self.text_style.quote = false;
                 });
@@ -467,10 +502,11 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
+        math_fn: Option<&RenderMathFn>,
     ) {
         while self.fenced_code_block.is_some() {
             if let Some((_, (e, src_span))) = events.next() {
-                self.event(ui, e, src_span, cache, options, max_width);
+                self.event(ui, e, src_span, cache, options, max_width, math_fn);
             } else {
                 break;
             }
@@ -484,6 +520,7 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &mut Ui,
         max_width: f32,
+        math_fn: Option<&RenderMathFn>,
     ) {
         if self.is_table {
             newline(ui);
@@ -499,7 +536,7 @@ impl CommonMarkViewerInternal {
                         ui.horizontal(|ui| {
                             for (e, src_span) in col {
                                 self.should_insert_newline = false;
-                                self.event(ui, e, src_span, cache, options, max_width);
+                                self.event(ui, e, src_span, cache, options, max_width, math_fn);
                             }
                         });
                     }
@@ -511,7 +548,7 @@ impl CommonMarkViewerInternal {
                             ui.horizontal(|ui| {
                                 for (e, src_span) in col {
                                     self.should_insert_newline = false;
-                                    self.event(ui, e, src_span, cache, options, max_width);
+                                    self.event(ui, e, src_span, cache, options, max_width, math_fn);
                                 }
                             });
                         }
@@ -535,6 +572,7 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         max_width: f32,
+        math_fn: Option<&RenderMathFn>,
     ) {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
@@ -578,10 +616,14 @@ impl CommonMarkViewerInternal {
                 }
             }
             pulldown_cmark::Event::InlineMath(tex) => {
-                println!("Math: {tex}");
+                if let Some(math_fn) = math_fn {
+                    math_fn(ui, &tex, true);
+                }
             }
             pulldown_cmark::Event::DisplayMath(tex) => {
-                println!("Math: {tex}");
+                if let Some(math_fn) = math_fn {
+                    math_fn(ui, &tex, false);
+                }
             }
         }
     }
@@ -618,7 +660,7 @@ impl CommonMarkViewerInternal {
                     HeadingLevel::H6 => 5,
                 });
             }
-            pulldown_cmark::Tag::BlockQuote => {
+            pulldown_cmark::Tag::BlockQuote(_) => {
                 self.is_blockquote = true;
             }
             pulldown_cmark::Tag::CodeBlock(c) => {

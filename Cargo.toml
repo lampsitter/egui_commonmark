@@ -27,7 +27,7 @@ comrak = { version = "0.20.0", default-features = false, optional = true }
 pulldown-cmark = { git = "https://github.com/pulldown-cmark/pulldown-cmark.git", branch = "branch_0.11", default-features = false, optional = true }
 
 [features]
-default = ["load-images", "pulldown_cmark"]
+default = ["load-images", "pulldown_cmark", "math"]
 
 pulldown_cmark = ["dep:pulldown-cmark"]
 comrak = ["dep:comrak"]
@@ -44,9 +44,14 @@ svg = ["egui_extras/svg"]
 ## Images with urls will be downloaded and displayed
 fetch = ["egui_extras/http"]
 
+## Enable pulldown_cmark's math parser
+math = []
+
 [dev-dependencies]
 eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
-image = { version = "0.24", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+egui_extras = { version = "0.27", features = ["svg"] } # required for math rendering
+mathjax_svg = "3.1" # required for LaTeX -> SVG
 
 [package.metadata.docs.rs]
 features = ["better_syntax_highlighting", "document-features"]
