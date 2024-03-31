@@ -431,7 +431,6 @@ impl<'a> CommonMarkViewer<'a> {
             cache,
             &self.options,
             text,
-            self.math_fn,
         );
 
         response
