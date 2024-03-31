@@ -564,6 +564,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn event(
         &mut self,
         ui: &mut Ui,
