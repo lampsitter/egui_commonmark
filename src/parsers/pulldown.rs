@@ -40,6 +40,30 @@ fn delayed_events<'e>(
     }
 }
 
+fn delayed_events_list_item<'e>(
+    events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+) -> Vec<(pulldown_cmark::Event<'e>, Range<usize>)> {
+    let mut curr_event = events.next();
+    let mut total_events = Vec::new();
+    loop {
+        if let Some(event) = curr_event.take() {
+            total_events.push(event.1.clone());
+            if let (_, (pulldown_cmark::Event::End(pulldown_cmark::TagEnd::Item), _range)) = event {
+                return total_events;
+            }
+
+            if let (_, (pulldown_cmark::Event::Start(pulldown_cmark::Tag::List(_)), _range)) = event
+            {
+                return total_events;
+            }
+        } else {
+            return total_events;
+        }
+
+        curr_event = events.next();
+    }
+}
+
 type Column<'e> = Vec<(pulldown_cmark::Event<'e>, Range<usize>)>;
 type Row<'e> = Vec<Column<'e>>;
 
@@ -178,6 +202,7 @@ pub struct CommonMarkViewerInternal {
     image: Option<crate::Image>,
     should_insert_newline: bool,
     fenced_code_block: Option<crate::FencedCodeBlock>,
+    is_list_item: bool,
     is_table: bool,
     is_blockquote: bool,
     checkbox_events: Vec<CheckboxClickEvent>,
@@ -198,6 +223,7 @@ impl CommonMarkViewerInternal {
             link: None,
             image: None,
             should_insert_newline: true,
+            is_list_item: false,
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
@@ -341,6 +367,7 @@ impl CommonMarkViewerInternal {
             scroll_cache.split_points.clear();
         }
     }
+
     #[allow(clippy::too_many_arguments)]
     fn process_event<'e>(
         &mut self,
@@ -353,6 +380,28 @@ impl CommonMarkViewerInternal {
         max_width: f32,
     ) {
         self.event(ui, event, src_span, cache, options, max_width);
+
+        if self.is_list_item {
+            self.is_list_item = false;
+
+            let item_events = delayed_events_list_item(events);
+            let mut events_iter = item_events.into_iter().enumerate();
+
+            ui.horizontal_wrapped(|ui| {
+                while let Some((_, (e, src_span))) = events_iter.next() {
+                    self.process_event(
+                        ui,
+                        &mut events_iter,
+                        e,
+                        src_span,
+                        cache,
+                        options,
+                        max_width,
+                    );
+                }
+            });
+        }
+
         self.fenced_code_block(events, max_width, cache, options, ui);
         self.table(events, cache, options, ui, max_width);
         self.blockquote(events, max_width, cache, options, ui);
@@ -566,6 +615,7 @@ impl CommonMarkViewerInternal {
                 }
             }
             pulldown_cmark::Tag::Item => {
+                self.is_list_item = true;
                 self.should_insert_newline = false;
                 self.list.start_item(ui, options);
             }
