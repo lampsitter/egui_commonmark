@@ -162,11 +162,13 @@ fn parse_alerts<'a>(
 }
 
 /// Supported pulldown_cmark options
+#[inline]
 fn parser_options() -> Options {
     Options::ENABLE_TABLES
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_FOOTNOTES
+        | Options::ENABLE_MATH
 }
 
 pub struct CommonMarkViewerInternal {
@@ -507,6 +509,12 @@ impl CommonMarkViewerInternal {
                 } else {
                     ui.add(ImmutableCheckbox::without_text(&mut checkbox));
                 }
+            }
+            pulldown_cmark::Event::InlineMath(tex) => {
+                println!("Math: {tex}");
+            }
+            pulldown_cmark::Event::DisplayMath(tex) => {
+                println!("Math: {tex}");
             }
         }
     }
