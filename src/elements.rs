@@ -41,7 +41,7 @@ pub(crate) fn number_point(ui: &mut Ui, number: &str) {
     ui.painter().text(
         rect.right_center(),
         egui::Align2::RIGHT_CENTER,
-        format!("{number}. "),
+        format!("{number}."),
         TextStyle::Body.resolve(ui.style()),
         ui.visuals().strong_text_color(),
     );
@@ -251,6 +251,8 @@ impl List {
         } else {
             unreachable!();
         }
+
+        ui.add_space(4.0);
     }
 
     pub fn end_level(&mut self, ui: &mut Ui) {
