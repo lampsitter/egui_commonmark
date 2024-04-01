@@ -401,6 +401,8 @@ impl CommonMarkViewerInternal {
             let item_events = delayed_events_list_item(events);
             let mut events_iter = item_events.into_iter().enumerate();
 
+            // Required to ensure that the content of the list item is aligned with
+            // the * or - when wrapping
             ui.horizontal_wrapped(|ui| {
                 while let Some((_, (e, src_span))) = events_iter.next() {
                     self.process_event(
