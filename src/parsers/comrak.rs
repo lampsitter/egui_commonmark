@@ -101,7 +101,7 @@ impl CommonMarkViewerInternal {
                     self.render(ui, cache, options, max_width, c);
 
                     self.list.end_level(ui);
-                    if self.list.is_inside_a_list() {
+                    if !self.list.is_inside_a_list() {
                         self.should_insert_newline = true;
                     }
                 }
