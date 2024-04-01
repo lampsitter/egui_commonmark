@@ -13,7 +13,12 @@
 ### Changed
 
 - Alerts are case-insensitive
+- More spacing between list indicator and elements ([#46](https://github.com/lampsitter/egui_commonmark/pull/46)
 
+### Fixed
+
+- Lists align text when wrapping instead of wrapping at the beginning of the next
+  line ([#46](https://github.com/lampsitter/egui_commonmark/pull/46)
 
 ## 0.14.0 - 2024-03-26
 
