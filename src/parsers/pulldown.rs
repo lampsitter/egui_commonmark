@@ -16,10 +16,12 @@ pub struct ScrollableCache {
     split_points: Vec<(usize, Pos2, Pos2)>,
 }
 
+pub type EventIteratorItem<'e> = (usize, (pulldown_cmark::Event<'e>, Range<usize>));
+
 /// Parse events until a desired end tag is reached or no more events are found.
 /// This is needed for multiple events that must be rendered inside a single widget
 fn delayed_events<'e>(
-    events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+    events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
     end_at: pulldown_cmark::TagEnd,
 ) -> Vec<(pulldown_cmark::Event<'e>, Range<usize>)> {
     let mut curr_event = events.next();
@@ -41,7 +43,7 @@ fn delayed_events<'e>(
 }
 
 fn delayed_events_list_item<'e>(
-    events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+    events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
 ) -> Vec<(pulldown_cmark::Event<'e>, Range<usize>)> {
     let mut curr_event = events.next();
     let mut total_events = Vec::new();
@@ -98,9 +100,7 @@ fn parse_row<'e>(
     row
 }
 
-fn parse_table<'e>(
-    events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
-) -> Table<'e> {
+fn parse_table<'e>(events: &mut impl Iterator<Item = EventIteratorItem<'e>>) -> Table<'e> {
     let mut all_events = delayed_events(events, pulldown_cmark::TagEnd::Table)
         .into_iter()
         .peekable();
@@ -372,7 +372,7 @@ impl CommonMarkViewerInternal {
     fn process_event<'e>(
         &mut self,
         ui: &mut Ui,
-        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         event: pulldown_cmark::Event,
         src_span: Range<usize>,
         cache: &mut CommonMarkCache,
@@ -381,6 +381,20 @@ impl CommonMarkViewerInternal {
     ) {
         self.event(ui, event, src_span, cache, options, max_width);
 
+        self.item_list_wrapping(events, max_width, cache, options, ui);
+        self.fenced_code_block(events, max_width, cache, options, ui);
+        self.table(events, cache, options, ui, max_width);
+        self.blockquote(events, max_width, cache, options, ui);
+    }
+
+    fn item_list_wrapping<'e>(
+        &mut self,
+        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
+        max_width: f32,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        ui: &mut Ui,
+    ) {
         if self.is_list_item {
             self.is_list_item = false;
 
@@ -401,15 +415,11 @@ impl CommonMarkViewerInternal {
                 }
             });
         }
-
-        self.fenced_code_block(events, max_width, cache, options, ui);
-        self.table(events, cache, options, ui, max_width);
-        self.blockquote(events, max_width, cache, options, ui);
     }
 
     fn blockquote<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         max_width: f32,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -442,7 +452,7 @@ impl CommonMarkViewerInternal {
 
     fn fenced_code_block<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         max_width: f32,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -459,7 +469,7 @@ impl CommonMarkViewerInternal {
 
     fn table<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = (usize, (pulldown_cmark::Event<'e>, Range<usize>))>,
+        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
