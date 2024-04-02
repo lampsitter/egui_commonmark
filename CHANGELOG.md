@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.0 - 2024-04-02
+
 ### Added
 
 - Replace copy icon with checkmark when clicking copy button in code blocks
