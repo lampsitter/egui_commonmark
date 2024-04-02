@@ -430,6 +430,10 @@ impl CommonMarkViewerInternal {
         if self.is_blockquote {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
 
+            if self.should_insert_newline {
+                newline(ui)
+            }
+
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 alert.ui(ui, |ui| {
                     for (event, src_span) in collected_events.into_iter() {
@@ -437,9 +441,6 @@ impl CommonMarkViewerInternal {
                     }
                 })
             } else {
-                if self.should_insert_newline {
-                    newline(ui)
-                }
                 blockquote(ui, ui.visuals().weak_text_color(), |ui| {
                     self.text_style.quote = true;
                     for (event, src_span) in collected_events {
