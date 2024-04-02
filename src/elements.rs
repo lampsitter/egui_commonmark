@@ -120,16 +120,25 @@ pub fn code_block<'t>(
     let persistent_id = ui.make_persistent_id(output.response.id);
     let copied_icon = ui.memory_mut(|m| *m.data.get_temp_mut_or_default::<bool>(persistent_id));
 
-    let copy_button = ui.put(
-        egui::Rect {
-            min: position,
-            max: position,
-        },
-        egui::Button::new(if copied_icon { "✔" } else { "🗐" })
-            .small()
-            .frame(false)
-            .fill(egui::Color32::TRANSPARENT),
-    );
+    let copy_button = ui
+        .put(
+            egui::Rect {
+                min: position,
+                max: position,
+            },
+            egui::Button::new(if copied_icon { "✔" } else { "🗐" })
+                .small()
+                .frame(false)
+                .fill(egui::Color32::TRANSPARENT),
+        )
+        // workaround for a regression after egui 0.27 where the edit cursor was shown even when
+        // hovering over the button. We try interact_cursor first to allow the cursor to be
+        // overriden
+        .on_hover_cursor(
+            ui.visuals()
+                .interact_cursor
+                .unwrap_or(egui::CursorIcon::Default),
+        );
 
     // Update icon state in persistent memory
     if copied_icon && !copy_button.hovered() {

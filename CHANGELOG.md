@@ -6,21 +6,22 @@
 
 - Replace copy icon with checkmark when clicking copy button in code blocks
 ([#42](https://github.com/lampsitter/egui_commonmark/pull/42) by [@zeozeozeo](https://github.com/zeozeozeo))
-
 - Interactive tasklists with `CommonMarkViewer::show_mut`
 ([#40](https://github.com/lampsitter/egui_commonmark/pull/40) by [@crumblingstatue](https://github.com/crumblingstatue))
 
 ### Changed
 
 - Alerts are case-insensitive
-- More spacing between list indicator and elements ([#46](https://github.com/lampsitter/egui_commonmark/pull/46)
+- More spacing between list indicator and elements ([#46](https://github.com/lampsitter/egui_commonmark/pull/46))
 
 ### Fixed
 
 - Lists align text when wrapping instead of wrapping at the beginning of the next
-  line ([#46](https://github.com/lampsitter/egui_commonmark/pull/46)
+  line ([#46](https://github.com/lampsitter/egui_commonmark/pull/46))
 - Code blocks won't insert a newline when in lists
 - In certain scenarios there was no newline after lists
+- Copy button for code blocks show the correct cursor again on hover (regression
+  after egui 0.27)
 
 ## 0.14.0 - 2024-03-26
 
