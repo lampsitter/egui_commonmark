@@ -11,6 +11,7 @@
 
 ### Changed
 
+- MSRV bumped to 1.74 due to pulldown_cmark
 - Alerts are case-insensitive
 - More spacing between list indicator and elements ([#46](https://github.com/lampsitter/egui_commonmark/pull/46))
 

@@ -11,7 +11,7 @@ readme = "README.md"
 repository = "https://github.com/lampsitter/egui_commonmark"
 documentation = "https://docs.rs/egui_commonmark"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
-rust-version = "1.72" # Follow egui
+rust-version = "1.74" # Required by pulldown_cmark
 
 [dependencies]
 egui_extras = "0.27"
