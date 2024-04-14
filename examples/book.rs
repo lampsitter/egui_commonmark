@@ -9,10 +9,7 @@
 use eframe::egui;
 use egui::ImageSource;
 use egui_commonmark::*;
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
 
 struct Page {
     name: String,
@@ -23,7 +20,7 @@ struct App {
     cache: CommonMarkCache,
     curr_tab: Option<usize>,
     pages: Vec<Page>,
-    math_to_svg: Arc<Mutex<HashMap<String, Arc<[u8]>>>>,
+    math_to_svg: Rc<RefCell<HashMap<String, Arc<[u8]>>>>,
 }
 
 fn render_math(math: &str, inline: bool) -> Arc<[u8]> {
@@ -72,13 +69,12 @@ impl App {
                         .default_width(Some(200))
                         .max_image_width(Some(512))
                         .render_math_fn(Some(&move |ui, math, inline| {
-                            let math_string = math.to_string();
-                            let mut map = math_to_svg.lock().unwrap();
+                            let mut map = math_to_svg.borrow_mut();
                             let svg = map
-                                .entry(math_string.clone())
+                                .entry(math.to_string())
                                 .or_insert_with(|| render_math(math, inline));
 
-                            let uri = format!("{}.svg", egui::Id::from(math_string).value());
+                            let uri = format!("{}.svg", egui::Id::from(math.to_string()).value());
                             ui.add(
                                 egui::Image::new(ImageSource::Bytes {
                                     uri: uri.into(),
@@ -167,7 +163,7 @@ fn main() {
                         content: include_str!("markdown/math.md").to_owned(),
                     },
                 ],
-                math_to_svg: Arc::new(Mutex::new(HashMap::new())),
+                math_to_svg: Rc::new(RefCell::new(HashMap::new())),
             })
         }),
     );
