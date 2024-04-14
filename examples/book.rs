@@ -7,7 +7,9 @@
 //! Shows a simple way to use the crate to implement a book like view.
 
 use eframe::egui;
+use egui::ImageSource;
 use egui_commonmark::*;
+use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
 
 struct Page {
     name: String,
@@ -18,6 +20,18 @@ struct App {
     cache: CommonMarkCache,
     curr_tab: Option<usize>,
     pages: Vec<Page>,
+    math_to_svg: Rc<RefCell<HashMap<String, Arc<[u8]>>>>,
+}
+
+fn render_math(math: &str, inline: bool) -> Arc<[u8]> {
+    println!("rendering math: {math}");
+    if inline {
+        mathjax_svg::convert_to_svg_inline(math).unwrap()
+    } else {
+        mathjax_svg::convert_to_svg(math).unwrap()
+    }
+    .into_bytes()
+    .into()
 }
 
 impl App {
@@ -47,12 +61,28 @@ impl App {
     fn content_panel(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             // Add a frame with margin to prevent the content from hugging the sidepanel
+            let math_to_svg = self.math_to_svg.clone();
             egui::Frame::none()
                 .inner_margin(egui::Margin::symmetric(5.0, 0.0))
                 .show(ui, |ui| {
                     CommonMarkViewer::new("viewer")
                         .default_width(Some(200))
                         .max_image_width(Some(512))
+                        .render_math_fn(Some(&move |ui, math, inline| {
+                            let mut map = math_to_svg.borrow_mut();
+                            let svg = map
+                                .entry(math.to_string())
+                                .or_insert_with(|| render_math(math, inline));
+
+                            let uri = format!("{}.svg", egui::Id::from(math.to_string()).value());
+                            ui.add(
+                                egui::Image::new(ImageSource::Bytes {
+                                    uri: uri.into(),
+                                    bytes: egui::load::Bytes::Shared(svg.clone()),
+                                })
+                                .fit_to_original_size(1.0),
+                            );
+                        }))
                         .show(
                             ui,
                             &mut self.cache,
@@ -121,14 +151,19 @@ fn main() {
                         content: include_str!("markdown/code-blocks.md").to_owned(),
                     },
                     Page {
-                        name: "Block Quotes ".to_owned(),
+                        name: "Block Quotes".to_owned(),
                         content: include_str!("markdown/blockquotes.md").to_owned(),
                     },
                     Page {
-                        name: "Tables ".to_owned(),
+                        name: "Tables".to_owned(),
                         content: include_str!("markdown/tables.md").to_owned(),
                     },
+                    Page {
+                        name: "Math".to_owned(),
+                        content: include_str!("markdown/math.md").to_owned(),
+                    },
                 ],
+                math_to_svg: Rc::new(RefCell::new(HashMap::new())),
             })
         }),
     );
