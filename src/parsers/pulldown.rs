@@ -199,6 +199,19 @@ fn parser_options() -> Options {
 /// Supported pulldown_cmark options
 #[inline]
 #[cfg(not(feature = "math"))]
+#[inline]
+#[cfg(feature = "math")]
+fn parser_options() -> Options {
+    Options::ENABLE_TABLES
+        | Options::ENABLE_TASKLISTS
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_FOOTNOTES
+        | Options::ENABLE_MATH
+}
+
+/// Supported pulldown_cmark options
+#[inline]
+#[cfg(not(feature = "math"))]
 fn parser_options() -> Options {
     Options::ENABLE_TABLES
         | Options::ENABLE_TASKLISTS
@@ -453,6 +466,9 @@ impl CommonMarkViewerInternal {
                 }
             });
         }
+        self.fenced_code_block(events, max_width, cache, options, ui, math_fn);
+        self.table(events, cache, options, ui, max_width, math_fn);
+        self.blockquote(events, max_width, cache, options, ui, math_fn);
     }
 
     fn blockquote<'e>(
