@@ -304,7 +304,7 @@ impl CommonMarkViewerInternal {
         } else if let Some(link) = &mut self.link {
             link.text.push(rich_text);
         } else {
-            ui.label(rich_text);
+            egui_twemoji::EmojiLabel::new(rich_text).show(ui);
         }
     }
 }

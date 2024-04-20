@@ -48,7 +48,7 @@ pub(crate) fn number_point(ui: &mut Ui, number: &str) {
 }
 
 pub(crate) fn footnote_start(ui: &mut Ui, note: &str) {
-    ui.label(RichText::new(note).raised().strong().small());
+    egui_twemoji::EmojiLabel::new(RichText::new(note).raised().strong().small()).show(ui);
 }
 
 pub(crate) fn footnote(ui: &mut Ui, text: &str) {

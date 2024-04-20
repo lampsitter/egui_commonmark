@@ -33,4 +33,4 @@ vec.push(5);
 ##### Header 5
 ###### Header 6
 
-Some text.
+Some text, with emojis 😸 🙀 (make sure to run with `--features svg`).
