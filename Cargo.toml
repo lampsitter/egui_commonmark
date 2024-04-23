@@ -25,7 +25,7 @@ document-features = { version = "0.2", optional = true }
 
 comrak = { version = "0.20.0", default-features = false, optional = true }
 pulldown-cmark = { version = "0.10", default-features = false, optional = true }
-egui-twemoji = "0.2.0"
+egui-twemoji = "0.3.0"
 
 [features]
 default = ["load-images", "pulldown_cmark"]
