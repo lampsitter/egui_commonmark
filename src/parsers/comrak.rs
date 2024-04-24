@@ -76,7 +76,7 @@ impl CommonMarkViewerInternal {
                 NodeValue::Document => self.render(ui, cache, options, max_width, c),
                 NodeValue::FrontMatter(_front_matter) => {}
 
-                NodeValue::BlockQuote => {
+                NodeValue::BlockQuote | NodeValue::MultilineBlockQuote(_) => {
                     if self.should_insert_newline {
                         newline(ui)
                     }
@@ -291,6 +291,12 @@ impl CommonMarkViewerInternal {
                     footnote_start(ui, &footnote.name);
                     self.render(ui, cache, options, max_width, c);
                 }
+
+                NodeValue::Escaped => {
+                    self.render(ui, cache, options, max_width, c);
+                }
+
+                NodeValue::Math(_) => {}
             }
         }
     }
