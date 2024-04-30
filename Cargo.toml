@@ -11,7 +11,7 @@ readme = "README.md"
 repository = "https://github.com/lampsitter/egui_commonmark"
 documentation = "https://docs.rs/egui_commonmark"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
-rust-version = "1.76" # Required by egui
+rust-version = "1.76"                                                # Required by egui
 
 [dependencies]
 egui_extras = "0.27"
@@ -45,8 +45,21 @@ svg = ["egui_extras/svg"]
 fetch = ["egui_extras/http"]
 
 [dev-dependencies]
-eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
+eframe = { version = "0.27", default-features = false, features = [
+    "default_fonts",
+    "glow",
+] }
 image = { version = "0.24", default-features = false, features = ["png"] }
 
 [package.metadata.docs.rs]
 features = ["better_syntax_highlighting", "document-features"]
+
+[patch.crates-io]
+# Use wgpu 0.20.0
+ecolor = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" }      # egui master 2024-04-30
+eframe = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" }      # egui master 2024-04-30
+egui = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" }        # egui master 2024-04-30
+egui_extras = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" } # egui master 2024-04-30
+egui_plot = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" }   # egui master 2024-04-30
+egui-wgpu = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" }   # egui master 2024-04-30
+emath = { git = "https://github.com/emilk/egui.git", rev = "c9b24d5a5ca316fd0a8b330ee071dad2e6eab2dc" }       # egui master 2024-04-30

@@ -297,7 +297,7 @@ pub(crate) fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl 
                     response.rect.left_bottom().y - 5.0,
                 ),
             ],
-            stroke: egui::Stroke::new(3.0, accent),
+            stroke: epaint::PathStroke::new(3.0, accent),
         },
     );
 }
