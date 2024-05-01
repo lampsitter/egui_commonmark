@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- MSRV bumped to 1.76
+
+## Fixed
+
+- Missing newline before alerts
+
 ## 0.15.0 - 2024-04-02
 
 ### Added
