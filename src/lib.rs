@@ -44,6 +44,7 @@ compile_error!("Cannot have multiple different parsing backends enabled at the s
 #[cfg(not(any(feature = "comrak", feature = "pulldown_cmark")))]
 compile_error!("Either the pulldown_cmark or comrak backend must be enabled");
 
+use elements::label;
 #[cfg(feature = "better_syntax_highlighting")]
 use syntect::{
     easy::HighlightLines,
@@ -624,7 +625,7 @@ impl Image {
         if !self.alt_text.is_empty() && options.show_alt_text_on_hover {
             response.on_hover_ui_at_pointer(|ui| {
                 for alt in self.alt_text {
-                    egui_twemoji::EmojiLabel::new(alt).show(ui);
+                    label(ui, alt);
                 }
             });
         }

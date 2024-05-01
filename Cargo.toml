@@ -25,7 +25,7 @@ document-features = { version = "0.2", optional = true }
 
 comrak = { version = "0.22.0", default-features = false, optional = true }
 pulldown-cmark = { version = "0.10", default-features = false, optional = true }
-egui-twemoji = "0.3.0"
+egui-twemoji = { version = "0.3.0", optional = true }
 
 [features]
 default = ["load-images", "pulldown_cmark"]
@@ -44,6 +44,9 @@ svg = ["egui_extras/svg"]
 
 ## Images with urls will be downloaded and displayed
 fetch = ["egui_extras/http"]
+
+## Enable twemoji support
+twemoji = ["egui-twemoji"]
 
 [dev-dependencies]
 eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
