@@ -6,7 +6,7 @@
 
 - MSRV bumped to 1.76
 
-## Fixed
+### Fixed
 
 - Missing newline before alerts
 
