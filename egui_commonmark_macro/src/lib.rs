@@ -36,9 +36,14 @@ impl Parse for Parameters {
 
 fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> TokenStream {
     let stream = CommonMarkViewerInternal::new(id.into()).show(ui, cache, &text);
-    println!("fn main() {{");
-    println!("{}", stream.to_string());
-    println!("}}");
+
+    #[cfg(feature = "dump-macro")]
+    {
+        // Wrap within a function to allow rustfmt to format it
+        println!("fn main() {{");
+        println!("{}", stream.to_string());
+        println!("}}");
+    }
 
     stream
 }
