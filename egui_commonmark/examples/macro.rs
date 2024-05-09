@@ -3,7 +3,6 @@
 //! `cargo r --features better_syntax_highlighting,svg,fetch`
 //! Add `light` or `dark` to the end of the command to specify theme. Default
 //! is light. `cargo r --features better_syntax_highlighting,svg,fetch -- dark`
-#![allow(dead_code)] // TODO: Remove
 
 use eframe::egui;
 use egui_commonmark::*;
