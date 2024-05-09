@@ -308,10 +308,6 @@ impl CommonMarkViewerInternal {
         let options = CommonMarkOptions::default();
         let mut stream = proc_macro2::TokenStream::new();
 
-        // FIXME: To make it easier specify all uses at the top
-        stream.extend(quote!(
-            use egui::TextStyle;
-        ));
         // struct CommonMarkViewerInternal {
         //     source_id: egui::Id,
         //     curr_table: usize,
@@ -362,7 +358,7 @@ impl CommonMarkViewerInternal {
 
         ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
-            let height = ui.text_style_height(&TextStyle::Body);
+            let height = ui.text_style_height(&egui::TextStyle::Body);
             ui.set_row_height(height);
             #event_stream
         });
@@ -865,12 +861,12 @@ fn to_richtext_tokenstream(s: &Style, ui: &Expr, text: &str) -> proc_macro2::Tok
         let max_height = #ui
             .style()
             .text_styles
-            .get(&TextStyle::Heading)
+            .get(&egui::TextStyle::Heading)
             .map_or(32.0, |d| d.size);
         let min_height = #ui
             .style()
             .text_styles
-            .get(&TextStyle::Body)
+            .get(&egui::TextStyle::Body)
             .map_or(14.0, |d| d.size);
         let diff = max_height - min_height;
         ));
