@@ -19,10 +19,11 @@ impl eframe::App for App {
                 // Embed text directly
                 commonmark!("n1", ui_not_called_ui, &mut self.cache, "Hello, world");
 
-                // or from a file like include_str! NOTE: This does not cause a recompile when the
-                // file has changed!
+                // In cases like these it's better to use egui::Separator directly
+                commonmark!("n1-1", ui_not_called_ui, &mut self.cache, "------------");
 
-                // TODO: This will probably break if this is not called ui
+                // From a file like include_str! NOTE: This does not cause a recompile when the
+                // file has changed!
                 commonmark_str!(
                     "n2",
                     ui_not_called_ui,
