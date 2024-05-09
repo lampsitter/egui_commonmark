@@ -43,7 +43,6 @@ impl List {
 
     pub fn start_item(
         &mut self,
-        ui: &Expr,
         options: &egui_commonmark::CommonMarkOptions,
     ) -> TokenStream {
         let mut stream = TokenStream::new();
@@ -51,33 +50,33 @@ impl List {
         if let Some(item) = self.items.last_mut() {
             let spaces = " ".repeat((len - 1) * options.indentation_spaces);
             stream.extend(quote!(
-                egui_commonmark::elements::newline(#ui);
-                #ui.label(#spaces);
+                egui_commonmark::elements::newline(ui);
+                ui.label(#spaces);
             ));
 
             if let Some(number) = &mut item.current_number {
                 let num = number.to_string();
-                stream.extend(quote!( egui_commonmark::elements::number_point(#ui, #num);));
+                stream.extend(quote!( egui_commonmark::elements::number_point(ui, #num);));
                 *number += 1;
             } else if len > 1 {
-                stream.extend(quote!( egui_commonmark::elements::bullet_point_hollow(#ui);));
+                stream.extend(quote!( egui_commonmark::elements::bullet_point_hollow(ui);));
             } else {
-                stream.extend(quote!( egui_commonmark::elements::bullet_point(#ui);));
+                stream.extend(quote!( egui_commonmark::elements::bullet_point(ui);));
             }
         } else {
             unreachable!();
         }
 
-        stream.extend(quote!( #ui.add_space(4.0); ));
+        stream.extend(quote!( ui.add_space(4.0); ));
         stream
     }
 
-    pub fn end_level(&mut self, ui: &Expr) -> TokenStream {
+    pub fn end_level(&mut self) -> TokenStream {
         let mut stream = TokenStream::new();
         self.items.pop();
 
         if self.items.is_empty() {
-            stream.extend(quote!( egui_commonmark::elements::newline(#ui); ));
+            stream.extend(quote!( egui_commonmark::elements::newline(ui); ));
         }
 
         stream
@@ -261,7 +260,7 @@ fn parser_options() -> Options {
         | Options::ENABLE_FOOTNOTES
 }
 
-/// To prevent depending on #ui during macro evalation we must store the current
+/// To prevent depending on ui during macro evalation we must store the current
 /// style and text temporarily
 pub(crate) struct StyledText {
     style: Style,
@@ -337,23 +336,28 @@ impl CommonMarkViewerInternal {
 
         let mut event_stream = TokenStream::new();
         while let Some((index, (e, src_span))) = events.next() {
-            let e = self.process_event(&ui, &mut events, e, src_span, &cache, &options, 500.0);
+            let e = self.process_event( &mut events, e, src_span, &cache, &options, 500.0);
             event_stream.extend(e);
         }
 
         // FIXME: max_width
-        stream.extend(quote!(
-        (#cache).prepare_show(#ui.ctx());
-        let options = CommonMarkOptions::default();
-        let max_width = options.max_width(ui);
-        let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
-        ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
-            ui.spacing_mut().item_spacing.x = 0.0;
-            let height = ui.text_style_height(&egui::TextStyle::Body);
-            ui.set_row_height(height);
-            #event_stream
-        });
+        // we manually rename #ui to ui to prevent borrowing issues if #ui is not named ui and
+        // there is a different ui also in scope that is called ui
+        stream.extend(quote!(
+            let ui: &mut egui::Ui = #ui;
+            (#cache).prepare_show(ui.ctx());
+            let options = CommonMarkOptions::default();
+            let max_width = options.max_width(ui);
+            let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
+
+            ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                let height = ui.text_style_height(&egui::TextStyle::Body);
+                ui.set_row_height(height);
+                #event_stream
+            });
+
         ));
 
         // Place all code within a block to prevent it from leaking into unrelated code
@@ -363,7 +367,6 @@ impl CommonMarkViewerInternal {
     #[allow(clippy::too_many_arguments)]
     fn process_event<'e>(
         &mut self,
-        ui: &Expr,
         events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         event: pulldown_cmark::Event,
         src_span: Range<usize>,
@@ -371,12 +374,12 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         max_width: f32,
     ) -> TokenStream {
-        let mut stream = self.event(ui, event, src_span, cache, options, max_width);
+        let mut stream = self.event(event, src_span, cache, options, max_width);
 
-        stream.extend(self.item_list_wrapping(events, max_width, cache, options, ui));
-        stream.extend(self.fenced_code_block(events, max_width, cache, options, ui));
-        stream.extend(self.table(events, cache, options, ui, max_width));
-        stream.extend(self.blockquote(events, max_width, cache, options, ui));
+        stream.extend(self.item_list_wrapping(events, max_width, cache, options));
+        stream.extend(self.fenced_code_block(events, max_width, cache, options));
+        stream.extend(self.table(events, cache, options, max_width));
+        stream.extend(self.blockquote(events, max_width, cache, options));
         stream
     }
 
@@ -386,7 +389,6 @@ impl CommonMarkViewerInternal {
         max_width: f32,
         cache: &Expr,
         options: &CommonMarkOptions,
-        ui: &Expr,
     ) -> TokenStream {
         let mut stream = TokenStream::new();
         if self.is_list_item {
@@ -399,7 +401,6 @@ impl CommonMarkViewerInternal {
 
             while let Some((_, (e, src_span))) = events_iter.next() {
                 inner.extend(self.process_event(
-                    ui,
                     &mut events_iter,
                     e,
                     src_span,
@@ -411,7 +412,7 @@ impl CommonMarkViewerInternal {
 
             // Required to ensure that the content of the list item is aligned with
             // the * or - when wrapping
-            stream.extend(quote!(#ui.horizontal_wrapped(|ui| {
+            stream.extend(quote!(ui.horizontal_wrapped(|ui| {
                     #inner
             });));
         }
@@ -425,14 +426,13 @@ impl CommonMarkViewerInternal {
         max_width: f32,
         cache: &Expr,
         options: &CommonMarkOptions,
-        ui: &Expr,
     ) -> TokenStream {
         let mut stream = TokenStream::new();
         if self.is_blockquote {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
 
             if self.should_insert_newline {
-                stream.extend(quote!( egui_commonmark::elements::newline(#ui);));
+                stream.extend(quote!( egui_commonmark::elements::newline(ui);));
             }
 
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
@@ -445,7 +445,7 @@ impl CommonMarkViewerInternal {
 
                 let mut inner = TokenStream::new();
                 for (event, src_span) in collected_events.into_iter() {
-                    inner.extend(self.event(ui, event, src_span, cache, options, max_width));
+                    inner.extend(self.event(event, src_span, cache, options, max_width));
                 }
 
                 let r = accent_color.r();
@@ -459,7 +459,7 @@ impl CommonMarkViewerInternal {
                     icon: #icon,
                     identifier: #identifier.to_owned(),
                     identifier_rendered: #identifier_rendered.to_owned()
-                }.ui(#ui, |ui| {
+                }.ui(ui, |ui| {
                     #inner
                 });));
             } else {
@@ -467,15 +467,15 @@ impl CommonMarkViewerInternal {
 
                 self.text_style.quote = true;
                 for (event, src_span) in collected_events {
-                    inner.extend(self.event(ui, event, src_span, cache, options, max_width));
+                    inner.extend(self.event(event, src_span, cache, options, max_width));
                 }
                 self.text_style.quote = false;
 
-                stream.extend(quote!(egui_commonmark::elements::blockquote(#ui, #ui.visuals().weak_text_color(), |ui| {#inner});));
+                stream.extend(quote!(egui_commonmark::elements::blockquote(ui, ui.visuals().weak_text_color(), |ui| {#inner});));
             }
 
             if self.should_insert_newline {
-                stream.extend(quote!( egui_commonmark::elements::newline(#ui);));
+                stream.extend(quote!( egui_commonmark::elements::newline(ui);));
             }
 
             self.is_blockquote = false;
@@ -489,12 +489,11 @@ impl CommonMarkViewerInternal {
         max_width: f32,
         cache: &Expr,
         options: &CommonMarkOptions,
-        ui: &Expr,
     ) -> TokenStream {
         let mut stream = TokenStream::new();
         while self.fenced_code_block.is_some() {
             if let Some((_, (e, src_span))) = events.next() {
-                stream.extend(self.event(ui, e, src_span, cache, options, max_width));
+                stream.extend(self.event(e, src_span, cache, options, max_width));
             } else {
                 break;
             }
@@ -508,12 +507,11 @@ impl CommonMarkViewerInternal {
         events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         cache: &Expr,
         options: &CommonMarkOptions,
-        ui: &Expr,
         max_width: f32,
     ) -> TokenStream {
         let mut stream = TokenStream::new();
         if self.is_table {
-            stream.extend(quote!( egui_commonmark::elements::newline(#ui);));
+            stream.extend(quote!( egui_commonmark::elements::newline(ui);));
 
             let id = self.source_id.with(self.curr_table);
             self.curr_table += 1;
@@ -525,10 +523,10 @@ impl CommonMarkViewerInternal {
                 let mut inner = TokenStream::new();
                 for (e, src_span) in col {
                     self.should_insert_newline = false;
-                    inner.extend(self.event(ui, e, src_span, cache, options, max_width));
+                    inner.extend(self.event(e, src_span, cache, options, max_width));
                 }
 
-                header_stream.extend(quote!(#ui.horizontal(|ui| {#inner});));
+                header_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
             }
 
             let mut content_stream = TokenStream::new();
@@ -538,12 +536,12 @@ impl CommonMarkViewerInternal {
                     let mut inner = TokenStream::new();
                     for (e, src_span) in col {
                         self.should_insert_newline = false;
-                        inner.extend(self.event(ui, e, src_span, cache, options, max_width));
+                        inner.extend(self.event(e, src_span, cache, options, max_width));
                     }
 
-                    row_stream.extend(quote!(#ui.horizontal(|ui| {#inner});));
+                    row_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
                 }
-                content_stream.extend(quote!(#row_stream #ui.end_row();))
+                content_stream.extend(quote!(#row_stream ui.end_row();))
             }
 
             let hash = id.value();
@@ -566,7 +564,7 @@ impl CommonMarkViewerInternal {
 
             self.is_table = false;
             self.should_insert_newline = true;
-            stream.extend(quote!( egui_commonmark::elements::newline(#ui);));
+            stream.extend(quote!( egui_commonmark::elements::newline(ui);));
         }
 
         stream
@@ -574,7 +572,6 @@ impl CommonMarkViewerInternal {
 
     fn event(
         &mut self,
-        ui: &Expr,
         event: pulldown_cmark::Event,
         src_span: Range<usize>,
         cache: &Expr,
@@ -582,12 +579,12 @@ impl CommonMarkViewerInternal {
         max_width: f32,
     ) -> TokenStream {
         match event {
-            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
-            pulldown_cmark::Event::Text(text) => self.event_text(text, ui),
+            pulldown_cmark::Event::Start(tag) => self.start_tag( tag, options),
+            pulldown_cmark::Event::End(tag) => self.end_tag( tag, cache, options, max_width),
+            pulldown_cmark::Event::Text(text) => self.event_text(text),
             pulldown_cmark::Event::Code(text) => {
                 self.text_style.code = true;
-                let s = self.event_text(text, ui);
+                let s = self.event_text(text);
                 self.text_style.code = false;
                 s
             }
@@ -599,15 +596,15 @@ impl CommonMarkViewerInternal {
                 quote!(egui_commonmark::elements::footnote_start(ui, #footnote);)
             }
             pulldown_cmark::Event::SoftBreak => {
-                quote!(egui_commonmark::elements::soft_break(#ui);)
+                quote!(egui_commonmark::elements::soft_break(ui);)
             }
-            pulldown_cmark::Event::HardBreak => quote!(egui_commonmark::elements::newline(#ui);),
+            pulldown_cmark::Event::HardBreak => quote!(egui_commonmark::elements::newline(ui);),
             pulldown_cmark::Event::Rule => {
                 quote!(
-                egui_commonmark::elements::newline(#ui);
+                egui_commonmark::elements::newline(ui);
                 ui.add(egui::Separator::default().horizontal());
                 // This does not add a new line, but instead ends the separator
-                egui_commonmark::elements::newline(#ui);
+                egui_commonmark::elements::newline(ui);
                 )
             }
             pulldown_cmark::Event::TaskListMarker(checkbox) => {
@@ -615,15 +612,13 @@ impl CommonMarkViewerInternal {
                     // FIXME: Unsupported for now
                     TokenStream::new()
                 } else {
-                    quote!(#ui.add(egui_commonmark::elements::ImmutableCheckbox::without_text(&mut #checkbox));)
+                    quote!(ui.add(egui_commonmark::elements::ImmutableCheckbox::without_text(&mut #checkbox));)
                 }
             }
         }
     }
 
-    fn event_text(&mut self, text: CowStr, ui: &Expr) -> TokenStream {
-        // FIXME: Store text with Style instead
-        // let rich_text = self.text_style.to_richtext(ui, &text);
+    fn event_text(&mut self, text: CowStr) -> TokenStream {
         if let Some(image) = &mut self.image {
             image
                 .alt_text
@@ -634,9 +629,9 @@ impl CommonMarkViewerInternal {
             link.text
                 .push(StyledText::new(self.text_style.clone(), text.to_string()));
         } else {
-            let rich_text = to_richtext_tokenstream(&self.text_style, ui, &text);
+            let rich_text = to_richtext_tokenstream(&self.text_style, &text);
             return quote!(
-                #ui.label(#rich_text);
+                ui.label(#rich_text);
             );
         }
 
@@ -645,14 +640,13 @@ impl CommonMarkViewerInternal {
 
     fn start_tag(
         &mut self,
-        ui: &Expr,
         tag: pulldown_cmark::Tag,
         options: &CommonMarkOptions,
     ) -> TokenStream {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 let s = if self.should_insert_newline {
-                    quote!( egui_commonmark::elements::newline(#ui);)
+                    quote!(egui_commonmark::elements::newline(ui);)
                 } else {
                     TokenStream::new()
                 };
@@ -671,7 +665,7 @@ impl CommonMarkViewerInternal {
                     HeadingLevel::H6 => 5,
                 });
 
-                quote!(egui_commonmark::elements::newline(#ui);)
+                quote!(egui_commonmark::elements::newline(ui);)
             }
             pulldown_cmark::Tag::BlockQuote => {
                 self.is_blockquote = true;
@@ -686,7 +680,7 @@ impl CommonMarkViewerInternal {
                     });
 
                     if self.should_insert_newline {
-                        s.extend(quote!(egui_commonmark::elements::newline(#ui);));
+                        s.extend(quote!(egui_commonmark::elements::newline(ui);));
                     }
                 }
 
@@ -705,12 +699,12 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::Item => {
                 self.is_list_item = true;
                 self.should_insert_newline = false;
-                self.list.start_item(ui, options)
+                self.list.start_item(options)
             }
             pulldown_cmark::Tag::FootnoteDefinition(note) => {
                 self.should_insert_newline = false;
                 let note = note.to_string();
-                quote!(egui_commonmark::elements::footnote(#ui, #note);)
+                quote!(egui_commonmark::elements::footnote(ui, #note);)
             }
             pulldown_cmark::Tag::Table(_) => {
                 self.is_table = true;
@@ -756,7 +750,6 @@ impl CommonMarkViewerInternal {
 
     fn end_tag(
         &mut self,
-        ui: &Expr,
         tag: pulldown_cmark::TagEnd,
         cache: &Expr,
         options: &CommonMarkOptions,
@@ -764,17 +757,17 @@ impl CommonMarkViewerInternal {
     ) -> TokenStream {
         match tag {
             pulldown_cmark::TagEnd::Paragraph => {
-                quote!( egui_commonmark::elements::newline(#ui);)
+                quote!( egui_commonmark::elements::newline(ui);)
             }
             pulldown_cmark::TagEnd::Heading { .. } => {
-                let newline = quote!( egui_commonmark::elements::newline(#ui););
+                let newline = quote!( egui_commonmark::elements::newline(ui););
                 self.text_style.heading = None;
                 newline
             }
             pulldown_cmark::TagEnd::BlockQuote => TokenStream::new(),
-            pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(ui, cache, options, max_width),
+            pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(cache, options, max_width),
             pulldown_cmark::TagEnd::List(_) => {
-                let s = self.list.end_level(ui);
+                let s = self.list.end_level();
 
                 if !self.list.is_inside_a_list() {
                     self.should_insert_newline = true;
@@ -789,7 +782,7 @@ impl CommonMarkViewerInternal {
             | pulldown_cmark::TagEnd::TableRow => TokenStream::new(),
             pulldown_cmark::TagEnd::TableCell => {
                 // Ensure space between cells
-                quote!(#ui.label("  ");)
+                quote!(ui.label("  ");)
             }
             pulldown_cmark::TagEnd::Emphasis => {
                 self.text_style.emphasis = false;
@@ -811,7 +804,7 @@ impl CommonMarkViewerInternal {
                     egui_commonmark::Link {
                         destination: #destination.to_owned(),
                         text: Vec::new()
-                    }.end(#ui, #cache);)
+                    }.end(ui, #cache);)
                 } else {
                     TokenStream::new()
                 }
@@ -827,7 +820,7 @@ impl CommonMarkViewerInternal {
                     let StyledImage { uri, alt_text } = image;
 
                     stream.extend(quote!(
-                    let response = #ui.add(
+                    let response = ui.add(
                         egui::Image::from_uri(#uri)
                             .fit_to_original_size(1.0)
                             .max_width(options.max_width(ui)),
@@ -837,8 +830,8 @@ impl CommonMarkViewerInternal {
                     if !alt_text.is_empty() && options.show_alt_text_on_hover {
                         let mut alt_text_stream = TokenStream::new();
                         for alt in alt_text {
-                            let text = to_richtext_tokenstream(&alt.style, ui, &alt.text);
-                            alt_text_stream.extend(quote!(#ui.label(#text);));
+                            let text = to_richtext_tokenstream(&alt.style, &alt.text);
+                            alt_text_stream.extend(quote!(ui.label(#text);));
                         }
 
                         stream.extend(quote!(
@@ -857,7 +850,6 @@ impl CommonMarkViewerInternal {
 
     fn end_code_block(
         &mut self,
-        ui: &Expr,
         cache: &Expr,
         options: &CommonMarkOptions,
         max_width: f32,
@@ -870,12 +862,12 @@ impl CommonMarkViewerInternal {
             stream.extend(
                 quote!(
                 egui_commonmark::FencedCodeBlock {lang: #lang.to_owned(), content: #content.to_owned()}
-                    .end(#ui, #cache, &options, max_width);
+                    .end(ui, #cache, &options, max_width);
             ));
 
             self.text_style.code = false;
             if self.should_insert_newline {
-                stream.extend(quote!(egui_commonmark::elements::newline(#ui);));
+                stream.extend(quote!(egui_commonmark::elements::newline(ui);));
             }
         }
 
@@ -883,19 +875,19 @@ impl CommonMarkViewerInternal {
     }
 }
 
-fn to_richtext_tokenstream(s: &Style, ui: &Expr, text: &str) -> TokenStream {
+fn to_richtext_tokenstream(s: &Style, text: &str) -> TokenStream {
     // Try to write a compact stream
 
     let mut stream = TokenStream::new();
     if let Some(level) = s.heading {
         // FIXME: Write at top to reduce code duplication
         stream.extend(quote!(
-        let max_height = #ui
+        let max_height = ui
             .style()
             .text_styles
             .get(&egui::TextStyle::Heading)
             .map_or(32.0, |d| d.size);
-        let min_height = #ui
+        let min_height = ui
             .style()
             .text_styles
             .get(&egui::TextStyle::Body)
