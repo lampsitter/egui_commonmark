@@ -3,7 +3,7 @@
 A *bunch* ~~of~~ __different__ `text` styles.
 
 
- ![Rust logo](examples/rust-logo-128x128.png)
+ ![Rust logo](egui_commonmark/examples/rust-logo-128x128.png)
 
 | __A table!__ |
 | ------------ |

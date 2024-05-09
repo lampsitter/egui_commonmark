@@ -59,12 +59,13 @@ fn main() {
 
 "#
                 );
+
                 // or from a file like include_str!
                 commonmark_str!(
                     "n2",
                     ui,
                     &mut self.cache,
-                    "egui_commonmark/examples/markdown/lists.md"
+                    "egui_commonmark/examples/markdown/hello_world.md"
                 );
             });
         });
