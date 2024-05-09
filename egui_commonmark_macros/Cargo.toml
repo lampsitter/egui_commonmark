@@ -30,5 +30,8 @@ egui = { workspace = true }
 trybuild = "1.0"
 
 [features]
-#! Internal Debugging tool only!
+## Internal Debugging tool only!
 dump-macro = []
+
+## Enable tracking of markdown files to recompile when their content changes
+nightly = []
