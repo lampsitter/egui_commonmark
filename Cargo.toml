@@ -5,3 +5,7 @@ members = [
 ]
 
 resolver = "2"
+
+[workspace.dependencies]
+egui_extras = "0.27"
+egui = "0.27"

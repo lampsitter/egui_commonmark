@@ -3,7 +3,7 @@ name = "egui_commonmark_macro"
 authors = ["Erlend Walstad"]
 version = "0.15.0"
 edition = "2021"
-description = "Commonmark viewer for egui with compile time parsing"
+description = "Embed markdown directly into the binary as egui widgets"
 keywords = ["commonmark", "egui"]
 categories = ["gui"]
 license = "MIT OR Apache-2.0"
@@ -20,17 +20,12 @@ proc-macro = true
 syn = "2"
 quote = { version = "1", default-features = false }
 proc-macro2 = "1"
-egui_commonmark = { path = "../egui_commonmark" }
 
-
-syntect = { version = "5.0.0", optional = true, default-features = false, features = [
-    "default-fancy",
-] }
-
-document-features = { version = "0.2", optional = true }
-
-comrak = { version = "0.22.0", default-features = false, optional = true }
 pulldown-cmark = { version = "0.10", default-features = false }
 
-egui_extras = "0.27"
-egui.version = "0.27"
+egui_commonmark = { path = "../egui_commonmark" }
+egui = { workspace = true }
+
+[features]
+#! Internal Debugging tool only!
+dump-macro = []
