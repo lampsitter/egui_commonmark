@@ -2,11 +2,9 @@ mod generator;
 use generator::*;
 
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned, ToTokens};
+use quote::quote_spanned;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::spanned::Spanned;
 use syn::{parse_macro_input, Expr, LitStr, Token};
-// TODO: Remove
 
 struct Parameters {
     ui: Expr,
@@ -65,8 +63,10 @@ pub fn commonmark_str(input: TokenStream) -> TokenStream {
     let path = markdown.value();
 
     let Ok(md) = std::fs::read_to_string(path) else {
-        // FIXME: error
-        return TokenStream::new();
+        return quote_spanned!(markdown.span()=>
+            compile_error!("Could not find markdown file");
+        )
+        .into();
     };
 
     commonmark_impl(ui, cache, md)
