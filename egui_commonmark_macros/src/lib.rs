@@ -47,8 +47,10 @@
 //! # });
 //! ```
 //!
-//! One current drawback is that the file is not tracked by rust so the program won't recompile
-//! if you only change the content of the file.
+//! One drawback is that the file cannot be tracked by rust on stable so the
+//! program won't recompile if you only change the content of the file. To
+//! work around this you can use a nightly compiler and enable the
+//! `nightly` feature when iterating on your markdown files.
 //!
 //! ## Limitations
 //!
@@ -69,6 +71,8 @@
 //! ```
 //!
 //! For that you should fall back to normal egui widgets
+#![cfg_attr(feature = "nightly", feature(track_path))]
+
 mod generator;
 use generator::*;
 
@@ -142,6 +146,12 @@ pub fn commonmark_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     } = parse_macro_input!(input as Parameters);
 
     let path = markdown.value();
+    #[cfg(feature = "nightly")]
+    {
+        // Tell rust to track the file so that the macro will regenerate when the
+        // file changes
+        proc_macro::tracked_path::path(&path);
+    }
 
     let Ok(md) = std::fs::read_to_string(path) else {
         return quote_spanned!(markdown.span()=>
