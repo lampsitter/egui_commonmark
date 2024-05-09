@@ -1,5 +1,5 @@
 use egui::__run_test_ui;
-use egui_commonmark_macro::commonmark_str;
+use egui_commonmark_macros::commonmark_str;
 
 // Testing all the different examples should give fairly good coverage
 fn main() {

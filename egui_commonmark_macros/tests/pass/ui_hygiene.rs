@@ -1,5 +1,5 @@
 use egui::__run_test_ui;
-use egui_commonmark_macro::commonmark;
+use egui_commonmark_macros::commonmark;
 
 // Check hygiene of the ui expression
 fn main() {

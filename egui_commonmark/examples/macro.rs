@@ -6,7 +6,7 @@
 
 use eframe::egui;
 use egui_commonmark::*;
-use egui_commonmark_macro::*;
+use egui_commonmark_macros::*;
 
 struct App {
     cache: CommonMarkCache,

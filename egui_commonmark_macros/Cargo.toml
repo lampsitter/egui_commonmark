@@ -1,5 +1,5 @@
 [package]
-name = "egui_commonmark_macro"
+name = "egui_commonmark_macros"
 authors = ["Erlend Walstad"]
 version = "0.15.0"
 edition = "2021"

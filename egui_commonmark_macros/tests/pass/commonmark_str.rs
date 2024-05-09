@@ -1,5 +1,5 @@
 use egui::__run_test_ui;
-use egui_commonmark_macro::commonmark_str;
+use egui_commonmark_macros::commonmark_str;
 
 // Check a simple case and ensure that it returns a reponse
 fn main() {
@@ -9,7 +9,7 @@ fn main() {
             "a",
             ui,
             &mut cache,
-            "../../../../egui_commonmark_macro/tests/file.md"
+            "../../../../egui_commonmark_macros/tests/file.md"
         );
     });
 }
