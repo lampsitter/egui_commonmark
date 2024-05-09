@@ -292,11 +292,11 @@ impl FencedCodeBlock {
         style.visuals.extreme_bg_color = curr_theme
             .settings
             .background
-            .map(crate::syntect_color_to_egui)
+            .map(syntect_color_to_egui)
             .unwrap_or(style.visuals.extreme_bg_color);
 
         if let Some(color) = curr_theme.settings.selection_foreground {
-            style.visuals.selection.bg_fill = crate::syntect_color_to_egui(color);
+            style.visuals.selection.bg_fill = syntect_color_to_egui(color);
         }
     }
 
@@ -321,7 +321,7 @@ impl FencedCodeBlock {
                         0.0,
                         egui::TextFormat::simple(
                             TextStyle::Monospace.resolve(ui.style()),
-                            crate::syntect_color_to_egui(front),
+                            syntect_color_to_egui(front),
                         ),
                     );
                 }
@@ -329,7 +329,7 @@ impl FencedCodeBlock {
 
             job
         } else {
-            crate::plain_highlighting(ui, text, extension)
+            plain_highlighting(ui, text, extension)
         }
     }
 }
