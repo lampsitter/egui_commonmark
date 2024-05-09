@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "egui_commonmark",
-    "egui_commonmark_macro",
+    "egui_commonmark_macros",
     "egui_commonmark_shared"
 ]
 

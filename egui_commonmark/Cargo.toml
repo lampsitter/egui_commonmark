@@ -49,7 +49,7 @@ fetch = ["egui_extras/http"]
 [dev-dependencies]
 eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
 image = { version = "0.24", default-features = false, features = ["png"] }
-egui_commonmark_macro = { path = "../egui_commonmark_macro" }
+egui_commonmark_macros = { path = "../egui_commonmark_macros" }
 
 [package.metadata.docs.rs]
 features = ["better_syntax_highlighting", "document-features"]
