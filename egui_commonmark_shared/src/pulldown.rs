@@ -154,7 +154,7 @@ pub fn parse_alerts<'a>(
             }
         }
 
-        let alert = alerts.try_get_alert(&alert_ident);
+        let alert = try_get_alert(&alerts, &alert_ident);
 
         if alert.is_some() {
             // remove the text that identifies it as an alert so that it won't end up in the
