@@ -47,6 +47,9 @@
 //! # });
 //! ```
 //!
+//! One current drawback is that the file is not tracked by rust so the program won't recompile
+//! if you only change the content of the file.
+//!
 //! ## Limitations
 //!
 //! Compared to it's runtime counterpart egui_commonmark it currently does not
