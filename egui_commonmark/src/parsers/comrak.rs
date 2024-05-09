@@ -1,5 +1,6 @@
-use crate::elements::*;
 use crate::{CommonMarkCache, CommonMarkOptions};
+use egui_commonmark_shared::elements::*;
+use egui_commonmark_shared::misc::*;
 
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{parse_document, Arena, Options};
@@ -9,12 +10,12 @@ use egui::{self, Id, TextStyle, Ui};
 pub struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
-    text_style: crate::Style,
+    text_style: Style,
     list: List,
-    link: Option<crate::Link>,
-    image: Option<crate::Image>,
+    link: Option<Link>,
+    image: Option<Image>,
     should_insert_newline: bool,
-    fenced_code_block: Option<crate::FencedCodeBlock>,
+    fenced_code_block: Option<FencedCodeBlock>,
 }
 
 impl CommonMarkViewerInternal {
@@ -22,7 +23,7 @@ impl CommonMarkViewerInternal {
         Self {
             source_id,
             curr_table: 0,
-            text_style: crate::Style::default(),
+            text_style: Style::default(),
             list: List::default(),
             link: None,
             image: None,
@@ -119,7 +120,7 @@ impl CommonMarkViewerInternal {
 
                 NodeValue::CodeBlock(code_block) => {
                     if code_block.fenced {
-                        self.fenced_code_block = Some(crate::FencedCodeBlock {
+                        self.fenced_code_block = Some(FencedCodeBlock {
                             lang: code_block.info.to_string(),
                             content: code_block.literal.to_string(),
                         });
@@ -257,7 +258,7 @@ impl CommonMarkViewerInternal {
 
                 NodeValue::Superscript => {}
                 NodeValue::Link(link) => {
-                    self.link = Some(crate::Link {
+                    self.link = Some(Link {
                         destination: link.url.to_owned(),
                         text: vec![link.title.to_owned().into()],
                     });
@@ -270,7 +271,7 @@ impl CommonMarkViewerInternal {
                 }
 
                 NodeValue::Image(image) => {
-                    self.image = Some(crate::Image::new(&image.url, options));
+                    self.image = Some(Image::new(&image.url, options));
                     // FIXME:
 
                     self.image
