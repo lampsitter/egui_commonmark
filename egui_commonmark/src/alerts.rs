@@ -15,7 +15,7 @@ pub struct Alert {
 }
 
 impl Alert {
-    pub(crate) fn ui(&self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
+    pub fn ui(&self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
         blockquote(ui, self.accent_color, |ui| {
             newline(ui);
             ui.colored_label(self.accent_color, self.icon.to_string());
@@ -52,7 +52,7 @@ impl AlertBundle {
         self.alerts.into_values().collect::<Vec<_>>()
     }
 
-    pub(crate) fn try_get_alert(&self, text: &str) -> Option<&Alert> {
+    pub fn try_get_alert(&self, text: &str) -> Option<&Alert> {
         self.alerts.get(&text.to_uppercase())
     }
 

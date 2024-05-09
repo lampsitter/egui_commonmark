@@ -1,14 +1,14 @@
 use egui::{self, epaint, NumExt, RichText, Sense, TextStyle, Ui, Vec2};
 
-pub(crate) fn soft_break(ui: &mut Ui) {
+pub fn soft_break(ui: &mut Ui) {
     ui.label(" ");
 }
 
-pub(crate) fn newline(ui: &mut Ui) {
+pub fn newline(ui: &mut Ui) {
     ui.label("\n");
 }
 
-pub(crate) fn bullet_point(ui: &mut Ui) {
+pub fn bullet_point(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
         Sense::hover(),
@@ -20,7 +20,7 @@ pub(crate) fn bullet_point(ui: &mut Ui) {
     );
 }
 
-pub(crate) fn bullet_point_hollow(ui: &mut Ui) {
+pub fn bullet_point_hollow(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
         Sense::hover(),
@@ -33,7 +33,7 @@ pub(crate) fn bullet_point_hollow(ui: &mut Ui) {
     );
 }
 
-pub(crate) fn number_point(ui: &mut Ui, number: &str) {
+pub fn number_point(ui: &mut Ui, number: &str) {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
         Sense::hover(),
@@ -47,11 +47,11 @@ pub(crate) fn number_point(ui: &mut Ui, number: &str) {
     );
 }
 
-pub(crate) fn footnote_start(ui: &mut Ui, note: &str) {
+pub fn footnote_start(ui: &mut Ui, note: &str) {
     ui.label(RichText::new(note).raised().strong().small());
 }
 
-pub(crate) fn footnote(ui: &mut Ui, text: &str) {
+pub fn footnote(ui: &mut Ui, text: &str) {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(width_body_space(ui) * 4.0, height_body(ui)),
         Sense::hover(),
@@ -168,7 +168,7 @@ pub fn code_block<'t>(
 // Stripped down version of egui's Checkbox. The only difference is that this
 // creates a noninteractive checkbox. ui.add_enabled could have been used instead,
 // but it makes the checkbox too grey.
-pub(crate) struct ImmutableCheckbox<'a> {
+pub struct ImmutableCheckbox<'a> {
     checked: &'a mut bool,
 }
 
@@ -217,12 +217,12 @@ impl<'a> egui::Widget for ImmutableCheckbox<'a> {
     }
 }
 
-pub(crate) struct ListLevel {
+pub struct ListLevel {
     current_number: Option<u64>,
 }
 
 #[derive(Default)]
-pub(crate) struct List {
+pub struct List {
     items: Vec<ListLevel>,
 }
 
@@ -273,7 +273,7 @@ impl List {
     }
 }
 
-pub(crate) fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(&mut Ui)) {
+pub fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(&mut Ui)) {
     let start = ui.painter().add(egui::Shape::Noop);
     let response = egui::Frame::none()
         // offset the frame so that we can use the space for the horizontal line and other stuff
