@@ -218,7 +218,7 @@ impl CommonMarkCache {
     }
 
     /// Should be called before any rendering
-    fn prepare_show(&mut self, ctx: &egui::Context) {
+    pub fn prepare_show(&mut self, ctx: &egui::Context) {
         if !self.has_installed_loaders {
             // Even though the install function can be called multiple times, its not the cheapest
             // so we ensure that we only call it once.
@@ -482,7 +482,7 @@ impl CommonMarkViewer {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Style {
     pub heading: Option<u8>,
     pub strong: bool,

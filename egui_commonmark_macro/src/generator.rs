@@ -260,13 +260,34 @@ fn parser_options() -> Options {
         | Options::ENABLE_FOOTNOTES
 }
 
+/// To prevent depending on #ui during macro evalation we must store the current
+/// style and text temporarily
+pub(crate) struct StyledText {
+    style: Style,
+    text: String,
+}
+
+impl StyledText {
+    pub fn new(style: Style, text: impl Into<String>) -> Self {
+        Self {
+            style,
+            text: text.into(),
+        }
+    }
+}
+
+pub struct StyledImage {
+    pub uri: String,
+    pub alt_text: Vec<StyledText>,
+}
+
 pub(crate) struct CommonMarkViewerInternal {
     pub source_id: Id,
     pub curr_table: usize,
     pub text_style: Style,
     pub list: List,
     pub link: Option<Link>,
-    pub image: Option<Image>,
+    pub image: Option<StyledImage>,
     pub should_insert_newline: bool,
     pub fenced_code_block: Option<FencedCodeBlock>,
     pub is_list_item: bool,
@@ -308,50 +329,15 @@ impl CommonMarkViewerInternal {
         let options = CommonMarkOptions::default();
         let mut stream = proc_macro2::TokenStream::new();
 
-        // struct CommonMarkViewerInternal {
-        //     source_id: egui::Id,
-        //     curr_table: usize,
-        //     text_style: egui_commonmark::Style,
-        //     list: egui_commonmark::elements::List,
-        //     link: Option<egui_commonmark::Link>,
-        //     image: Option<egui_commonmark::Image>,
-        //     should_insert_newline: bool,
-        //     fenced_code_block: Option<egui_commonmark::FencedCodeBlock>,
-        //     is_list_item: bool,
-        //     is_table: bool,
-        //     is_blockquote: bool,
-        // }
-
-        // impl CommonMarkViewerInternal {
-        //     fn new(source_id: egui::Id) -> Self {
-        //         Self {
-        //             source_id,
-        //             curr_table: 0,
-        //             text_style: egui_commonmark::Style::default(),
-        //             list: egui_commonmark::elements::List::default(),
-        //             link: None,
-        //             image: None,
-        //             should_insert_newline: true,
-        //             is_list_item: false,
-        //             fenced_code_block: None,
-        //             is_table: false,
-        //             is_blockquote: false,
-        //         }
-        //     }
-        // }
-
-        // let mut internal = CommonMarkViewerInternal::new("aaaaaaaaaa".into());
-        //         ));
-
-        // FIXME: max_width
-
         let mut event_stream = proc_macro2::TokenStream::new();
         while let Some((index, (e, src_span))) = events.next() {
             let e = self.process_event(&ui, &mut events, e, src_span, &cache, &options, 500.0);
             event_stream.extend(e);
         }
 
+        // FIXME: max_width
         stream.extend(quote!(
+        (#cache).prepare_show(#ui.ctx());
         let options = CommonMarkOptions::default();
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
@@ -611,23 +597,14 @@ impl CommonMarkViewerInternal {
                 egui_commonmark::elements::newline(#ui);
                 )
             }
-            // pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
-            //     if options.mutable {
-            //         if ui
-            //             .add(egui::Checkbox::without_text(&mut checkbox))
-            //             .clicked()
-            //         {
-            //             self.checkbox_events.push(CheckboxClickEvent {
-            //                 checked: checkbox,
-            //                 span: src_span,
-            //             });
-            //         }
-            //     } else {
-            //         ui.add(ImmutableCheckbox::without_text(&mut checkbox));
-            //     }
-            // }
-            // TODO: Remove
-            _ => proc_macro2::TokenStream::new(),
+            pulldown_cmark::Event::TaskListMarker(checkbox) => {
+                if options.mutable {
+                    // FIXME: Unsupported for now
+                    proc_macro2::TokenStream::new()
+                } else {
+                    quote!(#ui.add(egui_commonmark::elements::ImmutableCheckbox::without_text(&mut #checkbox));)
+                }
+            }
         }
     }
 
@@ -635,7 +612,9 @@ impl CommonMarkViewerInternal {
         // FIXME: Store text with Style instead
         // let rich_text = self.text_style.to_richtext(ui, &text);
         if let Some(image) = &mut self.image {
-            // image.alt_text.push(rich_text);
+            image
+                .alt_text
+                .push(StyledText::new(self.text_style.clone(), text.to_string()));
         } else if let Some(block) = &mut self.fenced_code_block {
             block.content.push_str(&text);
         } else if let Some(link) = &mut self.link {
@@ -747,7 +726,12 @@ impl CommonMarkViewerInternal {
                 proc_macro2::TokenStream::new()
             }
             pulldown_cmark::Tag::Image { dest_url, .. } => {
-                self.image = Some(Image::new(&dest_url, options));
+                let tmp = Image::new(&dest_url, options);
+                self.image = Some(StyledImage {
+                    uri: tmp.uri,
+                    alt_text: Vec::new(),
+                });
+
                 proc_macro2::TokenStream::new()
             }
             pulldown_cmark::Tag::HtmlBlock | pulldown_cmark::Tag::MetadataBlock(_) => {
@@ -810,11 +794,39 @@ impl CommonMarkViewerInternal {
             //             link.end(ui, cache);
             //         }
             //     }
-            //     pulldown_cmark::TagEnd::Image { .. } => {
-            //         if let Some(image) = self.image.take() {
-            //             image.end(ui, options);
-            //         }
-            //     }
+            pulldown_cmark::TagEnd::Image { .. } => {
+                let mut stream = proc_macro2::TokenStream::new();
+                if let Some(image) = self.image.take() {
+                    // FIXME: Try to reduce code duplication here
+                    //
+                    // FIXME: Split options into runtime options and static options
+                    // options.max_width is dynamic but for instance options.show_alt_text_on_hover
+                    // is static here and does not need to be included in the generated code
+                    let StyledImage { uri, alt_text } = image;
+
+                    stream.extend(quote!(
+                    let response = #ui.add(
+                        egui::Image::from_uri(#uri)
+                            .fit_to_original_size(1.0)
+                            .max_width(options.max_width(ui)),
+                    );
+                    ));
+
+                    if !alt_text.is_empty() && options.show_alt_text_on_hover {
+                        let mut alt_text_stream = proc_macro2::TokenStream::new();
+                        for alt in alt_text {
+                            let text = to_richtext_tokenstream(&alt.style, ui, &alt.text);
+                            alt_text_stream.extend(quote!(#ui.label(#text);));
+                        }
+
+                        stream.extend(quote!(
+                        response.on_hover_ui_at_pointer(|ui| {
+                            #alt_text_stream
+                        });));
+                    }
+                }
+                stream
+            }
             pulldown_cmark::TagEnd::HtmlBlock | pulldown_cmark::TagEnd::MetadataBlock(_) => {
                 proc_macro2::TokenStream::new()
             }
