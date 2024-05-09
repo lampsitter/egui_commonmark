@@ -24,7 +24,36 @@
 //! ```toml
 //! image = { version = "0.24", default-features = false, features = ["png"] }
 //! ```
+//! # Compile time evaluation of markdown
 //!
+//! If you want to embed markdown directly the binary then you can enable the `macro` feature.
+//! This will do the parsing of the markdown at compile time and output egui widgets.
+//!
+//! ## Example
+//!
+//! ```
+//! use egui_commonmark::{CommonMarkCache, commonmark};
+//! # egui::__run_test_ui(|ui| {
+//! let mut cache = CommonMarkCache::default();
+//! let _response = commonmark!("example", ui, &mut cache, "# ATX Heading Level 1");
+//! # });
+//! ```
+//!
+//! Alternatively you can embed a file
+//!
+//!
+//! ## Example
+//!
+//! ```rust,ignore
+//! use egui_commonmark::{CommonMarkCache, commonmark_str};
+//! # egui::__run_test_ui(|ui| {
+//! let mut cache = CommonMarkCache::default();
+//! commonmark_str!("example_file", ui, &mut cache, "content.md");
+//! # });
+//! ```
+//!
+//! For more information check out the documentation for
+//! [egui_commonmark_macros](https://docs.rs/crate/egui_commonmark_macros/latest)
 #![cfg_attr(feature = "document-features", doc = "# Features")]
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 
