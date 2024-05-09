@@ -10,6 +10,7 @@ use egui_commonmark::{CommonMarkCache, CommonMarkOptions};
 use egui::{self, Id, Pos2, TextStyle, Ui, Vec2};
 
 use egui_commonmark::*;
+use proc_macro2::TokenStream;
 use pulldown_cmark::{CowStr, HeadingLevel, Options};
 use quote::quote;
 use syn::Expr;
@@ -44,8 +45,8 @@ impl List {
         &mut self,
         ui: &Expr,
         options: &egui_commonmark::CommonMarkOptions,
-    ) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
         let len = self.items.len();
         if let Some(item) = self.items.last_mut() {
             let spaces = " ".repeat((len - 1) * options.indentation_spaces);
@@ -71,8 +72,8 @@ impl List {
         stream
     }
 
-    pub fn end_level(&mut self, ui: &Expr) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    pub fn end_level(&mut self, ui: &Expr) -> TokenStream {
+        let mut stream = TokenStream::new();
         self.items.pop();
 
         if self.items.is_empty() {
@@ -276,6 +277,11 @@ impl StyledText {
     }
 }
 
+pub struct StyledLink {
+    pub destination: String,
+    pub text: Vec<StyledText>,
+}
+
 pub struct StyledImage {
     pub uri: String,
     pub alt_text: Vec<StyledText>,
@@ -286,7 +292,7 @@ pub(crate) struct CommonMarkViewerInternal {
     pub curr_table: usize,
     pub text_style: Style,
     pub list: List,
-    pub link: Option<Link>,
+    pub link: Option<StyledLink>,
     pub image: Option<StyledImage>,
     pub should_insert_newline: bool,
     pub fenced_code_block: Option<FencedCodeBlock>,
@@ -327,9 +333,9 @@ impl CommonMarkViewerInternal {
             .enumerate();
 
         let options = CommonMarkOptions::default();
-        let mut stream = proc_macro2::TokenStream::new();
+        let mut stream = TokenStream::new();
 
-        let mut event_stream = proc_macro2::TokenStream::new();
+        let mut event_stream = TokenStream::new();
         while let Some((index, (e, src_span))) = events.next() {
             let e = self.process_event(&ui, &mut events, e, src_span, &cache, &options, 500.0);
             event_stream.extend(e);
@@ -364,7 +370,7 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         max_width: f32,
-    ) -> proc_macro2::TokenStream {
+    ) -> TokenStream {
         let mut stream = self.event(ui, event, src_span, cache, options, max_width);
 
         stream.extend(self.item_list_wrapping(events, max_width, cache, options, ui));
@@ -381,15 +387,15 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         ui: &Expr,
-    ) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
         if self.is_list_item {
             self.is_list_item = false;
 
             let item_events = delayed_events_list_item(events);
             let mut events_iter = item_events.into_iter().enumerate();
 
-            let mut inner = proc_macro2::TokenStream::new();
+            let mut inner = TokenStream::new();
 
             while let Some((_, (e, src_span))) = events_iter.next() {
                 inner.extend(self.process_event(
@@ -420,8 +426,8 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         ui: &Expr,
-    ) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
         if self.is_blockquote {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
 
@@ -437,7 +443,7 @@ impl CommonMarkViewerInternal {
                     identifier_rendered,
                 } = alert;
 
-                let mut inner = proc_macro2::TokenStream::new();
+                let mut inner = TokenStream::new();
                 for (event, src_span) in collected_events.into_iter() {
                     inner.extend(self.event(ui, event, src_span, cache, options, max_width));
                 }
@@ -457,7 +463,7 @@ impl CommonMarkViewerInternal {
                     #inner
                 });));
             } else {
-                let mut inner = proc_macro2::TokenStream::new();
+                let mut inner = TokenStream::new();
 
                 self.text_style.quote = true;
                 for (event, src_span) in collected_events {
@@ -484,8 +490,8 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         ui: &Expr,
-    ) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
         while self.fenced_code_block.is_some() {
             if let Some((_, (e, src_span))) = events.next() {
                 stream.extend(self.event(ui, e, src_span, cache, options, max_width));
@@ -504,8 +510,8 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &Expr,
         max_width: f32,
-    ) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
         if self.is_table {
             stream.extend(quote!( egui_commonmark::elements::newline(#ui);));
 
@@ -514,42 +520,49 @@ impl CommonMarkViewerInternal {
 
             let Table { header, rows } = parse_table(events);
 
-            let mut header_stream = proc_macro2::TokenStream::new();
+            let mut header_stream = TokenStream::new();
             for col in header {
-                let mut inner = proc_macro2::TokenStream::new();
+                let mut inner = TokenStream::new();
                 for (e, src_span) in col {
                     self.should_insert_newline = false;
                     inner.extend(self.event(ui, e, src_span, cache, options, max_width));
                 }
 
-                header_stream.extend(quote!(#ui.horizontal(|ui| {inner});));
+                header_stream.extend(quote!(#ui.horizontal(|ui| {#inner});));
             }
 
-            let mut content_stream = proc_macro2::TokenStream::new();
+            let mut content_stream = TokenStream::new();
             for row in rows {
+                let mut row_stream = TokenStream::new();
                 for col in row {
-                    let mut inner = proc_macro2::TokenStream::new();
+                    let mut inner = TokenStream::new();
                     for (e, src_span) in col {
                         self.should_insert_newline = false;
                         inner.extend(self.event(ui, e, src_span, cache, options, max_width));
                     }
 
-                    content_stream.extend(quote!(#ui.horizontal(|ui| {inner});));
+                    row_stream.extend(quote!(#ui.horizontal(|ui| {#inner});));
                 }
+                content_stream.extend(quote!(#row_stream #ui.end_row();))
             }
 
-            let frame = quote!(
+            let hash = id.value();
 
+            // FIXME: Hash is not the original
+            stream.extend(quote!(
                 egui::Frame::group(ui.style()).show(ui, |ui| {
-                    egui::Grid::new(id).striped(true).show(ui, |ui| {
+                    egui::Grid::new(egui::Id::new(#hash)).striped(true).show(ui, |ui| {
+
                     #header_stream
-                    ui.end_row();
-                    #content_stream
+
                     ui.end_row();
 
+                    #content_stream
+
+                    ui.end_row();
                     });
                 });
-            );
+            ));
 
             self.is_table = false;
             self.should_insert_newline = true;
@@ -567,7 +580,7 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         max_width: f32,
-    ) -> proc_macro2::TokenStream {
+    ) -> TokenStream {
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
             pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
@@ -579,7 +592,7 @@ impl CommonMarkViewerInternal {
                 s
             }
             pulldown_cmark::Event::InlineHtml(_) | pulldown_cmark::Event::Html(_) => {
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Event::FootnoteReference(footnote) => {
                 let footnote = footnote.to_string();
@@ -600,7 +613,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Event::TaskListMarker(checkbox) => {
                 if options.mutable {
                     // FIXME: Unsupported for now
-                    proc_macro2::TokenStream::new()
+                    TokenStream::new()
                 } else {
                     quote!(#ui.add(egui_commonmark::elements::ImmutableCheckbox::without_text(&mut #checkbox));)
                 }
@@ -608,7 +621,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn event_text(&mut self, text: CowStr, ui: &Expr) -> proc_macro2::TokenStream {
+    fn event_text(&mut self, text: CowStr, ui: &Expr) -> TokenStream {
         // FIXME: Store text with Style instead
         // let rich_text = self.text_style.to_richtext(ui, &text);
         if let Some(image) = &mut self.image {
@@ -618,7 +631,8 @@ impl CommonMarkViewerInternal {
         } else if let Some(block) = &mut self.fenced_code_block {
             block.content.push_str(&text);
         } else if let Some(link) = &mut self.link {
-            // link.text.push(rich_text);
+            link.text
+                .push(StyledText::new(self.text_style.clone(), text.to_string()));
         } else {
             let rich_text = to_richtext_tokenstream(&self.text_style, ui, &text);
             return quote!(
@@ -626,7 +640,7 @@ impl CommonMarkViewerInternal {
             );
         }
 
-        proc_macro2::TokenStream::new()
+        TokenStream::new()
     }
 
     fn start_tag(
@@ -634,13 +648,13 @@ impl CommonMarkViewerInternal {
         ui: &Expr,
         tag: pulldown_cmark::Tag,
         options: &CommonMarkOptions,
-    ) -> proc_macro2::TokenStream {
+    ) -> TokenStream {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 let s = if self.should_insert_newline {
                     quote!( egui_commonmark::elements::newline(#ui);)
                 } else {
-                    proc_macro2::TokenStream::new()
+                    TokenStream::new()
                 };
 
                 self.should_insert_newline = true;
@@ -661,10 +675,10 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::BlockQuote => {
                 self.is_blockquote = true;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
-                let mut s = proc_macro2::TokenStream::new();
+                let mut s = TokenStream::new();
                 if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
                     self.fenced_code_block = Some(FencedCodeBlock {
                         lang: lang.to_string(),
@@ -686,7 +700,7 @@ impl CommonMarkViewerInternal {
                     self.list.start_level_without_number();
                 }
 
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::Item => {
                 self.is_list_item = true;
@@ -700,30 +714,30 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::Table(_) => {
                 self.is_table = true;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::TableHead
             | pulldown_cmark::Tag::TableRow
-            | pulldown_cmark::Tag::TableCell => proc_macro2::TokenStream::new(),
+            | pulldown_cmark::Tag::TableCell => TokenStream::new(),
             pulldown_cmark::Tag::Emphasis => {
                 self.text_style.emphasis = true;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::Strong => {
                 self.text_style.strong = true;
                 // TODO: Return optional
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::Strikethrough => {
                 self.text_style.strikethrough = true;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::Link { dest_url, .. } => {
-                self.link = Some(Link {
+                self.link = Some(StyledLink {
                     destination: dest_url.to_string(),
                     text: Vec::new(),
                 });
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::Image { dest_url, .. } => {
                 let tmp = Image::new(&dest_url, options);
@@ -732,10 +746,10 @@ impl CommonMarkViewerInternal {
                     alt_text: Vec::new(),
                 });
 
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::Tag::HtmlBlock | pulldown_cmark::Tag::MetadataBlock(_) => {
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
         }
     }
@@ -747,7 +761,7 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         max_width: f32,
-    ) -> proc_macro2::TokenStream {
+    ) -> TokenStream {
         match tag {
             pulldown_cmark::TagEnd::Paragraph => {
                 quote!( egui_commonmark::elements::newline(#ui);)
@@ -757,7 +771,7 @@ impl CommonMarkViewerInternal {
                 self.text_style.heading = None;
                 newline
             }
-            pulldown_cmark::TagEnd::BlockQuote => proc_macro2::TokenStream::new(),
+            pulldown_cmark::TagEnd::BlockQuote => TokenStream::new(),
             pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(ui, cache, options, max_width),
             pulldown_cmark::TagEnd::List(_) => {
                 let s = self.list.end_level(ui);
@@ -772,30 +786,38 @@ impl CommonMarkViewerInternal {
             | pulldown_cmark::TagEnd::FootnoteDefinition
             | pulldown_cmark::TagEnd::Table
             | pulldown_cmark::TagEnd::TableHead
-            | pulldown_cmark::TagEnd::TableRow => proc_macro2::TokenStream::new(),
+            | pulldown_cmark::TagEnd::TableRow => TokenStream::new(),
             pulldown_cmark::TagEnd::TableCell => {
                 // Ensure space between cells
                 quote!(#ui.label("  ");)
             }
             pulldown_cmark::TagEnd::Emphasis => {
                 self.text_style.emphasis = false;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::TagEnd::Strong => {
                 self.text_style.strong = false;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
             pulldown_cmark::TagEnd::Strikethrough => {
                 self.text_style.strikethrough = false;
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
-            //     pulldown_cmark::TagEnd::Link { .. } => {
-            //         if let Some(link) = self.link.take() {
-            //             link.end(ui, cache);
-            //         }
-            //     }
+            pulldown_cmark::TagEnd::Link { .. } => {
+                if let Some(link) = self.link.take() {
+                    let StyledLink { destination, text } = link;
+                    // TODO: text
+                    quote!(
+                    egui_commonmark::Link {
+                        destination: #destination.to_owned(),
+                        text: Vec::new()
+                    }.end(#ui, #cache);)
+                } else {
+                    TokenStream::new()
+                }
+            }
             pulldown_cmark::TagEnd::Image { .. } => {
-                let mut stream = proc_macro2::TokenStream::new();
+                let mut stream = TokenStream::new();
                 if let Some(image) = self.image.take() {
                     // FIXME: Try to reduce code duplication here
                     //
@@ -813,7 +835,7 @@ impl CommonMarkViewerInternal {
                     ));
 
                     if !alt_text.is_empty() && options.show_alt_text_on_hover {
-                        let mut alt_text_stream = proc_macro2::TokenStream::new();
+                        let mut alt_text_stream = TokenStream::new();
                         for alt in alt_text {
                             let text = to_richtext_tokenstream(&alt.style, ui, &alt.text);
                             alt_text_stream.extend(quote!(#ui.label(#text);));
@@ -828,10 +850,8 @@ impl CommonMarkViewerInternal {
                 stream
             }
             pulldown_cmark::TagEnd::HtmlBlock | pulldown_cmark::TagEnd::MetadataBlock(_) => {
-                proc_macro2::TokenStream::new()
+                TokenStream::new()
             }
-            //  TODO: Remove
-            _ => proc_macro2::TokenStream::new(),
         }
     }
 
@@ -841,8 +861,8 @@ impl CommonMarkViewerInternal {
         cache: &Expr,
         options: &CommonMarkOptions,
         max_width: f32,
-    ) -> proc_macro2::TokenStream {
-        let mut stream = proc_macro2::TokenStream::new();
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
         if let Some(block) = self.fenced_code_block.take() {
             let lang = block.lang;
             let content = block.content;
@@ -863,10 +883,10 @@ impl CommonMarkViewerInternal {
     }
 }
 
-fn to_richtext_tokenstream(s: &Style, ui: &Expr, text: &str) -> proc_macro2::TokenStream {
+fn to_richtext_tokenstream(s: &Style, ui: &Expr, text: &str) -> TokenStream {
     // Try to write a compact stream
 
-    let mut stream = proc_macro2::TokenStream::new();
+    let mut stream = TokenStream::new();
     if let Some(level) = s.heading {
         // FIXME: Write at top to reduce code duplication
         stream.extend(quote!(

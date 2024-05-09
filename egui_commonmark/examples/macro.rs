@@ -17,50 +17,12 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // Embed text directly
-                commonmark!(
-                    "n1",
-                    ui,
-                    &mut self.cache,
-                    r#"
-# hello this is the `first` working text
+                commonmark!("n1", ui, &mut self.cache, "Hello, world");
 
-## h2
+                // or from a file like include_str! NOTE: This does not cause a recompile when the
+                // file has changed!
 
-### h3
-
-__Very__ exciting _indeed_!
-
-```rs
-fn main() {
-    println!("yay!");
-}
-```
-
-> yeep
->
-> jjj
-
-> [!NOTE]
-> note
-
-
-1.
-    1. Lorem ipsum dolor sit amet, consectetur __adipiscing elit, sed__ do
-    eiusmod tempor incididunt _ut_ labore ~~et~~ dolore magna aliqua. Ut enim
-    ad minim veniam, quis nostrud exercitation
-    2. Lorem ipsum dolor sit amet, consectetur __adipiscing elit, sed__ do
-    eiusmod tempor incididunt _ut_ labore ~~et~~ dolore magna aliqua. Ut enim
-    ad minim veniam, quis nostrud exercitation
-        - Lorem ipsum dolor sit amet, consectetur __adipiscing elit, sed__ do
-        eiusmod tempor incididunt _ut_ labore ~~et~~ dolore magna aliqua. Ut enim
-        ad minim veniam, quis nostrud exercitation
-
-
-
-"#
-                );
-
-                // or from a file like include_str!
+                // TODO: This will probably break if this is not called ui
                 commonmark_str!(
                     "n2",
                     ui,
