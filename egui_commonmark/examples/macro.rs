@@ -29,6 +29,49 @@ impl eframe::App for App {
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/hello_world.md"
                 );
+                commonmark!("n4", ui, &mut self.cache, "------------");
+
+                commonmark_str!(
+                    "n3",
+                    ui,
+                    &mut self.cache,
+                    "egui_commonmark/examples/markdown/headers.md"
+                );
+                commonmark!("n5", ui, &mut self.cache, "------------");
+
+                commonmark_str!(
+                    "n6",
+                    ui,
+                    &mut self.cache,
+                    "egui_commonmark/examples/markdown/lists.md"
+                );
+
+                commonmark!("n6", ui, &mut self.cache, "------------");
+
+                commonmark_str!(
+                    "n7",
+                    ui,
+                    &mut self.cache,
+                    "egui_commonmark/examples/markdown/code-blocks.md"
+                );
+
+                commonmark!("n8", ui, &mut self.cache, "------------");
+
+                commonmark_str!(
+                    "n9",
+                    ui,
+                    &mut self.cache,
+                    "egui_commonmark/examples/markdown/blockquotes.md"
+                );
+
+                commonmark!("n10", ui, &mut self.cache, "------------");
+
+                commonmark_str!(
+                    "n11",
+                    ui,
+                    &mut self.cache,
+                    "egui_commonmark/examples/markdown/tables.md"
+                );
             });
         });
     }
