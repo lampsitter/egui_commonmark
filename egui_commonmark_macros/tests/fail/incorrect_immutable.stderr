@@ -1,0 +1,16 @@
+error[E0308]: mismatched types
+ --> tests/fail/incorrect_immutable.rs:7:30
+  |
+7 |         commonmark!("a", ui, &cache, "# Hello");
+  |         ---------------------^^^^^^------------
+  |         |                    |
+  |         |                    types differ in mutability
+  |         arguments to this function are incorrect
+  |
+  = note: expected mutable reference `&mut CommonMarkCache`
+                     found reference `&CommonMarkCache`
+note: function defined here
+ --> $WORKSPACE/egui_commonmark_shared/src/misc.rs
+  |
+  | pub fn prepare_show(cache: &mut CommonMarkCache, ctx: &egui::Context) {
+  |        ^^^^^^^^^^^^
