@@ -14,8 +14,10 @@ include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 rust-version = "1.76" # Required by egui
 
 [dependencies]
-egui_extras = "0.27"
-egui.version = "0.27"
+egui_commonmark_shared = { path = "../egui_commonmark_shared" }
+
+egui_extras = { workspace = true }
+egui = { workspace = true }
 
 syntect = { version = "5.0.0", optional = true, default-features = false, features = [
     "default-fancy",
@@ -29,10 +31,10 @@ pulldown-cmark = { version = "0.10", default-features = false, optional = true }
 [features]
 default = ["load-images", "pulldown_cmark"]
 
-pulldown_cmark = ["dep:pulldown-cmark"]
+pulldown_cmark = ["dep:pulldown-cmark", "egui_commonmark_shared/pulldown-cmark"]
 comrak = ["dep:comrak"]
 ## Syntax highlighting for code blocks using syntect
-better_syntax_highlighting = ["syntect"]
+better_syntax_highlighting = ["dep:syntect", "egui_commonmark_shared/better_syntax_highlighting"]
 
 ## Enable loading of images. Make sure to also opt in to what image format you need
 ## through the image crate.

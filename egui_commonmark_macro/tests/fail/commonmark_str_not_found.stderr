@@ -1,0 +1,5 @@
+error: Could not find markdown file
+ --> tests/fail/commonmark_str_not_found.rs:8:46
+  |
+8 |         commonmark_str!("a", ui, &mut cache, "foo.md");
+  |                                              ^^^^^^^^

@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "egui_commonmark",
-    "egui_commonmark_macro"
+    "egui_commonmark_macro",
+    "egui_commonmark_shared"
 ]
 
 resolver = "2"
