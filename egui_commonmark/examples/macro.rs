@@ -78,11 +78,6 @@ impl eframe::App for App {
     }
 }
 
-#[cfg(feature = "comrak")]
-const BACKEND: &str = "comrak";
-#[cfg(feature = "pulldown_cmark")]
-const BACKEND: &str = "pulldown_cmark";
-
 fn main() {
     let mut args = std::env::args();
     args.next();
@@ -97,7 +92,7 @@ fn main() {
     };
 
     eframe::run_native(
-        &format!("Markdown viewer (backend '{}')", BACKEND),
+        "Markdown viewer",
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
             cc.egui_ctx.set_visuals(if use_dark_theme {
