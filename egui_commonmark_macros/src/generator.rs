@@ -6,8 +6,9 @@ use std::ops::Range;
 
 use egui_commonmark_shared::{
     alerts::{Alert, AlertBundle},
+    misc::{CommonMarkCache, Style},
     pulldown::*,
-    CommonMarkCache, CommonMarkOptions, FencedCodeBlock, Image, Style,
+    CommonMarkOptions, FencedCodeBlock, Image,
 };
 
 use egui::{self, Id, Pos2, TextStyle, Ui, Vec2};
