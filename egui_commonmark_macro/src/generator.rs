@@ -41,10 +41,7 @@ impl List {
         !self.items.is_empty()
     }
 
-    pub fn start_item(
-        &mut self,
-        options: &egui_commonmark::CommonMarkOptions,
-    ) -> TokenStream {
+    pub fn start_item(&mut self, options: &egui_commonmark::CommonMarkOptions) -> TokenStream {
         let mut stream = TokenStream::new();
         let len = self.items.len();
         if let Some(item) = self.items.last_mut() {
@@ -299,6 +296,11 @@ pub(crate) struct CommonMarkViewerInternal {
     pub is_table: bool,
     pub is_blockquote: bool,
     pub checkbox_events: Vec<CheckboxClickEvent>,
+
+    /// Informs that a calculation of heading sizes is required.
+    /// This will dump min and max text size at the top of the macro output
+    /// to reduce code duplication.
+    pub dumps_heading: bool,
 }
 
 pub(crate) struct CheckboxClickEvent {
@@ -321,6 +323,7 @@ impl CommonMarkViewerInternal {
             is_table: false,
             is_blockquote: false,
             checkbox_events: Vec::new(),
+            dumps_heading: false,
         }
     }
 }
@@ -336,16 +339,13 @@ impl CommonMarkViewerInternal {
 
         let mut event_stream = TokenStream::new();
         while let Some((index, (e, src_span))) = events.next() {
-            let e = self.process_event( &mut events, e, src_span, &cache, &options, 500.0);
+            let e = self.process_event(&mut events, e, src_span, &cache, &options, 500.0);
             event_stream.extend(e);
         }
 
         // FIXME: max_width
 
-        // we manually rename #ui to ui to prevent borrowing issues if #ui is not named ui and
-        // there is a different ui also in scope that is called ui
         stream.extend(quote!(
-            let ui: &mut egui::Ui = #ui;
             (#cache).prepare_show(ui.ctx());
             let options = CommonMarkOptions::default();
             let max_width = options.max_width(ui);
@@ -360,8 +360,22 @@ impl CommonMarkViewerInternal {
 
         ));
 
+        let heights = if self.dumps_heading {
+            dump_heading_heights()
+        } else {
+            TokenStream::new()
+        };
+
         // Place all code within a block to prevent it from leaking into unrelated code
-        quote!({#stream}).into()
+        //
+        // we manually rename #ui to ui to prevent borrowing issues if #ui is not named ui and
+        // there is a different ui also in scope that is called ui
+        quote!({
+            let ui: &mut egui::Ui = #ui;
+            #heights
+            #stream
+        })
+        .into()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -579,8 +593,8 @@ impl CommonMarkViewerInternal {
         max_width: f32,
     ) -> TokenStream {
         match event {
-            pulldown_cmark::Event::Start(tag) => self.start_tag( tag, options),
-            pulldown_cmark::Event::End(tag) => self.end_tag( tag, cache, options, max_width),
+            pulldown_cmark::Event::Start(tag) => self.start_tag(tag, options),
+            pulldown_cmark::Event::End(tag) => self.end_tag(tag, cache, options, max_width),
             pulldown_cmark::Event::Text(text) => self.event_text(text),
             pulldown_cmark::Event::Code(text) => {
                 self.text_style.code = true;
@@ -629,7 +643,7 @@ impl CommonMarkViewerInternal {
             link.text
                 .push(StyledText::new(self.text_style.clone(), text.to_string()));
         } else {
-            let rich_text = to_richtext_tokenstream(&self.text_style, &text);
+            let rich_text = self.to_richtext_tokenstream(&self.text_style.clone(), &text);
             return quote!(
                 ui.label(#rich_text);
             );
@@ -638,11 +652,7 @@ impl CommonMarkViewerInternal {
         TokenStream::new()
     }
 
-    fn start_tag(
-        &mut self,
-        tag: pulldown_cmark::Tag,
-        options: &CommonMarkOptions,
-    ) -> TokenStream {
+    fn start_tag(&mut self, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) -> TokenStream {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 let s = if self.should_insert_newline {
@@ -830,7 +840,7 @@ impl CommonMarkViewerInternal {
                     if !alt_text.is_empty() && options.show_alt_text_on_hover {
                         let mut alt_text_stream = TokenStream::new();
                         for alt in alt_text {
-                            let text = to_richtext_tokenstream(&alt.style, &alt.text);
+                            let text = self.to_richtext_tokenstream(&alt.style, &alt.text);
                             alt_text_stream.extend(quote!(ui.label(#text);));
                         }
 
@@ -873,74 +883,81 @@ impl CommonMarkViewerInternal {
 
         stream
     }
+
+    fn to_richtext_tokenstream(&mut self, s: &Style, text: &str) -> TokenStream {
+        // Try to write a compact stream
+
+        let mut stream = TokenStream::new();
+        if let Some(level) = s.heading {
+            stream.extend(quote!(egui::RichText::new(#text)));
+
+            match level {
+                0 => {
+                    // no dumps_heading here as it does not depend on min_height and diff
+                    stream.extend(quote!(.strong().heading()));
+                }
+                1 => {
+                    self.dumps_heading = true;
+                    stream.extend(quote!(.strong().size(min_height + diff * 0.835)));
+                }
+                2 => {
+                    self.dumps_heading = true;
+                    stream.extend(quote!(.strong().size(min_height + diff * 0.668)));
+                }
+                3 => {
+                    self.dumps_heading = true;
+                    stream.extend(quote!(.strong().size(min_height + diff * 0.501)));
+                }
+                4 => {
+                    self.dumps_heading = true;
+                    stream.extend(quote!(.size(min_height + diff * 0.334)));
+                }
+                // We only support 6 levels
+                5.. => {
+                    self.dumps_heading = true;
+                    stream.extend(quote!(.size(min_height + diff * 0.167)));
+                }
+            }
+        } else {
+            stream.extend(quote!(egui::RichText::new(#text)));
+        }
+
+        if s.quote {
+            stream.extend(quote!(.weak()));
+        }
+
+        if s.strong {
+            stream.extend(quote!(.strong()));
+        }
+
+        if s.emphasis {
+            stream.extend(quote!(.italics()));
+        }
+
+        if s.strikethrough {
+            stream.extend(quote!(.strikethrough()));
+        }
+
+        if s.code {
+            stream.extend(quote!(.code()));
+        }
+
+        stream
+    }
 }
 
-fn to_richtext_tokenstream(s: &Style, text: &str) -> TokenStream {
-    // Try to write a compact stream
-
-    let mut stream = TokenStream::new();
-    if let Some(level) = s.heading {
-        // FIXME: Write at top to reduce code duplication
-        stream.extend(quote!(
-        let max_height = ui
-            .style()
-            .text_styles
-            .get(&egui::TextStyle::Heading)
-            .map_or(32.0, |d| d.size);
-        let min_height = ui
-            .style()
-            .text_styles
-            .get(&egui::TextStyle::Body)
-            .map_or(14.0, |d| d.size);
-        let diff = max_height - min_height;
-        ));
-
-        stream.extend(quote!(egui::RichText::new(#text)));
-
-        match level {
-            0 => {
-                stream.extend(quote!(.strong().heading()));
-            }
-            1 => {
-                stream.extend(quote!(.strong().size(min_height + diff * 0.835)));
-            }
-            2 => {
-                stream.extend(quote!(.strong().size(min_height + diff * 0.668)));
-            }
-            3 => {
-                stream.extend(quote!(.strong().size(min_height + diff * 0.501)));
-            }
-            4 => {
-                stream.extend(quote!(.size(min_height + diff * 0.334)));
-            }
-            // We only support 6 levels
-            5.. => {
-                stream.extend(quote!(.size(min_height + diff * 0.167)));
-            }
-        }
-    } else {
-        stream.extend(quote!(egui::RichText::new(#text)));
-    }
-
-    if s.quote {
-        stream.extend(quote!(.weak()));
-    }
-
-    if s.strong {
-        stream.extend(quote!(.strong()));
-    }
-
-    if s.emphasis {
-        stream.extend(quote!(.italics()));
-    }
-
-    if s.strikethrough {
-        stream.extend(quote!(.strikethrough()));
-    }
-
-    if s.code {
-        stream.extend(quote!(.code()));
-    }
-
-    quote!({#stream})
+fn dump_heading_heights() -> TokenStream {
+    quote!(
+    let max_height = ui
+        .style()
+        .text_styles
+        .get(&egui::TextStyle::Heading)
+        .map_or(32.0, |d| d.size);
+    let min_height = ui
+        .style()
+        .text_styles
+        .get(&egui::TextStyle::Body)
+        .map_or(14.0, |d| d.size);
+    let diff = max_height - min_height;
+    )
 }
