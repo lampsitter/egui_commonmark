@@ -1,7 +1,6 @@
 mod generator;
 use generator::*;
 
-use proc_macro::TokenStream;
 use quote::quote_spanned;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::{parse_macro_input, Expr, LitStr, Token};
@@ -34,7 +33,7 @@ impl Parse for Parameters {
     }
 }
 
-fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> TokenStream {
+fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> proc_macro2::TokenStream {
     let stream = CommonMarkViewerInternal::new(id.into()).show(ui, cache, &text);
 
     #[cfg(feature = "dump-macro")]
@@ -49,7 +48,7 @@ fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> TokenStre
 }
 
 #[proc_macro]
-pub fn commonmark(input: TokenStream) -> TokenStream {
+pub fn commonmark(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let Parameters {
         id,
         ui,
@@ -58,11 +57,11 @@ pub fn commonmark(input: TokenStream) -> TokenStream {
         markdown,
     } = parse_macro_input!(input as Parameters);
 
-    commonmark_impl(id.value(), ui, cache, markdown.value())
+    commonmark_impl(id.value(), ui, cache, markdown.value()).into()
 }
 
 #[proc_macro]
-pub fn commonmark_str(input: TokenStream) -> TokenStream {
+pub fn commonmark_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let Parameters {
         id,
         ui,
@@ -80,5 +79,12 @@ pub fn commonmark_str(input: TokenStream) -> TokenStream {
         .into();
     };
 
-    commonmark_impl(id.value(), ui, cache, md)
+    commonmark_impl(id.value(), ui, cache, md).into()
+}
+
+#[test]
+fn tests() {
+    let t = trybuild::TestCases::new();
+    t.pass("tests/pass/*.rs");
+    t.compile_fail("tests/fail/*.rs");
 }

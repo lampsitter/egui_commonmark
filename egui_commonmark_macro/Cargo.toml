@@ -19,12 +19,15 @@ proc-macro = true
 [dependencies]
 syn = "2"
 quote = { version = "1", default-features = false }
-proc-macro2 = "1"
+proc-macro2 = { version = "1", default-features = false }
 
 pulldown-cmark = { version = "0.10", default-features = false }
 
-egui_commonmark = { path = "../egui_commonmark" }
+egui_commonmark_shared = { path = "../egui_commonmark_shared", features = ["pulldown-cmark"] }
 egui = { workspace = true }
+
+[dev-dependencies]
+trybuild = "1.0"
 
 [features]
 #! Internal Debugging tool only!
