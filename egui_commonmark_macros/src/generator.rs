@@ -291,12 +291,12 @@ impl CommonMarkViewerInternal {
                 let a = accent_color.a();
                 // FIXME: Figure out what rgba function to use
                 stream.extend(quote!(
-                egui_commonmark_shared::Alert {
+                ::egui_commonmark_shared::alert_ui(&egui_commonmark_shared::Alert {
                     accent_color: egui::Color32::from_rgba_premultiplied(#r, #g, #b, #a),
                     icon: #icon,
                     identifier: #identifier.to_owned(),
                     identifier_rendered: #identifier_rendered.to_owned()
-                }.ui(ui, |ui| {
+                }, ui, |ui| {
                     #inner
                 });));
             } else {

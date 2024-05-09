@@ -15,6 +15,7 @@ rust-version = "1.76" # Required by egui
 
 [dependencies]
 egui_commonmark_shared = { path = "../egui_commonmark_shared" }
+egui_commonmark_macros = { path = "../egui_commonmark_macros", optional = true }
 
 egui_extras = { workspace = true }
 egui = { workspace = true }
@@ -30,6 +31,9 @@ pulldown-cmark = { version = "0.10", default-features = false, optional = true }
 
 [features]
 default = ["load-images", "pulldown_cmark"]
+
+## Enable proc macros for compile time generation of egui widgets from markdowns
+macro = ["dep:egui_commonmark_macros", "dep:pulldown-cmark"] # For simplicity it only support pulldown-cmark
 
 pulldown_cmark = ["dep:pulldown-cmark", "egui_commonmark_shared/pulldown-cmark"]
 comrak = ["dep:comrak"]

@@ -32,14 +32,18 @@ use egui::{self, Id};
 
 mod parsers;
 
+pub use egui_commonmark_shared::alerts::{Alert, AlertBundle};
 pub use egui_commonmark_shared::CommonMarkCache;
-use egui_commonmark_shared::*;
 
 #[cfg(all(feature = "comrak", feature = "pulldown_cmark"))]
 compile_error!("Cannot have multiple different parsing backends enabled at the same time");
 
 #[cfg(not(any(feature = "comrak", feature = "pulldown_cmark")))]
 compile_error!("Either the pulldown_cmark or comrak backend must be enabled");
+
+#[cfg(feature = "macro")]
+pub use egui_commonmark_shared;
+use egui_commonmark_shared::*;
 
 #[derive(Debug)]
 pub struct CommonMarkViewer {

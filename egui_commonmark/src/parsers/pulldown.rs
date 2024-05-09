@@ -8,6 +8,7 @@ use crate::{CommonMarkCache, CommonMarkOptions};
 use egui::{self, Id, Pos2, TextStyle, Ui};
 
 use egui_commonmark_shared::pulldown::*;
+use egui_commonmark_shared::scroll_cache;
 use pulldown_cmark::{CowStr, HeadingLevel};
 
 pub struct CommonMarkViewerInternal {
@@ -79,7 +80,7 @@ impl CommonMarkViewerInternal {
                 self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
                 if populate_split_points && should_add_split_point {
-                    let scroll_cache = cache.scroll(&self.source_id);
+                    let scroll_cache = scroll_cache(cache, &self.source_id);
                     let end_position = ui.next_widget_position();
 
                     let split_point_exists = scroll_cache
@@ -95,7 +96,8 @@ impl CommonMarkViewerInternal {
                 }
             }
 
-            cache.scroll(&self.source_id).page_size = Some(ui.next_widget_position().to_vec2());
+            scroll_cache(cache, &self.source_id).page_size =
+                Some(ui.next_widget_position().to_vec2());
         });
         (re, std::mem::take(&mut self.checkbox_events))
     }
@@ -110,7 +112,7 @@ impl CommonMarkViewerInternal {
         let available_size = ui.available_size();
         let scroll_id = self.source_id.with("_scroll_area");
 
-        let Some(page_size) = cache.scroll(&self.source_id).page_size else {
+        let Some(page_size) = scroll_cache(cache, &self.source_id).page_size else {
             egui::ScrollArea::vertical()
                 .id_source(scroll_id)
                 .auto_shrink([false, true])
@@ -118,7 +120,7 @@ impl CommonMarkViewerInternal {
                     self.show(ui, cache, options, text, true);
                 });
             // Prevent repopulating points twice at startup
-            cache.scroll(&self.source_id).available_size = available_size;
+            scroll_cache(cache, &self.source_id).available_size = available_size;
             return;
         };
 
@@ -141,7 +143,7 @@ impl CommonMarkViewerInternal {
                 let max_width = options.max_width(ui);
                 ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
-                    let scroll_cache = cache.scroll(&self.source_id);
+                    let scroll_cache = scroll_cache(cache, &self.source_id);
 
                     // finding the first element that's not in the viewport anymore
                     let (first_event_index, _, first_end_position) = scroll_cache
@@ -177,7 +179,7 @@ impl CommonMarkViewerInternal {
             });
 
         // Forcing full re-render to repopulate split points for the new size
-        let scroll_cache = cache.scroll(&self.source_id);
+        let scroll_cache = scroll_cache(cache, &self.source_id);
         if available_size != scroll_cache.available_size {
             scroll_cache.available_size = available_size;
             scroll_cache.page_size = None;
@@ -252,7 +254,7 @@ impl CommonMarkViewerInternal {
             }
 
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
-                alert.ui(ui, |ui| {
+                egui_commonmark_shared::alert_ui(&alert, ui, |ui| {
                     for (event, src_span) in collected_events.into_iter() {
                         self.event(ui, event, src_span, cache, options, max_width);
                     }

@@ -14,18 +14,17 @@ pub struct Alert {
     pub identifier_rendered: String,
 }
 
-impl Alert {
-    pub fn ui(&self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
-        blockquote(ui, self.accent_color, |ui| {
-            newline(ui);
-            ui.colored_label(self.accent_color, self.icon.to_string());
-            ui.add_space(3.0);
-            ui.colored_label(self.accent_color, &self.identifier_rendered);
-            // end line
-            newline(ui);
-            add_contents(ui);
-        })
-    }
+// Seperate function to not leak into the public API
+pub fn alert_ui(alert: &Alert, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
+    blockquote(ui, alert.accent_color, |ui| {
+        newline(ui);
+        ui.colored_label(alert.accent_color, alert.icon.to_string());
+        ui.add_space(3.0);
+        ui.colored_label(alert.accent_color, &alert.identifier_rendered);
+        // end line
+        newline(ui);
+        add_contents(ui);
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -50,10 +49,6 @@ impl AlertBundle {
         // a new bundle with from_alerts after a potential modification
 
         self.alerts.into_values().collect::<Vec<_>>()
-    }
-
-    pub fn try_get_alert(&self, text: &str) -> Option<&Alert> {
-        self.alerts.get(&text.to_uppercase())
     }
 
     pub fn empty() -> Self {
@@ -105,4 +100,8 @@ impl AlertBundle {
     pub fn is_empty(&self) -> bool {
         self.alerts.is_empty()
     }
+}
+
+pub fn try_get_alert<'a>(bundle: &'a AlertBundle, text: &str) -> Option<&'a Alert> {
+    bundle.alerts.get(&text.to_uppercase())
 }

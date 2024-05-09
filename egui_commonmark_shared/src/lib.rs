@@ -521,14 +521,14 @@ impl CommonMarkCache {
             // Since we have called load_defaults, the default theme *should* always be available..
             .unwrap_or_else(|| &self.ts.themes[default_theme(ui)])
     }
+}
 
-    #[cfg(feature = "pulldown-cmark")]
-    pub fn scroll(&mut self, id: &egui::Id) -> &mut ScrollableCache {
-        if !self.scroll.contains_key(id) {
-            self.scroll.insert(*id, Default::default());
-        }
-        self.scroll.get_mut(id).unwrap()
+#[cfg(feature = "pulldown-cmark")]
+pub fn scroll_cache<'a>(cache: &'a mut CommonMarkCache, id: &egui::Id) -> &'a mut ScrollableCache {
+    if !cache.scroll.contains_key(id) {
+        cache.scroll.insert(*id, Default::default());
     }
+    cache.scroll.get_mut(id).unwrap()
 }
 
 /// Should be called before any rendering
