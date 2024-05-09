@@ -1,3 +1,4 @@
+use crate::misc::CommonMarkOptions;
 use egui::{self, epaint, NumExt, RichText, Sense, TextStyle, Ui, Vec2};
 
 pub fn soft_break(ui: &mut Ui) {
@@ -243,7 +244,7 @@ impl List {
         !self.items.is_empty()
     }
 
-    pub fn start_item(&mut self, ui: &mut Ui, options: &crate::CommonMarkOptions) {
+    pub fn start_item(&mut self, ui: &mut Ui, options: &CommonMarkOptions) {
         let len = self.items.len();
         if let Some(item) = self.items.last_mut() {
             newline(ui);

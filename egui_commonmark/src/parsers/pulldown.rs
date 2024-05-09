@@ -2,24 +2,24 @@
 
 use std::ops::Range;
 
-use crate::elements::*;
 use crate::{CommonMarkCache, CommonMarkOptions};
 
 use egui::{self, Id, Pos2, TextStyle, Ui};
 
+use egui_commonmark_shared::elements::*;
+use egui_commonmark_shared::misc::*;
 use egui_commonmark_shared::pulldown::*;
-use egui_commonmark_shared::scroll_cache;
 use pulldown_cmark::{CowStr, HeadingLevel};
 
 pub struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
-    text_style: crate::Style,
+    text_style: Style,
     list: List,
-    link: Option<crate::Link>,
-    image: Option<crate::Image>,
+    link: Option<Link>,
+    image: Option<Image>,
     should_insert_newline: bool,
-    fenced_code_block: Option<crate::FencedCodeBlock>,
+    fenced_code_block: Option<FencedCodeBlock>,
     is_list_item: bool,
     is_table: bool,
     is_blockquote: bool,
@@ -36,7 +36,7 @@ impl CommonMarkViewerInternal {
         Self {
             source_id,
             curr_table: 0,
-            text_style: crate::Style::default(),
+            text_style: Style::default(),
             list: List::default(),
             link: None,
             image: None,
