@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use egui::{self, text::LayoutJob, Id, RichText, TextStyle, Ui};
 
 mod alerts;
-mod elements;
+pub mod elements;
 mod parsers;
 
 pub use alerts::*;
@@ -210,7 +210,7 @@ impl CommonMarkCache {
     }
 
     #[cfg(feature = "pulldown_cmark")]
-    fn scroll(&mut self, id: &Id) -> &mut ScrollableCache {
+    pub fn scroll(&mut self, id: &Id) -> &mut ScrollableCache {
         if !self.scroll.contains_key(id) {
             self.scroll.insert(*id, Default::default());
         }
@@ -240,20 +240,20 @@ const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
 const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
 #[derive(Debug)]
-struct CommonMarkOptions {
-    indentation_spaces: usize,
-    max_image_width: Option<usize>,
-    show_alt_text_on_hover: bool,
-    default_width: Option<usize>,
+pub struct CommonMarkOptions {
+    pub indentation_spaces: usize,
+    pub max_image_width: Option<usize>,
+    pub show_alt_text_on_hover: bool,
+    pub default_width: Option<usize>,
     #[cfg(feature = "better_syntax_highlighting")]
-    theme_light: String,
+    pub theme_light: String,
     #[cfg(feature = "better_syntax_highlighting")]
     theme_dark: String,
-    use_explicit_uri_scheme: bool,
-    default_implicit_uri_scheme: String,
-    alerts: AlertBundle,
+    pub use_explicit_uri_scheme: bool,
+    pub default_implicit_uri_scheme: String,
+    pub alerts: AlertBundle,
     /// Whether to present a mutable ui for things like checkboxes
-    mutable: bool,
+    pub mutable: bool,
 }
 
 impl Default for CommonMarkOptions {
@@ -285,7 +285,7 @@ impl CommonMarkOptions {
         }
     }
 
-    fn max_width(&self, ui: &Ui) -> f32 {
+    pub fn max_width(&self, ui: &Ui) -> f32 {
         let max_image_width = self.max_image_width.unwrap_or(0) as f32;
         let available_width = ui.available_width();
 
@@ -483,17 +483,17 @@ impl CommonMarkViewer {
 }
 
 #[derive(Default)]
-struct Style {
-    heading: Option<u8>,
-    strong: bool,
-    emphasis: bool,
-    strikethrough: bool,
-    quote: bool,
-    code: bool,
+pub struct Style {
+    pub heading: Option<u8>,
+    pub strong: bool,
+    pub emphasis: bool,
+    pub strikethrough: bool,
+    pub quote: bool,
+    pub code: bool,
 }
 
 impl Style {
-    fn to_richtext(&self, ui: &Ui, text: &str) -> RichText {
+    pub fn to_richtext(&self, ui: &Ui, text: &str) -> RichText {
         let mut text = RichText::new(text);
 
         if let Some(level) = self.heading {
@@ -563,13 +563,13 @@ impl Style {
 }
 
 #[derive(Default)]
-struct Link {
-    destination: String,
-    text: Vec<RichText>,
+pub struct Link {
+    pub destination: String,
+    pub text: Vec<RichText>,
 }
 
 impl Link {
-    fn end(self, ui: &mut Ui, cache: &mut CommonMarkCache) {
+    pub fn end(self, ui: &mut Ui, cache: &mut CommonMarkCache) {
         let Self { destination, text } = self;
 
         let mut layout_job = LayoutJob::default();
@@ -592,9 +592,9 @@ impl Link {
     }
 }
 
-struct Image {
-    uri: String,
-    alt_text: Vec<RichText>,
+pub struct Image {
+    pub uri: String,
+    pub alt_text: Vec<RichText>,
 }
 
 impl Image {
@@ -614,7 +614,7 @@ impl Image {
         }
     }
 
-    fn end(self, ui: &mut Ui, options: &CommonMarkOptions) {
+    pub fn end(self, ui: &mut Ui, options: &CommonMarkOptions) {
         let response = ui.add(
             egui::Image::from_uri(&self.uri)
                 .fit_to_original_size(1.0)
@@ -631,13 +631,13 @@ impl Image {
     }
 }
 
-struct FencedCodeBlock {
-    lang: String,
-    content: String,
+pub struct FencedCodeBlock {
+    pub lang: String,
+    pub content: String,
 }
 
 impl FencedCodeBlock {
-    fn end(
+    pub fn end(
         &self,
         ui: &mut Ui,
         cache: &mut CommonMarkCache,
