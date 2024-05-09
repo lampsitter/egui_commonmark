@@ -1,3 +1,71 @@
+//! Compile time evalation of markdown that generates egui widgets
+//!
+//! It is recommended to use this crate through the parent crate
+//! [egui_commonmark](https://docs.rs/crate/egui_commonmark/latest).
+//! If you for some reason don't want to use it you must also import
+//! [egui_commonmark_shared](https://docs.rs/crate/egui_commonmark_shared/latest)
+//! directly from your crate to get access to `CommonMarkCache` and internals that
+//! the macros require for the final generated code.
+//!
+//! ## API
+//! ### Embedding markdown text directly
+//!
+//! The macro has the following format:
+//!
+//! commonmark!(id, ui, cache, text);
+//!
+//! #### Example
+//!
+//! ```
+//! // If used through egui_commonmark the shared crate does not need to be relied upon
+//! # use egui_commonmark_shared::CommonMarkCache;
+//! # use egui_commonmark_macros::commonmark;
+//! # egui::__run_test_ui(|ui| {
+//! let mut cache = CommonMarkCache::default();
+//! let _response = commonmark!("example", ui, &mut cache, "# ATX Heading Level 1");
+//! # });
+//! ```
+//!
+//! As you can see it also returns a response like most other egui widgets.
+//!
+//! ### Embedding markdown file
+//!
+//! The macro has the exact same format as the `commonmark!` macro:
+//!
+//! commonmark_str!(id, ui, cache, file_path);
+//!
+//! #### Example
+//!
+// Unfortunately can't depend on an actual file in the doc test so i must be
+// disabled
+//! ```rust,ignore
+//! # use egui_commonmark_shared::CommonMarkCache;
+//! # use egui_commonmark_macros::commonmark_str;
+//! # egui::__run_test_ui(|ui| {
+//! let mut cache = CommonMarkCache::default();
+//! commonmark_str!("example", ui, &mut cache, "foo.md");
+//! # });
+//! ```
+//!
+//! ## Limitations
+//!
+//! Compared to it's runtime counterpart egui_commonmark it currently does not
+//! offer customization. This is something that will be addressed eventually once
+//! a good API has been chosen.
+//!
+//! ## What this crate is not
+//!
+//! This crate does not have as goal to make widgets that can be interacted with
+//! through code.
+//!
+//! ```rust,ignore
+//! let ... = commonmark!("example", ui, &mut cache, "- [ ] Task List");
+//! if task_list.is_checked() {
+//!   // No!!
+//! }
+//! ```
+//!
+//! For that you should fall back to normal egui widgets
 mod generator;
 use generator::*;
 

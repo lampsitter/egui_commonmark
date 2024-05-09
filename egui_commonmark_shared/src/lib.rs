@@ -1,5 +1,6 @@
 //! Shared code for egui_commonmark and egui_commonmark_macro. Breaking changes will happen and
-//! should not be relied upon directly
+//! should ideally not be relied upon. Only items that can been seen in this documentation
+//! can be safely used directly.
 
 #[doc(hidden)]
 pub mod alerts;
@@ -17,5 +18,8 @@ pub use {
     alerts::{alert_ui, Alert, AlertBundle},
     // Pretty much every single element in this module is used by the proc macros
     elements::*,
-    misc::{prepare_show, CommonMarkCache, CommonMarkOptions, FencedCodeBlock, Image, Link},
+    misc::{prepare_show, CommonMarkOptions, FencedCodeBlock, Image, Link},
 };
+
+// The only struct that is allowed to use directly. (If one does not need egui_commonmark)
+pub use misc::CommonMarkCache;
