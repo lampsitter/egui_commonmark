@@ -1,0 +1,8 @@
+error[E0308]: mismatched types
+ --> tests/fail/incorrect_type.rs:7:22
+  |
+7 |     commonmark!("a", x, &mut cache, "# Hello");
+  |     -----------------^------------------------
+  |     |                |
+  |     |                expected `&mut Ui`, found integer
+  |     expected due to this
