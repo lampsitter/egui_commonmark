@@ -18,6 +18,7 @@ impl eframe::App for App {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // Embed text directly
                 commonmark!(
+                    "n1",
                     ui,
                     &mut self.cache,
                     r#"
@@ -60,9 +61,10 @@ fn main() {
                 );
                 // or from a file like include_str!
                 commonmark_str!(
+                    "n2",
                     ui,
                     &mut self.cache,
-                    "egui_commonmark/examples/markdown/hello_world.md"
+                    "egui_commonmark/examples/markdown/lists.md"
                 );
             });
         });
