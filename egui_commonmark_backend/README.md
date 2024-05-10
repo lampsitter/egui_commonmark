@@ -1,6 +1,6 @@
 # A commonmark viewer for [egui](https://github.com/emilk/egui)
 
-[![Crate](https://img.shields.io/crates/v/egui_commonmark_shared.svg)](https://crates.io/crates/egui_commonmark_shared)
+[![Crate](https://img.shields.io/crates/v/egui_commonmark_backend.svg)](https://crates.io/crates/egui_commonmark_backend)
 
 This contains shared code between the crates `egui_commonmark` and `egui_commonmark_macros`.
 See [egui_commonmark](https://github.com/lampsitter/egui_commonmark) as a starting point.

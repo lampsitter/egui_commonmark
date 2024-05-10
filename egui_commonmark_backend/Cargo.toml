@@ -1,5 +1,5 @@
 [package]
-name = "egui_commonmark_shared"
+name = "egui_commonmark_backend"
 authors = ["Erlend Walstad"]
 
 version.workspace = true
@@ -12,7 +12,7 @@ description = "Shared code for egui_commonmark and egui_commonmark_macro"
 keywords = ["commonmark", "egui"]
 categories = ["gui"]
 readme = "README.md"
-documentation = "https://docs.rs/egui_commonmark_shared"
+documentation = "https://docs.rs/egui_commonmark_backend"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]

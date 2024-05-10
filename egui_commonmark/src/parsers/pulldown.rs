@@ -6,9 +6,9 @@ use crate::{CommonMarkCache, CommonMarkOptions};
 
 use egui::{self, Id, Pos2, TextStyle, Ui};
 
-use egui_commonmark_shared::elements::*;
-use egui_commonmark_shared::misc::*;
-use egui_commonmark_shared::pulldown::*;
+use egui_commonmark_backend::elements::*;
+use egui_commonmark_backend::misc::*;
+use egui_commonmark_backend::pulldown::*;
 use pulldown_cmark::{CowStr, HeadingLevel};
 
 pub struct CommonMarkViewerInternal {
@@ -254,7 +254,7 @@ impl CommonMarkViewerInternal {
             }
 
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
-                egui_commonmark_shared::alert_ui(alert, ui, |ui| {
+                egui_commonmark_backend::alert_ui(alert, ui, |ui| {
                     for (event, src_span) in collected_events.into_iter() {
                         self.event(ui, event, src_span, cache, options, max_width);
                     }

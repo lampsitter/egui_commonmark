@@ -2,7 +2,7 @@
 members = [
     "egui_commonmark",
     "egui_commonmark_macros",
-    "egui_commonmark_shared"
+    "egui_commonmark_backend"
 ]
 
 resolver = "2"
@@ -19,12 +19,12 @@ repository = "https://github.com/lampsitter/egui_commonmark"
 egui_extras = "0.27"
 egui = "0.27"
 
-egui_commonmark_shared = { version = "0.15", default-features = false }
+egui_commonmark_backend = { version = "0.15", default-features = false }
 egui_commonmark_macros = { version = "0.15", default-features = false }
 
 # To add features to documentation
 document-features = { version = "0.2" }
 
 [patch.crates-io]
-egui_commonmark_shared = { path = "egui_commonmark_shared" }
+egui_commonmark_backend = { path = "egui_commonmark_backend" }
 egui_commonmark_macros = { path = "egui_commonmark_macros" }
