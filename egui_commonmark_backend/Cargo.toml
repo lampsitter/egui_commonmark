@@ -8,7 +8,7 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 
-description = "Shared code for egui_commonmark and egui_commonmark_macro"
+description = "Shared code for egui_commonmark and egui_commonmark_macros"
 keywords = ["commonmark", "egui"]
 categories = ["gui"]
 readme = "README.md"
