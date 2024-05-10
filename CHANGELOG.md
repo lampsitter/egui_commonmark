@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- `commonmark!` and `commonmark_str!` for compile time parsing of markdown. The
+  proc macros will output egui widgets directly into your code. To use this
+  enable the `macro` feature.
+
 ### Changed
 
 - MSRV bumped to 1.76
