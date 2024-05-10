@@ -84,7 +84,6 @@ struct Parameters {
     id: LitStr,
     ui: Expr,
     cache: Expr,
-    // options: Expr,
     markdown: LitStr,
 }
 
@@ -102,7 +101,6 @@ impl Parse for Parameters {
             id,
             ui,
             cache,
-            // options,
             markdown,
         })
     }
@@ -130,7 +128,6 @@ pub fn commonmark(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         id,
         ui,
         cache,
-        // options,
         markdown,
     } = parse_macro_input!(input as Parameters);
 
@@ -143,7 +140,6 @@ pub fn commonmark_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         id,
         ui,
         cache,
-        // options,
         markdown,
     } = parse_macro_input!(input as Parameters);
 
