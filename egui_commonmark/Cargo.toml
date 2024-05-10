@@ -22,7 +22,7 @@ egui_commonmark_macros = { workspace = true, optional = true }
 egui_extras = { workspace = true }
 egui = { workspace = true }
 
-document-features = { version = "0.2", optional = true }
+document-features = { workspace = true, optional = true }
 
 comrak = { version = "0.22.0", default-features = false, optional = true }
 pulldown-cmark = { version = "0.10", default-features = false, optional = true }

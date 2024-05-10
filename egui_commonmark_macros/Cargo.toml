@@ -29,12 +29,17 @@ pulldown-cmark = { version = "0.10", default-features = false }
 egui_commonmark_shared = { workspace = true, features = ["pulldown-cmark"] }
 egui = { workspace = true }
 
+document-features = { workspace = true, optional = true }
+
 [dev-dependencies]
 trybuild = "1.0"
 
 [features]
-## Internal Debugging tool only!
+# Internal Debugging tool only!
 dump-macro = []
 
 ## Enable tracking of markdown files to recompile when their content changes
 nightly = []
+
+[package.metadata.docs.rs]
+features = ["document-features"]

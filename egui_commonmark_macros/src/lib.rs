@@ -69,6 +69,8 @@
 //! ```
 //!
 //! For that you should fall back to normal egui widgets
+#![cfg_attr(feature = "document-features", doc = "# Features")]
+#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 #![cfg_attr(feature = "nightly", feature(track_path))]
 
 mod generator;
