@@ -1,17 +1,19 @@
 [package]
 name = "egui_commonmark_shared"
 authors = ["Erlend Walstad"]
-version = "0.15.0"
-edition = "2021"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
 description = "Shared code for egui_commonmark and egui_commonmark_macro"
 keywords = ["commonmark", "egui"]
 categories = ["gui"]
-license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/lampsitter/egui_commonmark"
-documentation = "https://docs.rs/egui_commonmark"
+documentation = "https://docs.rs/egui_commonmark_shared"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
-rust-version = "1.76" # Required by egui
 
 [dependencies]
 pulldown-cmark = { version = "0.10", default-features = false, optional = true }

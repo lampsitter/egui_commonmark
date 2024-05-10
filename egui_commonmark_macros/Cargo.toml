@@ -1,17 +1,20 @@
 [package]
 name = "egui_commonmark_macros"
 authors = ["Erlend Walstad"]
-version = "0.15.0"
-edition = "2021"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
 description = "Embed markdown directly into the binary as egui widgets"
 keywords = ["commonmark", "egui"]
 categories = ["gui"]
-license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/lampsitter/egui_commonmark"
-documentation = "https://docs.rs/egui_commonmark"
+documentation = "https://docs.rs/egui_commonmark_macros"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
-rust-version = "1.76" # Required by egui
+
 
 [lib]
 proc-macro = true
@@ -23,7 +26,7 @@ proc-macro2 = { version = "1", default-features = false }
 
 pulldown-cmark = { version = "0.10", default-features = false }
 
-egui_commonmark_shared = { path = "../egui_commonmark_shared", features = ["pulldown-cmark"] }
+egui_commonmark_shared = { workspace = true, features = ["pulldown-cmark"] }
 egui = { workspace = true }
 
 [dev-dependencies]

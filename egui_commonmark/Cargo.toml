@@ -1,21 +1,23 @@
 [package]
 name = "egui_commonmark"
 authors = ["Erlend Walstad"]
-version = "0.15.0"
-edition = "2021"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
 description = "Commonmark viewer for egui"
 keywords = ["commonmark", "egui"]
 categories = ["gui"]
-license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/lampsitter/egui_commonmark"
 documentation = "https://docs.rs/egui_commonmark"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
-rust-version = "1.76" # Required by egui
 
 [dependencies]
-egui_commonmark_shared = { path = "../egui_commonmark_shared" }
-egui_commonmark_macros = { path = "../egui_commonmark_macros", optional = true }
+egui_commonmark_shared = { workspace = true }
+egui_commonmark_macros = { workspace = true, optional = true }
 
 egui_extras = { workspace = true }
 egui = { workspace = true }
@@ -49,7 +51,7 @@ fetch = ["egui_extras/http"]
 [dev-dependencies]
 eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
 image = { version = "0.24", default-features = false, features = ["png"] }
-egui_commonmark_macros = { path = "../egui_commonmark_macros" }
+egui_commonmark_macros = { workspace = true } # Tests won't build otherswise
 
 [package.metadata.docs.rs]
 features = ["better_syntax_highlighting", "document-features", "macro"]
