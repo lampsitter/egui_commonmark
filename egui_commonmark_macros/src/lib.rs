@@ -1,4 +1,4 @@
-//! Compile time evalation of markdown that generates egui widgets
+//! Compile time evaluation of markdown that generates egui widgets
 //!
 //! It is recommended to use this crate through the parent crate
 //! [egui_commonmark](https://docs.rs/crate/egui_commonmark/latest).
@@ -17,7 +17,7 @@
 //! #### Example
 //!
 //! ```
-//! // If used through egui_commonmark the shared crate does not need to be relied upon
+//! # // If used through egui_commonmark the shared crate does not need to be relied upon
 //! # use egui_commonmark_shared::CommonMarkCache;
 //! # use egui_commonmark_macros::commonmark;
 //! # egui::__run_test_ui(|ui| {
@@ -36,7 +36,7 @@
 //!
 //! #### Example
 //!
-// Unfortunately can't depend on an actual file in the doc test so i must be
+// Unfortunately can't depend on an actual file in the doc test so it must be
 // disabled
 //! ```rust,ignore
 //! # use egui_commonmark_shared::CommonMarkCache;
@@ -60,14 +60,12 @@
 //!
 //! ## What this crate is not
 //!
-//! This crate does not have as goal to make widgets that can be interacted with
+//! This crate does not have as a goal to make widgets that can be interacted with
 //! through code.
 //!
 //! ```rust,ignore
 //! let ... = commonmark!("example", ui, &mut cache, "- [ ] Task List");
-//! if task_list.is_checked() {
-//!   // No!!
-//! }
+//! task_list.set_checked(true); // No !!
 //! ```
 //!
 //! For that you should fall back to normal egui widgets
