@@ -365,7 +365,10 @@ impl CommonMarkViewerInternal {
 
                     row_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
                 }
-                content_stream.extend(quote!(#row_stream ui.end_row();))
+
+                if !row_stream.is_empty() {
+                    content_stream.extend(quote!(#row_stream ui.end_row();))
+                }
             }
 
             let hash = id.value();
@@ -380,8 +383,6 @@ impl CommonMarkViewerInternal {
                     ui.end_row();
 
                     #content_stream
-
-                    ui.end_row();
                     });
                 });
             ));
