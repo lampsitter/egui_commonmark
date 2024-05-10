@@ -3,7 +3,7 @@
 //! It is recommended to use this crate through the parent crate
 //! [egui_commonmark](https://docs.rs/crate/egui_commonmark/latest).
 //! If you for some reason don't want to use it you must also import
-//! [egui_commonmark_shared](https://docs.rs/crate/egui_commonmark_shared/latest)
+//! [egui_commonmark_backend](https://docs.rs/crate/egui_commonmark_backend/latest)
 //! directly from your crate to get access to `CommonMarkCache` and internals that
 //! the macros require for the final generated code.
 //!
@@ -17,8 +17,8 @@
 //! #### Example
 //!
 //! ```
-//! # // If used through egui_commonmark the shared crate does not need to be relied upon
-//! # use egui_commonmark_shared::CommonMarkCache;
+//! # // If used through egui_commonmark the backend crate does not need to be relied upon
+//! # use egui_commonmark_backend::CommonMarkCache;
 //! # use egui_commonmark_macros::commonmark;
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
@@ -39,7 +39,7 @@
 // Unfortunately can't depend on an actual file in the doc test so it must be
 // disabled
 //! ```rust,ignore
-//! # use egui_commonmark_shared::CommonMarkCache;
+//! # use egui_commonmark_backend::CommonMarkCache;
 //! # use egui_commonmark_macros::commonmark_str;
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();

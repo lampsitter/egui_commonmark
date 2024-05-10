@@ -61,8 +61,8 @@ use egui::{self, Id};
 
 mod parsers;
 
-pub use egui_commonmark_shared::alerts::{Alert, AlertBundle};
-pub use egui_commonmark_shared::misc::CommonMarkCache;
+pub use egui_commonmark_backend::alerts::{Alert, AlertBundle};
+pub use egui_commonmark_backend::misc::CommonMarkCache;
 
 #[cfg(all(feature = "comrak", feature = "pulldown_cmark"))]
 compile_error!("Cannot have multiple different parsing backends enabled at the same time");
@@ -76,9 +76,9 @@ pub use egui_commonmark_macros::*;
 #[cfg(feature = "macro")]
 // Do not rely on this directly!
 #[doc(hidden)]
-pub use egui_commonmark_shared;
+pub use egui_commonmark_backend;
 
-use egui_commonmark_shared::*;
+use egui_commonmark_backend::*;
 
 #[derive(Debug)]
 pub struct CommonMarkViewer {
@@ -182,7 +182,7 @@ impl CommonMarkViewer {
         cache: &mut CommonMarkCache,
         text: &str,
     ) -> egui::InnerResponse<()> {
-        egui_commonmark_shared::prepare_show(cache, ui.ctx());
+        egui_commonmark_backend::prepare_show(cache, ui.ctx());
 
         #[cfg(feature = "pulldown_cmark")]
         let (response, _) = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
@@ -215,7 +215,7 @@ impl CommonMarkViewer {
         text: &mut String,
     ) -> egui::InnerResponse<()> {
         self.options.mutable = true;
-        egui_commonmark_shared::prepare_show(cache, ui.ctx());
+        egui_commonmark_backend::prepare_show(cache, ui.ctx());
 
         let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new(
             self.source_id,
@@ -250,7 +250,7 @@ impl CommonMarkViewer {
     #[doc(hidden)] // Buggy in scenarios more complex than the example application
     #[cfg(feature = "pulldown_cmark")]
     pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
-        egui_commonmark_shared::prepare_show(cache, ui.ctx());
+        egui_commonmark_backend::prepare_show(cache, ui.ctx());
         parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show_scrollable(
             ui,
             cache,
