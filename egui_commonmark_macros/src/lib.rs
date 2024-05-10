@@ -119,6 +119,8 @@ fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> proc_macr
         println!("}}");
     }
 
+    // false positive due to feature gate
+    #[allow(clippy::let_and_return)]
     stream
 }
 
