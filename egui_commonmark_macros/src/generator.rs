@@ -469,7 +469,7 @@ impl CommonMarkViewerInternal {
             link.text
                 .push(StyledText::new(self.text_style.clone(), text.to_string()));
         } else {
-            let rich_text = self.to_richtext_tokenstream(&self.text_style.clone(), &text);
+            let rich_text = self.richtext_tokenstream(&self.text_style.clone(), &text);
             return quote!(
                 ui.label(#rich_text);
             );
@@ -666,7 +666,7 @@ impl CommonMarkViewerInternal {
                     if !alt_text.is_empty() && options.show_alt_text_on_hover {
                         let mut alt_text_stream = TokenStream::new();
                         for alt in alt_text {
-                            let text = self.to_richtext_tokenstream(&alt.style, &alt.text);
+                            let text = self.richtext_tokenstream(&alt.style, &alt.text);
                             alt_text_stream.extend(quote!(ui.label(#text);));
                         }
 
@@ -710,7 +710,7 @@ impl CommonMarkViewerInternal {
         stream
     }
 
-    fn to_richtext_tokenstream(&mut self, s: &Style, text: &str) -> TokenStream {
+    fn richtext_tokenstream(&mut self, s: &Style, text: &str) -> TokenStream {
         // Try to write a compact stream
 
         let mut stream = TokenStream::new();

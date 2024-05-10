@@ -254,7 +254,7 @@ impl CommonMarkViewerInternal {
             }
 
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
-                egui_commonmark_shared::alert_ui(&alert, ui, |ui| {
+                egui_commonmark_shared::alert_ui(alert, ui, |ui| {
                     for (event, src_span) in collected_events.into_iter() {
                         self.event(ui, event, src_span, cache, options, max_width);
                     }
