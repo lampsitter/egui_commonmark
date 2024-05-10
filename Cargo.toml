@@ -7,6 +7,21 @@ members = [
 
 resolver = "2"
 
+
+[workspace.package]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.76" # Required by egui
+version = "0.15.0"
+repository = "https://github.com/lampsitter/egui_commonmark"
+
 [workspace.dependencies]
 egui_extras = "0.27"
 egui = "0.27"
+
+egui_commonmark_shared = { version = "0.15", default-features = false }
+egui_commonmark_macros = { version = "0.15", default-features = false }
+
+[patch.crates-io]
+egui_commonmark_shared = { path = "egui_commonmark_shared" }
+egui_commonmark_macros = { path = "egui_commonmark_macros" }
