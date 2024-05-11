@@ -34,7 +34,7 @@ CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 
 ## Compile time evaluation of markdown
 
-If you want to embed markdown directly the binary then you can enable the `macro` feature.
+If you want to embed markdown directly the binary then you can enable the `macros` feature.
 This will do the parsing of the markdown at compile time and output egui widgets.
 
 ### Example
@@ -58,7 +58,7 @@ commonmark_str!("example_file", ui, &mut cache, "content.md");
 
 ## Features
 
-* `macro`: macros for compile time parsing of markdown
+* `macros`: macros for compile time parsing of markdown
 * `better_syntax_highlighting`: Syntax highlighting inside code blocks with
   [`syntect`](https://crates.io/crates/syntect)
 * `svg`: Support for viewing svg images

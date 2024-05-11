@@ -9,7 +9,7 @@
 ### egui_commonmark
 
 This is the main crate. It depends on `egui_commonmark_backend` and can expose
-`egui_commonmark_macros` through the `macro` feature.
+`egui_commonmark_macros` through the `macros` feature.
 
 ### egui_commonmark_macros
 

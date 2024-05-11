@@ -26,7 +26,7 @@
 //! ```
 //! # Compile time evaluation of markdown
 //!
-//! If you want to embed markdown directly the binary then you can enable the `macro` feature.
+//! If you want to embed markdown directly the binary then you can enable the `macros` feature.
 //! This will do the parsing of the markdown at compile time and output egui widgets.
 //!
 //! ## Example

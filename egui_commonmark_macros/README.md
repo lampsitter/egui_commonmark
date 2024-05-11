@@ -6,7 +6,7 @@
 <img src="https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v3.png" alt="showcase" width=280/>
 
 This crate is `egui_commonmark`'s compile time variant. It is recommended to use
-this crate through `egui_commonmark` by enabling the `macro` feature.
+this crate through `egui_commonmark` by enabling the `macros` feature.
 
 
 ## Usage

@@ -31,7 +31,11 @@ pulldown-cmark = { version = "0.10", default-features = false, optional = true }
 default = ["load-images", "pulldown_cmark"]
 
 ## Enable proc macros for compile time generation of egui widgets from markdown
-macro = ["dep:egui_commonmark_macros", "dep:pulldown-cmark"] # For simplicity it only supports pulldown-cmark
+macros = ["dep:egui_commonmark_macros", "dep:pulldown-cmark"] # For simplicity it only supports pulldown-cmark
+
+## Builds upon the `macros` feature. Enables tracking of markdown files to recompile
+## when their content changes. Uses nightly features
+nightly = ["macros", "egui_commonmark_macros/nightly"]
 
 # For internal debugging use only!
 dump-macro = ["egui_commonmark_macros/dump-macro"]

@@ -6,7 +6,7 @@
 
 - `commonmark!` and `commonmark_str!` for compile time parsing of markdown. The
   proc macros will output egui widgets directly into your code. To use this
-  enable the `macro` feature.
+  enable the `macros` feature.
 
 ### Changed
 
