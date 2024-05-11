@@ -1,20 +1,11 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
-use std::ops::Range;
-
 use egui_commonmark_backend::{
-    alerts::{Alert, AlertBundle},
-    misc::{CommonMarkCache, Style},
-    pulldown::*,
-    CommonMarkOptions, FencedCodeBlock, Image,
+    alerts::Alert, misc::Style, pulldown::*, CommonMarkOptions, FencedCodeBlock, Image,
 };
 
-use egui::{self, Id, Pos2, TextStyle, Ui, Vec2};
+use egui::{self, Id};
 
 use proc_macro2::TokenStream;
-use pulldown_cmark::{CowStr, HeadingLevel, Options};
+use pulldown_cmark::{CowStr, HeadingLevel};
 use quote::quote;
 use syn::Expr;
 
@@ -121,17 +112,11 @@ pub(crate) struct CommonMarkViewerInternal {
     pub is_list_item: bool,
     pub is_table: bool,
     pub is_blockquote: bool,
-    pub checkbox_events: Vec<CheckboxClickEvent>,
 
     /// Informs that a calculation of heading sizes is required.
     /// This will dump min and max text size at the top of the macro output
     /// to reduce code duplication.
     pub dumps_heading: bool,
-}
-
-pub(crate) struct CheckboxClickEvent {
-    checked: bool,
-    span: Range<usize>,
 }
 
 impl CommonMarkViewerInternal {
@@ -148,7 +133,6 @@ impl CommonMarkViewerInternal {
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
-            checkbox_events: Vec::new(),
             dumps_heading: false,
         }
     }
@@ -164,8 +148,8 @@ impl CommonMarkViewerInternal {
         let mut stream = TokenStream::new();
 
         let mut event_stream = TokenStream::new();
-        while let Some((index, (e, src_span))) = events.next() {
-            let e = self.process_event(&mut events, e, src_span, &cache, &options);
+        while let Some((_, (e, _))) = events.next() {
+            let e = self.process_event(&mut events, e, &cache, &options);
             event_stream.extend(e);
         }
 
@@ -205,11 +189,10 @@ impl CommonMarkViewerInternal {
         &mut self,
         events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
         event: pulldown_cmark::Event,
-        src_span: Range<usize>,
         cache: &Expr,
         options: &CommonMarkOptions,
     ) -> TokenStream {
-        let mut stream = self.event(event, src_span, cache, options);
+        let mut stream = self.event(event, cache, options);
 
         stream.extend(self.item_list_wrapping(events, cache, options));
         stream.extend(self.fenced_code_block(events, cache, options));
@@ -233,8 +216,8 @@ impl CommonMarkViewerInternal {
 
             let mut inner = TokenStream::new();
 
-            while let Some((_, (e, src_span))) = events_iter.next() {
-                inner.extend(self.process_event(&mut events_iter, e, src_span, cache, options));
+            while let Some((_, (e, _))) = events_iter.next() {
+                inner.extend(self.process_event(&mut events_iter, e, cache, options));
             }
 
             // Required to ensure that the content of the list item is aligned with
@@ -270,8 +253,8 @@ impl CommonMarkViewerInternal {
                 } = alert;
 
                 let mut inner = TokenStream::new();
-                for (event, src_span) in collected_events.into_iter() {
-                    inner.extend(self.event(event, src_span, cache, options));
+                for (event, _) in collected_events.into_iter() {
+                    inner.extend(self.event(event, cache, options));
                 }
 
                 let r = accent_color.r();
@@ -292,8 +275,8 @@ impl CommonMarkViewerInternal {
                 let mut inner = TokenStream::new();
 
                 self.text_style.quote = true;
-                for (event, src_span) in collected_events {
-                    inner.extend(self.event(event, src_span, cache, options));
+                for (event, _) in collected_events {
+                    inner.extend(self.event(event, cache, options));
                 }
                 self.text_style.quote = false;
 
@@ -317,8 +300,8 @@ impl CommonMarkViewerInternal {
     ) -> TokenStream {
         let mut stream = TokenStream::new();
         while self.fenced_code_block.is_some() {
-            if let Some((_, (e, src_span))) = events.next() {
-                stream.extend(self.event(e, src_span, cache, options));
+            if let Some((_, (e, _))) = events.next() {
+                stream.extend(self.event(e, cache, options));
             } else {
                 break;
             }
@@ -345,9 +328,9 @@ impl CommonMarkViewerInternal {
             let mut header_stream = TokenStream::new();
             for col in header {
                 let mut inner = TokenStream::new();
-                for (e, src_span) in col {
+                for (e, _) in col {
                     self.should_insert_newline = false;
-                    inner.extend(self.event(e, src_span, cache, options));
+                    inner.extend(self.event(e, cache, options));
                 }
 
                 header_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
@@ -358,9 +341,9 @@ impl CommonMarkViewerInternal {
                 let mut row_stream = TokenStream::new();
                 for col in row {
                     let mut inner = TokenStream::new();
-                    for (e, src_span) in col {
+                    for (e, _) in col {
                         self.should_insert_newline = false;
-                        inner.extend(self.event(e, src_span, cache, options));
+                        inner.extend(self.event(e, cache, options));
                     }
 
                     row_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
@@ -398,7 +381,6 @@ impl CommonMarkViewerInternal {
     fn event(
         &mut self,
         event: pulldown_cmark::Event,
-        src_span: Range<usize>,
         cache: &Expr,
         options: &CommonMarkOptions,
     ) -> TokenStream {
@@ -586,7 +568,7 @@ impl CommonMarkViewerInternal {
                 newline
             }
             pulldown_cmark::TagEnd::BlockQuote => TokenStream::new(),
-            pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(cache, options),
+            pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(cache),
             pulldown_cmark::TagEnd::List(_) => {
                 let s = self.list.end_level();
 
@@ -665,7 +647,7 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn end_code_block(&mut self, cache: &Expr, options: &CommonMarkOptions) -> TokenStream {
+    fn end_code_block(&mut self, cache: &Expr) -> TokenStream {
         let mut stream = TokenStream::new();
         if let Some(block) = self.fenced_code_block.take() {
             let lang = block.lang;
