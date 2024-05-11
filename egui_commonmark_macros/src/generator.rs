@@ -261,7 +261,6 @@ impl CommonMarkViewerInternal {
                 let g = accent_color.g();
                 let b = accent_color.b();
                 let a = accent_color.a();
-                // FIXME: Figure out what rgba function to use
                 stream.extend(quote!(
                 ::egui_commonmark_backend::alert_ui(&egui_commonmark_backend::Alert {
                     accent_color: egui::Color32::from_rgba_premultiplied(#r, #g, #b, #a),
