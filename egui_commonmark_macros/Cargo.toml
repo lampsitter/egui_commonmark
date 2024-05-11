@@ -13,7 +13,7 @@ keywords = ["commonmark", "egui"]
 categories = ["gui"]
 readme = "README.md"
 documentation = "https://docs.rs/egui_commonmark_macros"
-include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
+include = ["src/**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 
 [lib]
