@@ -70,10 +70,10 @@ compile_error!("Cannot have multiple different parsing backends enabled at the s
 #[cfg(not(any(feature = "comrak", feature = "pulldown_cmark")))]
 compile_error!("Either the pulldown_cmark or comrak backend must be enabled");
 
-#[cfg(feature = "macro")]
+#[cfg(feature = "macros")]
 pub use egui_commonmark_macros::*;
 
-#[cfg(feature = "macro")]
+#[cfg(feature = "macros")]
 // Do not rely on this directly!
 #[doc(hidden)]
 pub use egui_commonmark_backend;
