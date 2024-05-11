@@ -2,6 +2,7 @@ use crate::{CommonMarkCache, CommonMarkOptions};
 use egui_commonmark_backend::elements::*;
 use egui_commonmark_backend::misc::*;
 
+use crate::List;
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{parse_document, Arena, Options};
 

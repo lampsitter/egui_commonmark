@@ -2,7 +2,7 @@ use egui_commonmark_backend::{
     alerts::Alert, misc::Style, pulldown::*, CommonMarkOptions, FencedCodeBlock, Image,
 };
 
-use egui::{self, Id};
+use egui::Id;
 
 use proc_macro2::TokenStream;
 use pulldown_cmark::{CowStr, HeadingLevel};
