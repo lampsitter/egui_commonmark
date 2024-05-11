@@ -186,23 +186,20 @@ fn resolve_backend_crate_import() -> proc_macro2::TokenStream {
     let backend_crate = proc_macro_crate::crate_name("egui_commonmark_backend");
     let main_crate = proc_macro_crate::crate_name("egui_commonmark");
 
-    if let Ok(_) = backend_crate {
+    if backend_crate.is_ok() {
         proc_macro2::TokenStream::new()
-    } else {
-        if let Ok(found_crate) = main_crate {
-            let crate_name = match found_crate {
-                proc_macro_crate::FoundCrate::Itself => return proc_macro2::TokenStream::new(),
-                proc_macro_crate::FoundCrate::Name(name) => name,
-            };
+    } else if let Ok(found_crate) = main_crate {
+        let crate_name = match found_crate {
+            proc_macro_crate::FoundCrate::Itself => return proc_macro2::TokenStream::new(),
+            proc_macro_crate::FoundCrate::Name(name) => name,
+        };
 
-            let crate_name_lit =
-                proc_macro2::Ident::new(&crate_name, proc_macro2::Span::call_site());
-            quote::quote!(
-                use #crate_name_lit::egui_commonmark_backend;
-            )
-        } else {
-            proc_macro2::TokenStream::new()
-        }
+        let crate_name_lit = proc_macro2::Ident::new(&crate_name, proc_macro2::Span::call_site());
+        quote::quote!(
+            use #crate_name_lit::egui_commonmark_backend;
+        )
+    } else {
+        proc_macro2::TokenStream::new()
     }
 }
 
