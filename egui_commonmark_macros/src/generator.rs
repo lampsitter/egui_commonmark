@@ -602,11 +602,17 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::Link { .. } => {
                 if let Some(link) = self.link.take() {
                     let StyledLink { destination, text } = link;
-                    // TODO: text
+                    let mut text_stream = TokenStream::new();
+                    for text_style in text {
+                        text_stream
+                            .extend(self.richtext_tokenstream(&text_style.style, &text_style.text));
+                        text_stream.extend(quote!(,));
+                    }
+
                     quote!(
                     ::egui_commonmark_backend::Link {
                         destination: #destination.to_owned(),
-                        text: Vec::new()
+                        text: vec![#text_stream]
                     }.end(ui, #cache);)
                 } else {
                     TokenStream::new()
