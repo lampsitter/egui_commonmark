@@ -13,7 +13,7 @@ Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
 In Cargo.toml:
 
 ```toml
-egui_commonmark = "0.15"
+egui_commonmark = "0.16"
 # Specify what image formats you want to use
 image = { version = "0.24", default-features = false, features = ["png"] }
 ```
