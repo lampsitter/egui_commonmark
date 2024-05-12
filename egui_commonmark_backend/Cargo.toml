@@ -16,7 +16,7 @@ documentation = "https://docs.rs/egui_commonmark_backend"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]
-pulldown-cmark = { version = "0.10", default-features = false, optional = true }
+pulldown-cmark = { workspace = true, optional = true }
 egui_extras = { workspace = true }
 egui = { workspace = true }
 

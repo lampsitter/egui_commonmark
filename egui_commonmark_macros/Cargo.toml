@@ -24,7 +24,7 @@ syn = "2"
 quote = { version = "1", default-features = false }
 proc-macro2 = { version = "1", default-features = false }
 
-pulldown-cmark = { version = "0.10", default-features = false }
+pulldown-cmark = { workspace = true, default-features = false }
 
 egui_commonmark_backend = { workspace = true, features = ["pulldown-cmark"] }
 egui = { workspace = true }

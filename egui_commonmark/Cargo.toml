@@ -25,7 +25,7 @@ egui = { workspace = true }
 document-features = { workspace = true, optional = true }
 
 comrak = { version = "0.22.0", default-features = false, optional = true }
-pulldown-cmark = { version = "0.10", default-features = false, optional = true }
+pulldown-cmark = { workspace = true, optional = true }
 
 [features]
 default = ["load-images", "pulldown_cmark"]
