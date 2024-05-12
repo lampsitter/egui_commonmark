@@ -22,3 +22,6 @@ jobs:
 
     - name: Cargo fmt
       run: cargo fmt --check -q
+
+    - name: Test
+      run: cargo test --features macros
