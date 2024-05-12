@@ -61,4 +61,4 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 egui_commonmark_macros = { workspace = true } # Tests won't build otherswise
 
 [package.metadata.docs.rs]
-features = ["better_syntax_highlighting", "document-features", "macro"]
+features = ["better_syntax_highlighting", "document-features", "macros"]

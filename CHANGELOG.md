@@ -1,5 +1,11 @@
 # egui_commomnark changelog
 
+## 0.16.1 - 2024-05-12
+
+## Fixed
+
+- Fixed docs.rs build
+
 ## 0.16.0 - 2024-05-12
 
 ### Added
