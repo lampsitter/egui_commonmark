@@ -13,7 +13,7 @@ keywords = ["commonmark", "egui"]
 categories = ["gui"]
 readme = "README.md"
 documentation = "https://docs.rs/egui_commonmark"
-include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
+include = ["src/**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]
 egui_commonmark_backend = { workspace = true }
