@@ -34,25 +34,18 @@ const BACKEND: &str = "pulldown_cmark";
 fn main() {
     let mut args = std::env::args();
     args.next();
-    let use_dark_theme = if let Some(theme) = args.next() {
-        if theme == "light" {
-            false
-        } else {
-            theme == "dark"
-        }
-    } else {
-        false
-    };
 
     eframe::run_native(
         &format!("Markdown viewer (backend '{}')", BACKEND),
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
-            cc.egui_ctx.set_visuals(if use_dark_theme {
-                egui::Visuals::dark()
-            } else {
-                egui::Visuals::light()
-            });
+            if let Some(theme) = args.next() {
+                if theme == "light" {
+                    cc.egui_ctx.set_visuals(egui::Visuals::light());
+                } else if theme == "dark" {
+                    cc.egui_ctx.set_visuals(egui::Visuals::dark());
+                }
+            }
 
             Box::new(App {
                 cache: CommonMarkCache::default(),
