@@ -424,6 +424,10 @@ impl CommonMarkViewerInternal {
                     quote!(ui.add(egui_commonmark_backend::ImmutableCheckbox::without_text(&mut #checkbox));)
                 }
             }
+
+            pulldown_cmark::Event::InlineMath(_) | pulldown_cmark::Event::DisplayMath(_) => {
+                TokenStream::new()
+            }
         }
     }
 
@@ -472,7 +476,7 @@ impl CommonMarkViewerInternal {
 
                 quote!(egui_commonmark_backend::newline(ui);)
             }
-            pulldown_cmark::Tag::BlockQuote => {
+            pulldown_cmark::Tag::BlockQuote(_) => {
                 self.is_blockquote = true;
                 TokenStream::new()
             }

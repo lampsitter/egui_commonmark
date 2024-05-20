@@ -25,4 +25,4 @@ egui_commonmark_macros = { version = "0.16.0", path = "egui_commonmark_macros", 
 # To add features to documentation
 document-features = { version = "0.2" }
 
-pulldown-cmark = { version = "0.10", default-features = false }
+pulldown-cmark = { version = "0.11", default-features = false }

@@ -395,6 +395,8 @@ impl CommonMarkViewerInternal {
                     ui.add(ImmutableCheckbox::without_text(&mut checkbox));
                 }
             }
+
+            pulldown_cmark::Event::InlineMath(_) | pulldown_cmark::Event::DisplayMath(_) => {}
         }
     }
 
@@ -430,7 +432,10 @@ impl CommonMarkViewerInternal {
                     HeadingLevel::H6 => 5,
                 });
             }
-            pulldown_cmark::Tag::BlockQuote => {
+
+            // deliberately not using the built in alerts from pulldown-cmark as
+            // the markdown itself cannot be localized :( e.g: [!TIP]
+            pulldown_cmark::Tag::BlockQuote(_) => {
                 self.is_blockquote = true;
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
