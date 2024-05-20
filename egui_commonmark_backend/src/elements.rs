@@ -1,9 +1,11 @@
 use egui::{self, epaint, NumExt, RichText, Sense, TextStyle, Ui, Vec2};
 
+#[inline]
 pub fn soft_break(ui: &mut Ui) {
     ui.label(" ");
 }
 
+#[inline]
 pub fn newline(ui: &mut Ui) {
     ui.label("\n");
 }
@@ -47,6 +49,7 @@ pub fn number_point(ui: &mut Ui, number: &str) {
     );
 }
 
+#[inline]
 pub fn footnote_start(ui: &mut Ui, note: &str) {
     ui.label(RichText::new(note).raised().strong().small());
 }
