@@ -236,15 +236,15 @@ pub fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(
 
     ui.painter().set(
         start,
-        egui::epaint::Shape::LineSegment {
-            points: [
+        egui::epaint::Shape::line_segment(
+            [
                 egui::pos2(response.rect.left_top().x, response.rect.left_top().y + 5.0),
                 egui::pos2(
                     response.rect.left_bottom().x,
                     response.rect.left_bottom().y - 5.0,
                 ),
             ],
-            stroke: egui::Stroke::new(3.0, accent),
-        },
+            egui::Stroke::new(3.0, accent),
+        ),
     );
 }
