@@ -31,7 +31,7 @@
 //! ```
 //! # use egui::__run_test_ui;
 //! # __run_test_ui(|ui| {
-//! ui.style_mut().url_tooltip_on_hover = true;
+//! ui.style_mut().url_in_tooltip = true;
 //! # });
 //! ```
 //!
