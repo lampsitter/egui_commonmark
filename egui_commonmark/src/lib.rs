@@ -11,7 +11,7 @@
 //! * A list
 //! * [ ] Checkbox
 //! ";
-//! // Stores image handles between each frame
+//!
 //! # __run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
 //! CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
@@ -24,6 +24,18 @@
 //! ```toml
 //! image = { version = "0.24", default-features = false, features = ["png"] }
 //! ```
+//!
+//! By default egui does not show urls when you hover hyperlinks. To enable it,
+//! you can do the following before calling any ui related functions:
+//!
+//! ```
+//! # use egui::__run_test_ui;
+//! # __run_test_ui(|ui| {
+//! ui.style_mut().url_tooltip_on_hover = true;
+//! # });
+//! ```
+//!
+//!
 //! # Compile time evaluation of markdown
 //!
 //! If you want to embed markdown directly the binary then you can enable the `macros` feature.

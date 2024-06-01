@@ -92,6 +92,10 @@ fn main() {
                     cc.egui_ctx.set_visuals(egui::Visuals::dark());
                 }
             }
+            cc.egui_ctx.style_mut(|style| {
+                // Show the url of a hyperlink on hover
+                style.url_in_tooltip = true;
+            });
 
             Box::new(App {
                 cache: CommonMarkCache::default(),
