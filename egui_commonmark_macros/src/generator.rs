@@ -618,7 +618,7 @@ impl CommonMarkViewerInternal {
                     egui_commonmark_backend::Link {
                         destination: #destination.to_owned(),
                         text: vec![#text_stream]
-                    }.end(ui, #cache);)
+                    }.end(ui, #cache, options.show_link_url_on_hover);)
                 } else {
                     TokenStream::new()
                 }
