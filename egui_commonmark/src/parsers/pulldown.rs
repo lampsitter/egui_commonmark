@@ -544,7 +544,7 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::TagEnd::Link { .. } => {
                 if let Some(link) = self.link.take() {
-                    link.end(ui, cache);
+                    link.end(ui, cache, options.show_link_url_on_hover);
                 }
             }
             pulldown_cmark::TagEnd::Image { .. } => {

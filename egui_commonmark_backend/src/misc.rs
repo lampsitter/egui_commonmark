@@ -23,6 +23,7 @@ pub struct CommonMarkOptions {
     pub indentation_spaces: usize,
     pub max_image_width: Option<usize>,
     pub show_alt_text_on_hover: bool,
+    pub show_link_url_on_hover: bool,
     pub default_width: Option<usize>,
     #[cfg(feature = "better_syntax_highlighting")]
     pub theme_light: String,
@@ -41,6 +42,7 @@ impl Default for CommonMarkOptions {
             indentation_spaces: 4,
             max_image_width: None,
             show_alt_text_on_hover: true,
+            show_link_url_on_hover: true,
             default_width: None,
             #[cfg(feature = "better_syntax_highlighting")]
             theme_light: DEFAULT_THEME_LIGHT.to_owned(),
@@ -168,7 +170,7 @@ pub struct Link {
 }
 
 impl Link {
-    pub fn end(self, ui: &mut Ui, cache: &mut CommonMarkCache) {
+    pub fn end(self, ui: &mut Ui, cache: &mut CommonMarkCache, show_url: bool) {
         let Self { destination, text } = self;
 
         let mut layout_job = LayoutJob::default();
@@ -186,7 +188,10 @@ impl Link {
                 cache.link_hooks_mut().insert(destination, true);
             }
         } else {
-            ui.hyperlink_to(layout_job, destination);
+            let re = ui.hyperlink_to(layout_job, &destination);
+            if show_url {
+                re.on_hover_text(&destination);
+            }
         }
     }
 }

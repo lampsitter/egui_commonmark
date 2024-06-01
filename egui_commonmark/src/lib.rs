@@ -121,6 +121,12 @@ impl CommonMarkViewer {
         self
     }
 
+    /// Show destination url when hovering over links. By default this is enabled.
+    pub fn show_link_url_on_hover(mut self, show: bool) -> Self {
+        self.options.show_link_url_on_hover = show;
+        self
+    }
+
     /// Allows changing the default implicit `file://` uri scheme.
     /// This does nothing if [`explicit_image_uri_scheme`](`Self::explicit_image_uri_scheme`) is enabled
     ///
