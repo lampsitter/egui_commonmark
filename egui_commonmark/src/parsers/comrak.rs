@@ -267,7 +267,7 @@ impl CommonMarkViewerInternal {
                     self.render(ui, cache, options, max_width, c);
 
                     if let Some(link) = self.link.take() {
-                        link.end(ui, cache);
+                        link.end(ui, cache, options.show_link_url_on_hover);
                     }
                 }
 
