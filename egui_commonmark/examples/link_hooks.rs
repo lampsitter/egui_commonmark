@@ -55,6 +55,12 @@ fn main() {
                 }
             }
 
+            cc.egui_ctx.style_mut(|style| {
+                // Show the url of a hyperlink on hover. The demonstration of
+                // the link hooks would be a little pointless without this
+                style.url_in_tooltip = true;
+            });
+
             let mut cache = CommonMarkCache::default();
             cache.add_link_hook("#next");
             cache.add_link_hook("#prev");
