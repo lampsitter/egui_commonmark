@@ -93,9 +93,9 @@ fn main() {
                 }
             }
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
-            })
+            }))
         }),
     )
     .unwrap();

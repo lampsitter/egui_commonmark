@@ -59,10 +59,10 @@ fn main() {
             cache.add_link_hook("#next");
             cache.add_link_hook("#prev");
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache,
                 curr_page: 0,
-            })
+            }))
         }),
     )
     .unwrap();

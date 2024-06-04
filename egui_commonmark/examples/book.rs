@@ -93,7 +93,7 @@ fn main() {
                 }
             }
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
                 curr_tab: Some(0),
                 pages: vec![
@@ -122,7 +122,7 @@ fn main() {
                         content: include_str!("markdown/tables.md").to_owned(),
                     },
                 ],
-            })
+            }))
         }),
     );
 }
