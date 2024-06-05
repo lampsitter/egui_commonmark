@@ -52,10 +52,10 @@ fn main() {
                 style.url_in_tooltip = true;
             });
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
                 text_buffer: EXAMPLE_TEXT.into(),
-            })
+            }))
         }),
     )
     .unwrap();

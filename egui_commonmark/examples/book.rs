@@ -97,7 +97,7 @@ fn main() {
                 style.url_in_tooltip = true;
             });
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
                 curr_tab: Some(0),
                 pages: vec![
@@ -126,7 +126,7 @@ fn main() {
                         content: include_str!("markdown/tables.md").to_owned(),
                     },
                 ],
-            })
+            }))
         }),
     );
 }

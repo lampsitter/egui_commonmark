@@ -50,9 +50,9 @@ fn main() {
                 style.url_in_tooltip = true;
             });
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
-            })
+            }))
         }),
     )
     .unwrap();
