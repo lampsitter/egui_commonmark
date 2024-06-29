@@ -411,9 +411,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Event::Rule => {
                 quote!(
                 egui_commonmark_backend::newline(ui);
-                ui.add(egui::Separator::default().horizontal());
-                // This does not add a new line, but instead ends the separator
-                egui_commonmark_backend::newline(ui);
+                egui_commonmark_backend::rule(ui);
                 )
             }
             pulldown_cmark::Event::TaskListMarker(checkbox) => {

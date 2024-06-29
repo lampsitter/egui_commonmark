@@ -174,9 +174,7 @@ impl CommonMarkViewerInternal {
 
                 NodeValue::ThematicBreak => {
                     newline(ui);
-                    ui.add(egui::Separator::default().horizontal());
-                    // This does not add a new line, but instead ends the separator
-                    newline(ui);
+                    rule(ui);
                 }
 
                 NodeValue::FootnoteDefinition(f) => {
