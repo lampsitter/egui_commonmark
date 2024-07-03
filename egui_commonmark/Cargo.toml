@@ -56,8 +56,8 @@ svg = ["egui_extras/svg"]
 fetch = ["egui_extras/http"]
 
 [dev-dependencies]
-eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
-image = { version = "0.24", default-features = false, features = ["png"] }
+eframe = { version = "0.28", default-features = false, features = ["default_fonts", "glow"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
 egui_commonmark_macros = { workspace = true } # Tests won't build otherswise
 
 [package.metadata.docs.rs]
