@@ -77,11 +77,11 @@ const BACKEND: &str = "comrak";
 #[cfg(feature = "pulldown_cmark")]
 const BACKEND: &str = "pulldown_cmark";
 
-fn main() {
+fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
-    let _ = eframe::run_native(
+    eframe::run_native(
         &format!("Markdown viewer (backend '{}')", BACKEND),
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
@@ -97,7 +97,7 @@ fn main() {
                 style.url_in_tooltip = true;
             });
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
                 curr_tab: Some(0),
                 pages: vec![
@@ -126,7 +126,7 @@ fn main() {
                         content: include_str!("markdown/tables.md").to_owned(),
                     },
                 ],
-            })
+            }))
         }),
-    );
+    )
 }

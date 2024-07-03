@@ -77,7 +77,7 @@ impl eframe::App for App {
     }
 }
 
-fn main() {
+fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
@@ -98,10 +98,9 @@ fn main() {
                 style.url_in_tooltip = true;
             });
 
-            Box::new(App {
+            Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
-            })
+            }))
         }),
     )
-    .unwrap();
 }
