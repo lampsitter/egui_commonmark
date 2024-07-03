@@ -22,7 +22,7 @@
 //! Remember to opt into the image formats you want to use!
 //!
 //! ```toml
-//! image = { version = "0.24", default-features = false, features = ["png"] }
+//! image = { version = "0.25", default-features = false, features = ["png"] }
 //! ```
 //!
 //! By default egui does not show urls when you hover hyperlinks. To enable it,
