@@ -1,5 +1,12 @@
 # egui_commomnark changelog
 
+## 0.17.0 - 2024-07-03
+
+### Changed
+
+- Updated egui to 0.28 ([#51](https://github.com/lampsitter/egui_commonmark/pull/51) by [@emilk](https://github.com/emilk))
+- Updated pulldown-cmark to 0.11
+
 ## 0.16.1 - 2024-05-12
 
 ## Fixed
