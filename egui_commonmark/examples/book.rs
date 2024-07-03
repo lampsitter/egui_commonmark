@@ -77,11 +77,11 @@ const BACKEND: &str = "comrak";
 #[cfg(feature = "pulldown_cmark")]
 const BACKEND: &str = "pulldown_cmark";
 
-fn main() {
+fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
-    let _ = eframe::run_native(
+    eframe::run_native(
         &format!("Markdown viewer (backend '{}')", BACKEND),
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
@@ -128,5 +128,5 @@ fn main() {
                 ],
             }))
         }),
-    );
+    )
 }

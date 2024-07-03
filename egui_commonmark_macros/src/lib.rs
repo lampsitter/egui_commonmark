@@ -112,7 +112,7 @@ fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> proc_macr
     #[cfg(feature = "dump-macro")]
     {
         // Wrap within a function to allow rustfmt to format it
-        println!("fn main() {{");
+        println!("fn main() -> eframe::Result {{");
         println!("{}", stream.to_string());
         println!("}}");
     }

@@ -5,7 +5,7 @@
 > A block quote with more other blocks inside it
 >
 > ```rust
-> fn main() {
+> fn main() -> eframe::Result {
 >     println!("Hello, World!");
 > }
 > ```
@@ -37,10 +37,10 @@ will be displayed as:
 
 <!-- The trailing whitespaces are deliberate on important and warning -->
 <!-- Case insensitivity --->
-> [!imporTant] 
+> [!imporTant]
 > important alert
 
-> [!WARNING] 
+> [!WARNING]
 > warning alert
 
 > [!CAUTION]

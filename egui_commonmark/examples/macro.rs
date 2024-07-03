@@ -77,7 +77,7 @@ impl eframe::App for App {
     }
 }
 
-fn main() {
+fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
@@ -103,5 +103,4 @@ fn main() {
             }))
         }),
     )
-    .unwrap();
 }
