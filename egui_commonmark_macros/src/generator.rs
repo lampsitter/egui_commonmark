@@ -197,7 +197,6 @@ impl CommonMarkViewerInternal {
         let mut stream = self.event(event, cache, options);
 
         stream.extend(self.item_list_wrapping(events, cache, options));
-        stream.extend(self.fenced_code_block(events, cache, options));
         stream.extend(self.table(events, cache, options));
         stream.extend(self.blockquote(events, cache, options));
         stream
@@ -290,24 +289,6 @@ impl CommonMarkViewerInternal {
 
             self.is_blockquote = false;
         }
-        stream
-    }
-
-    fn fenced_code_block<'e>(
-        &mut self,
-        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
-        cache: &Expr,
-        options: &CommonMarkOptions,
-    ) -> TokenStream {
-        let mut stream = TokenStream::new();
-        while self.fenced_code_block.is_some() {
-            if let Some((_, (e, _))) = events.next() {
-                stream.extend(self.event(e, cache, options));
-            } else {
-                break;
-            }
-        }
-
         stream
     }
 
