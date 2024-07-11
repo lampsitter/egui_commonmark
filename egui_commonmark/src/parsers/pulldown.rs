@@ -1,3 +1,4 @@
+use std::iter::Peekable;
 use std::ops::Range;
 
 use crate::{CommonMarkCache, CommonMarkOptions};
@@ -10,6 +11,53 @@ use egui_commonmark_backend::misc::*;
 use egui_commonmark_backend::pulldown::*;
 use pulldown_cmark::{CowStr, HeadingLevel};
 
+/// Newline logic is constructed by the following:
+/// All elements try to insert a newline before them (if they are allowed)
+/// and end their own line.
+struct Newline {
+    /// Whether an element should insert a newline before it
+    should_start_newline: bool,
+    /// Whether an element should end it's own line using a newline
+    /// This will have to be set to false in cases such as when blocks are within
+    /// a list.
+    should_end_newline: bool,
+    /// only false when the widget is the last one.
+    should_end_newline_forced: bool,
+}
+
+impl Default for Newline {
+    fn default() -> Self {
+        Self {
+            // Default as false as the first line should not have a newline above it
+            should_start_newline: false,
+            should_end_newline: true,
+            should_end_newline_forced: true,
+        }
+    }
+}
+
+impl Newline {
+    pub fn can_insert_end(&self) -> bool {
+        self.should_end_newline && self.should_end_newline_forced
+    }
+
+    pub fn can_insert_start(&self) -> bool {
+        self.should_start_newline
+    }
+
+    pub fn try_insert_start(&self, ui: &mut Ui) {
+        if self.should_start_newline {
+            newline(ui);
+        }
+    }
+
+    pub fn try_insert_end(&self, ui: &mut Ui) {
+        if self.can_insert_end() {
+            newline(ui);
+        }
+    }
+}
+
 pub struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
@@ -17,16 +65,7 @@ pub struct CommonMarkViewerInternal {
     list: List,
     link: Option<Link>,
     image: Option<Image>,
-    /// Newline logic is constructed by the following:
-    /// All elements try to insert a newline before them (if they are allowed)
-    /// and end their own line.
-    /// Whether an element should insert a newline before it
-    should_start_newline: bool,
-    /// Whether an element should end it's own line using a newline
-    /// This will have to be set to false in cases such as when blocks are within
-    /// a list.
-    // FIXME: Can this be avoided by changing lists?
-    should_end_newline: bool,
+    line: Newline,
     fenced_code_block: Option<FencedCodeBlock>,
     is_list_item: bool,
     is_table: bool,
@@ -48,8 +87,7 @@ impl CommonMarkViewerInternal {
             list: List::default(),
             link: None,
             image: None,
-            should_start_newline: false,
-            should_end_newline: true,
+            line: Newline::default(),
             is_list_item: false,
             fenced_code_block: None,
             is_table: false,
@@ -88,7 +126,7 @@ impl CommonMarkViewerInternal {
                 let should_add_split_point = self.list.is_inside_a_list() && is_element_end;
 
                 if events.peek().is_none() {
-                    self.should_end_newline = false;
+                    self.line.should_end_newline_forced = false;
                 }
 
                 self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
@@ -110,7 +148,7 @@ impl CommonMarkViewerInternal {
                 }
 
                 if index == 0 {
-                    self.should_start_newline = true;
+                    self.line.should_start_newline = true;
                 }
             }
 
@@ -193,13 +231,13 @@ impl CommonMarkViewerInternal {
 
                     while let Some((i, (e, src_span))) = events.next() {
                         if events.peek().is_none() {
-                            self.should_end_newline = false;
+                            self.line.should_end_newline_forced = false;
                         }
 
                         self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
                         if i == 0 {
-                            self.should_start_newline = true;
+                            self.line.should_start_newline = true;
                         }
                     }
                 });
@@ -218,7 +256,7 @@ impl CommonMarkViewerInternal {
     fn process_event<'e>(
         &mut self,
         ui: &mut Ui,
-        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
+        events: &mut Peekable<impl Iterator<Item = EventIteratorItem<'e>>>,
         event: pulldown_cmark::Event,
         src_span: Range<usize>,
         cache: &mut CommonMarkCache,
@@ -244,7 +282,7 @@ impl CommonMarkViewerInternal {
             self.is_list_item = false;
 
             let item_events = delayed_events_list_item(events);
-            let mut events_iter = item_events.into_iter().enumerate();
+            let mut events_iter = item_events.into_iter().enumerate().peekable();
 
             // Required to ensure that the content of the list item is aligned with
             // the * or - when wrapping
@@ -266,7 +304,7 @@ impl CommonMarkViewerInternal {
 
     fn blockquote<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
+        events: &mut Peekable<impl Iterator<Item = EventIteratorItem<'e>>>,
         max_width: f32,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -274,14 +312,11 @@ impl CommonMarkViewerInternal {
     ) {
         if self.is_blockquote {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
-
-            if self.should_start_newline {
-                newline(ui)
-            }
+            self.line.try_insert_start(ui);
 
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 egui_commonmark_backend::alert_ui(alert, ui, |ui| {
-                    for (event, src_span) in collected_events.into_iter() {
+                    for (event, src_span) in collected_events {
                         self.event(ui, event, src_span, cache, options, max_width);
                     }
                 })
@@ -295,26 +330,25 @@ impl CommonMarkViewerInternal {
                 });
             }
 
-            if self.should_end_newline {
-                newline(ui);
+            if events.peek().is_none() {
+                self.line.should_end_newline_forced = false;
             }
 
+            self.line.try_insert_end(ui);
             self.is_blockquote = false;
         }
     }
 
     fn table<'e>(
         &mut self,
-        events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
+        events: &mut Peekable<impl Iterator<Item = EventIteratorItem<'e>>>,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
         max_width: f32,
     ) {
         if self.is_table {
-            if self.should_start_newline {
-                newline(ui);
-            }
+            self.line.try_insert_start(ui);
 
             let id = self.source_id.with(self.curr_table);
             self.curr_table += 1;
@@ -327,12 +361,12 @@ impl CommonMarkViewerInternal {
                         ui.horizontal(|ui| {
                             for (e, src_span) in col {
                                 let tmp_start =
-                                    std::mem::replace(&mut self.should_start_newline, false);
+                                    std::mem::replace(&mut self.line.should_start_newline, false);
                                 let tmp_end =
-                                    std::mem::replace(&mut self.should_end_newline, false);
+                                    std::mem::replace(&mut self.line.should_end_newline, false);
                                 self.event(ui, e, src_span, cache, options, max_width);
-                                self.should_start_newline = tmp_start;
-                                self.should_end_newline = tmp_end;
+                                self.line.should_start_newline = tmp_start;
+                                self.line.should_end_newline = tmp_end;
                             }
                         });
                     }
@@ -343,13 +377,15 @@ impl CommonMarkViewerInternal {
                         for col in row {
                             ui.horizontal(|ui| {
                                 for (e, src_span) in col {
-                                    let tmp_start =
-                                        std::mem::replace(&mut self.should_start_newline, false);
+                                    let tmp_start = std::mem::replace(
+                                        &mut self.line.should_start_newline,
+                                        false,
+                                    );
                                     let tmp_end =
-                                        std::mem::replace(&mut self.should_end_newline, false);
+                                        std::mem::replace(&mut self.line.should_end_newline, false);
                                     self.event(ui, e, src_span, cache, options, max_width);
-                                    self.should_start_newline = tmp_start;
-                                    self.should_end_newline = tmp_end;
+                                    self.line.should_start_newline = tmp_start;
+                                    self.line.should_end_newline = tmp_end;
                                 }
                             });
                         }
@@ -360,10 +396,11 @@ impl CommonMarkViewerInternal {
             });
 
             self.is_table = false;
-
-            if self.should_end_newline {
-                newline(ui);
+            if events.peek().is_none() {
+                self.line.should_end_newline_forced = false;
             }
+
+            self.line.try_insert_end(ui);
         }
     }
 
@@ -397,10 +434,8 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Event::HardBreak => newline(ui),
             pulldown_cmark::Event::Rule => {
-                if self.should_start_newline {
-                    newline(ui);
-                }
-                rule(ui);
+                self.line.try_insert_start(ui);
+                rule(ui, self.line.can_insert_end());
             }
             pulldown_cmark::Event::TaskListMarker(mut checkbox) => {
                 if options.mutable {
@@ -438,9 +473,7 @@ impl CommonMarkViewerInternal {
     fn start_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
-                if self.should_start_newline {
-                    newline(ui);
-                }
+                self.line.try_insert_start(ui);
             }
             pulldown_cmark::Tag::Heading { level, .. } => {
                 // Headings should always insert a newline even if it is at the start.
@@ -468,15 +501,13 @@ impl CommonMarkViewerInternal {
                         content: "".to_string(),
                     });
 
-                    if self.should_start_newline {
-                        newline(ui);
-                    }
+                    self.line.try_insert_start(ui);
                 }
 
                 self.text_style.code = true;
             }
             pulldown_cmark::Tag::List(point) => {
-                if !self.list.is_inside_a_list() && self.should_start_newline {
+                if !self.list.is_inside_a_list() && self.line.can_insert_start() {
                     newline(ui);
                 }
 
@@ -485,20 +516,20 @@ impl CommonMarkViewerInternal {
                 } else {
                     self.list.start_level_without_number();
                 }
-                self.should_start_newline = false;
-                self.should_end_newline = false;
+                self.line.should_start_newline = false;
+                self.line.should_end_newline = false;
             }
+
             pulldown_cmark::Tag::Item => {
                 self.is_list_item = true;
                 self.list.start_item(ui, options);
             }
-            pulldown_cmark::Tag::FootnoteDefinition(note) => {
-                if self.should_start_newline {
-                    newline(ui);
-                }
 
-                self.should_start_newline = false;
-                self.should_end_newline = false;
+            pulldown_cmark::Tag::FootnoteDefinition(note) => {
+                self.line.try_insert_start(ui);
+
+                self.line.should_start_newline = false;
+                self.line.should_end_newline = false;
                 footnote(ui, &note);
             }
             pulldown_cmark::Tag::Table(_) => {
@@ -540,14 +571,10 @@ impl CommonMarkViewerInternal {
     ) {
         match tag {
             pulldown_cmark::TagEnd::Paragraph => {
-                if self.should_end_newline {
-                    newline(ui);
-                }
+                self.line.try_insert_end(ui);
             }
             pulldown_cmark::TagEnd::Heading { .. } => {
-                if self.should_end_newline {
-                    newline(ui);
-                }
+                self.line.try_insert_end(ui);
                 self.text_style.heading = None;
             }
             pulldown_cmark::TagEnd::BlockQuote => {}
@@ -555,18 +582,16 @@ impl CommonMarkViewerInternal {
                 self.end_code_block(ui, cache, options, max_width);
             }
             pulldown_cmark::TagEnd::List(_) => {
-                self.list.end_level(ui);
+                self.list.end_level(ui, self.line.can_insert_end());
 
-                if !self.list.is_inside_a_list() {
-                    newline(ui);
-                }
+                self.line.should_start_newline = true;
+                self.line.should_end_newline = true;
             }
             pulldown_cmark::TagEnd::Item => {}
             pulldown_cmark::TagEnd::FootnoteDefinition => {
-                self.should_start_newline = true;
-                self.should_end_newline = true;
-                // End the footnote line
-                newline(ui);
+                self.line.should_start_newline = true;
+                self.line.should_end_newline = true;
+                self.line.try_insert_end(ui);
             }
             pulldown_cmark::TagEnd::Table => {}
             pulldown_cmark::TagEnd::TableHead => {}
@@ -609,9 +634,7 @@ impl CommonMarkViewerInternal {
         if let Some(block) = self.fenced_code_block.take() {
             block.end(ui, cache, options, max_width);
             self.text_style.code = false;
-            if self.should_end_newline {
-                newline(ui);
-            }
+            self.line.try_insert_end(ui);
         }
     }
 }

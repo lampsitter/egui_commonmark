@@ -58,6 +58,13 @@ A footnote [^F1]
                 );
 
                 ui.label(label);
+                egui_commonmark::CommonMarkViewer::new("viewer").show(
+                    ui,
+                    &mut cache,
+                    "---------------",
+                );
+
+                ui.label(label);
             });
         },
     )

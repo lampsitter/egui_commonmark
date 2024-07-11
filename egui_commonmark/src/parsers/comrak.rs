@@ -174,7 +174,7 @@ impl CommonMarkViewerInternal {
 
                 NodeValue::ThematicBreak => {
                     newline(ui);
-                    rule(ui);
+                    rule(ui, true);
                 }
 
                 NodeValue::FootnoteDefinition(f) => {
