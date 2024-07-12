@@ -1,5 +1,21 @@
 use eframe::egui;
 
+macro_rules! m {
+    ($ui:expr, $cache:expr,$($a:expr),* $(,)? ) => {
+        $(
+        $ui.label("Label!");
+        #[cfg(feature = "macros")]
+        {
+            egui_commonmark_macros::commonmark!("n1", $ui, &mut $cache, $a);
+        }
+        #[cfg(not(feature = "macros"))]
+        {
+            egui_commonmark::CommonMarkViewer::new("viewer").show($ui, &mut $cache, $a);
+        }
+        )*
+    };
+}
+
 // This is more of an test...
 // Ensure that there are no newlines that should not be present when mixing markdown
 // and egui widgets.
@@ -11,60 +27,54 @@ fn main() -> eframe::Result<()> {
         Default::default(),
         move |ctx, _frame| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                let label = "Label!";
-                ui.label(label);
-
-                egui_commonmark::CommonMarkViewer::new("viewer").show(ui, &mut cache, "Markdown");
-
-                ui.label(label);
-
-                egui_commonmark::CommonMarkViewer::new("viewer").show(
-                    ui,
-                    &mut cache,
-                    "# Markdown (Deliberate space above)",
-                );
-
-                ui.label(label);
-
-                egui_commonmark::CommonMarkViewer::new("viewer").show(
-                    ui,
-                    &mut cache,
-                    r#"1. aaa
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    m!(
+                        ui,
+                        cache,
+                        "Markdown *a*",
+                        "# Markdown (Deliberate space above)",
+                        "--------------------",
+                        r#"
+1. aaa
 2. aaa
-3. bbb"#,
-                );
-
-                ui.label(label);
-
-                egui_commonmark::CommonMarkViewer::new("viewer").show(
-                    ui,
-                    &mut cache,
-                    r#"```rust
+    - abb
+    - acc
+3. bbb
+   - baa
+                        "#,
+                        r#"
+```rust
 let x = 3;
-````
-                "#,
-                );
-
-                ui.label(label);
-
-                egui_commonmark::CommonMarkViewer::new("viewer").show(
-                    ui,
-                    &mut cache,
-                    r#"
+```
+                        "#,
+                        r#"
 A footnote [^F1]
 
-[^F1]: The footnote
-                "#,
-                );
+[^F1]: The footnote"#,
+                        r#"
+>
+> Test
+>
+                        "#,
+                        r#"
+> [!TIP]
+>
+> Test
+                        "#,
+                        r#"
 
-                ui.label(label);
-                egui_commonmark::CommonMarkViewer::new("viewer").show(
-                    ui,
-                    &mut cache,
-                    "---------------",
-                );
+Column A   | Column B
+-----------|----------
+`item` `a1` | item b1
+item a2 | item b2
+item a3 | item b3
+item a4 | item b4
 
-                ui.label(label);
+                        "#,
+                    );
+
+                    ui.label("Label!");
+                });
             });
         },
     )
