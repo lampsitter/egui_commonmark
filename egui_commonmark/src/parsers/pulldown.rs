@@ -582,10 +582,10 @@ impl CommonMarkViewerInternal {
                 self.end_code_block(ui, cache, options, max_width);
             }
             pulldown_cmark::TagEnd::List(_) => {
-                self.list.end_level(ui, self.line.can_insert_end());
-
                 self.line.should_start_newline = true;
                 self.line.should_end_newline = true;
+
+                self.list.end_level(ui, self.line.can_insert_end());
             }
             pulldown_cmark::TagEnd::Item => {}
             pulldown_cmark::TagEnd::FootnoteDefinition => {

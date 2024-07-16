@@ -35,6 +35,10 @@ fn main() -> eframe::Result<()> {
                         "# Markdown (Deliberate space above)",
                         "--------------------",
                         r#"
+- Simple list 1
+- Simple list 2
+                        "#,
+                        r#"
 1. aaa
 2. aaa
     - abb
