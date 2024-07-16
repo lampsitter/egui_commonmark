@@ -1,5 +1,12 @@
 # egui_commomnark changelog
 
+## Unreleased
+
+## Changed
+
+- Newlines are no longer inserted before/after markdown ([#56](https://github.com/lampsitter/egui_commonmark/pull/56))
+    > For the old behaviour you can call `ui.label("");` before and and after
+
 ## 0.17.0 - 2024-07-03
 
 ### Changed

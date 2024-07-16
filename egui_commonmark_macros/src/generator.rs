@@ -309,6 +309,7 @@ impl CommonMarkViewerInternal {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
             stream.extend(self.line.try_insert_start());
 
+            self.line.should_start_newline = true;
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 let Alert {
                     accent_color,

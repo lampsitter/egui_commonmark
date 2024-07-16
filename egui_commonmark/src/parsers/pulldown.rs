@@ -314,6 +314,10 @@ impl CommonMarkViewerInternal {
             let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
             self.line.try_insert_start(ui);
 
+            // Currently the blockquotes are made in such a way that they need a newline at the end
+            // and the start so when this is the first element in the markdown the newline must be
+            // manually enabled
+            self.line.should_start_newline = true;
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 egui_commonmark_backend::alert_ui(alert, ui, |ui| {
                     for (event, src_span) in collected_events {
