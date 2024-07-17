@@ -10,6 +10,7 @@
 ## Removed
 
 - Experimental comrak backend ([#57](https://github.com/lampsitter/egui_commonmark/pull/57))
+- Deprecated method `syntax_theme`
 
 ## 0.17.0 - 2024-07-03
 

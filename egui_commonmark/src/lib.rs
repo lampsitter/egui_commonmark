@@ -150,14 +150,6 @@ impl CommonMarkViewer {
     }
 
     #[cfg(feature = "better_syntax_highlighting")]
-    #[deprecated(note = "use `syntax_theme_light` or `syntax_theme_dark` instead")]
-    pub fn syntax_theme(mut self, theme: String) -> Self {
-        self.options.theme_light = theme.clone();
-        self.options.theme_dark = theme;
-        self
-    }
-
-    #[cfg(feature = "better_syntax_highlighting")]
     /// Set the syntax theme to be used inside code blocks in light mode
     pub fn syntax_theme_light<S: Into<String>>(mut self, theme: S) -> Self {
         self.options.theme_light = theme.into();
