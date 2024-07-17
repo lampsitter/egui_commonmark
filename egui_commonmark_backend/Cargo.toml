@@ -16,7 +16,7 @@ documentation = "https://docs.rs/egui_commonmark_backend"
 include = ["**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 
 [dependencies]
-pulldown-cmark = { workspace = true, optional = true }
+pulldown-cmark = { workspace = true }
 egui_extras = { workspace = true }
 egui = { workspace = true }
 
@@ -27,4 +27,3 @@ syntect = { version = "5.0.0", optional = true, default-features = false, featur
 
 [features]
 better_syntax_highlighting = ["dep:syntect"]
-pulldown-cmark = ["dep:pulldown-cmark"]

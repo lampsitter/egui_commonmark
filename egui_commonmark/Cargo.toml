@@ -24,14 +24,13 @@ egui = { workspace = true }
 
 document-features = { workspace = true, optional = true }
 
-comrak = { version = "0.22.0", default-features = false, optional = true }
-pulldown-cmark = { workspace = true, optional = true }
+pulldown-cmark = { workspace = true  }
 
 [features]
 default = ["load-images", "pulldown_cmark"]
 
 ## Enable proc macros for compile time generation of egui widgets from markdown
-macros = ["dep:egui_commonmark_macros", "dep:pulldown-cmark"] # For simplicity it only supports pulldown-cmark
+macros = ["dep:egui_commonmark_macros"] # For simplicity it only supports pulldown-cmark
 
 ## Builds upon the `macros` feature. Enables tracking of markdown files to recompile
 ## when their content changes. Uses nightly features
@@ -40,8 +39,9 @@ nightly = ["macros", "egui_commonmark_macros/nightly"]
 # For internal debugging use only!
 dump-macro = ["egui_commonmark_macros/dump-macro"]
 
-pulldown_cmark = ["dep:pulldown-cmark", "egui_commonmark_backend/pulldown-cmark"]
-comrak = ["dep:comrak"]
+## No-op feature
+pulldown_cmark = []
+
 ## Syntax highlighting for code blocks using syntect
 better_syntax_highlighting = ["egui_commonmark_backend/better_syntax_highlighting"]
 

@@ -26,7 +26,7 @@ proc-macro2 = { version = "1", default-features = false }
 
 pulldown-cmark = { workspace = true, default-features = false }
 
-egui_commonmark_backend = { workspace = true, features = ["pulldown-cmark"] }
+egui_commonmark_backend = { workspace = true }
 egui = { workspace = true }
 
 document-features = { workspace = true, optional = true }
