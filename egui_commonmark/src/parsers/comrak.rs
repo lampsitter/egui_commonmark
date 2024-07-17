@@ -102,7 +102,7 @@ impl CommonMarkViewerInternal {
 
                     self.render(ui, cache, options, max_width, c);
 
-                    self.list.end_level(ui);
+                    self.list.end_level(ui, true);
                     if !self.list.is_inside_a_list() {
                         self.should_insert_newline = true;
                     }
@@ -174,9 +174,7 @@ impl CommonMarkViewerInternal {
 
                 NodeValue::ThematicBreak => {
                     newline(ui);
-                    ui.add(egui::Separator::default().horizontal());
-                    // This does not add a new line, but instead ends the separator
-                    newline(ui);
+                    rule(ui, true);
                 }
 
                 NodeValue::FootnoteDefinition(f) => {

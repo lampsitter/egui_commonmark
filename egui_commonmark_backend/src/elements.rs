@@ -1,6 +1,15 @@
 use egui::{self, epaint, NumExt, RichText, Sense, TextStyle, Ui, Vec2};
 
 #[inline]
+pub fn rule(ui: &mut Ui, end_line: bool) {
+    ui.add(egui::Separator::default().horizontal());
+    // This does not add a new line, but instead ends the separator
+    if end_line {
+        newline(ui);
+    }
+}
+
+#[inline]
 pub fn soft_break(ui: &mut Ui) {
     ui.label(" ");
 }

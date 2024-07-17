@@ -279,6 +279,7 @@ pub(crate) struct ListLevel {
 #[derive(Default)]
 pub(crate) struct List {
     items: Vec<ListLevel>,
+    has_list_begun: bool,
 }
 
 impl List {
@@ -299,9 +300,15 @@ impl List {
     }
 
     pub fn start_item(&mut self, ui: &mut egui::Ui, options: &CommonMarkOptions) {
+        // To ensure that newlines are only inserted within the list and not before it
+        if self.has_list_begun {
+            newline(ui);
+        } else {
+            self.has_list_begun = true;
+        }
+
         let len = self.items.len();
         if let Some(item) = self.items.last_mut() {
-            newline(ui);
             ui.label(" ".repeat((len - 1) * options.indentation_spaces));
 
             if let Some(number) = &mut item.current_number {
@@ -319,10 +326,10 @@ impl List {
         ui.add_space(4.0);
     }
 
-    pub fn end_level(&mut self, ui: &mut egui::Ui) {
+    pub fn end_level(&mut self, ui: &mut egui::Ui, insert_newline: bool) {
         self.items.pop();
 
-        if self.items.is_empty() {
+        if self.items.is_empty() && insert_newline {
             newline(ui);
         }
     }
