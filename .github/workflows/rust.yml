@@ -17,9 +17,6 @@ jobs:
     - name: Check all features pulldown
       run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros
 
-    - name: Check all features comrak
-      run: cargo check --no-default-features --features comrak,better_syntax_highlighting,macros
-
     - name: Cargo fmt
       run: cargo fmt --check -q
 

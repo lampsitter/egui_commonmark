@@ -42,17 +42,12 @@ vec.push(5);
     }
 }
 
-#[cfg(feature = "comrak")]
-const BACKEND: &str = "comrak";
-#[cfg(feature = "pulldown_cmark")]
-const BACKEND: &str = "pulldown_cmark";
-
 fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
     eframe::run_native(
-        &format!("Markdown viewer (backend '{}')", BACKEND),
+        "Markdown viewer",
         eframe::NativeOptions::default(),
         Box::new(move |cc| {
             if let Some(theme) = args.next() {

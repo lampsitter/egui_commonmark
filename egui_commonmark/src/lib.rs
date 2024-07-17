@@ -76,12 +76,6 @@ mod parsers;
 pub use egui_commonmark_backend::alerts::{Alert, AlertBundle};
 pub use egui_commonmark_backend::misc::CommonMarkCache;
 
-#[cfg(all(feature = "comrak", feature = "pulldown_cmark"))]
-compile_error!("Cannot have multiple different parsing backends enabled at the same time");
-
-#[cfg(not(any(feature = "comrak", feature = "pulldown_cmark")))]
-compile_error!("Either the pulldown_cmark or comrak backend must be enabled");
-
 #[cfg(feature = "macros")]
 pub use egui_commonmark_macros::*;
 
@@ -177,7 +171,6 @@ impl CommonMarkViewer {
         self
     }
 
-    #[cfg(not(feature = "comrak"))] // not supported by the backend atm.
     /// Specify what kind of alerts are supported. This can also be used to localize alerts.
     ///
     /// By default [github flavoured markdown style alerts](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts)
@@ -196,7 +189,6 @@ impl CommonMarkViewer {
     ) -> egui::InnerResponse<()> {
         egui_commonmark_backend::prepare_show(cache, ui.ctx());
 
-        #[cfg(feature = "pulldown_cmark")]
         let (response, _) = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
             ui,
             cache,
@@ -205,21 +197,12 @@ impl CommonMarkViewer {
             false,
         );
 
-        #[cfg(feature = "comrak")]
-        let response = parsers::comrak::CommonMarkViewerInternal::new(self.source_id).show(
-            ui,
-            cache,
-            &self.options,
-            text,
-        );
-
         response
     }
 
     /// Shows rendered markdown, and allows the rendered ui to mutate the source text.
     ///
     /// The only currently implemented mutation is allowing checkboxes to be toggled through the ui.
-    #[cfg(feature = "pulldown_cmark")]
     pub fn show_mut(
         mut self,
         ui: &mut egui::Ui,

@@ -2,7 +2,6 @@ use crate::alerts::AlertBundle;
 use egui::{text::LayoutJob, RichText, TextStyle, Ui};
 use std::collections::HashMap;
 
-#[cfg(feature = "pulldown-cmark")]
 use crate::pulldown::ScrollableCache;
 
 #[cfg(feature = "better_syntax_highlighting")]
@@ -370,7 +369,6 @@ pub struct CommonMarkCache {
 
     link_hooks: HashMap<String, bool>,
 
-    #[cfg(feature = "pulldown-cmark")]
     scroll: HashMap<egui::Id, ScrollableCache>,
     pub(self) has_installed_loaders: bool,
 }
@@ -384,7 +382,6 @@ impl Default for CommonMarkCache {
             #[cfg(feature = "better_syntax_highlighting")]
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
-            #[cfg(feature = "pulldown-cmark")]
             scroll: Default::default(),
             has_installed_loaders: false,
         }
@@ -434,14 +431,12 @@ impl CommonMarkCache {
     }
 
     /// Clear the cache for all scrollable elements
-    #[cfg(feature = "pulldown-cmark")]
     pub fn clear_scrollable(&mut self) {
         self.scroll.clear();
     }
 
     /// Clear the cache for a specific scrollable viewer. Returns false if the
     /// id was not in the cache.
-    #[cfg(feature = "pulldown-cmark")]
     pub fn clear_scrollable_with_id(&mut self, source_id: impl std::hash::Hash) -> bool {
         self.scroll.remove(&egui::Id::new(source_id)).is_some()
     }
@@ -513,7 +508,6 @@ impl CommonMarkCache {
     }
 }
 
-#[cfg(feature = "pulldown-cmark")]
 pub fn scroll_cache<'a>(cache: &'a mut CommonMarkCache, id: &egui::Id) -> &'a mut ScrollableCache {
     if !cache.scroll.contains_key(id) {
         cache.scroll.insert(*id, Default::default());

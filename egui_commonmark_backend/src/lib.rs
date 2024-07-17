@@ -8,7 +8,6 @@ pub mod alerts;
 pub mod elements;
 #[doc(hidden)]
 pub mod misc;
-#[cfg(feature = "pulldown-cmark")]
 #[doc(hidden)]
 pub mod pulldown;
 
