@@ -163,7 +163,7 @@ pub fn commonmark_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
 fn resolve_backend_crate_import() -> proc_macro2::TokenStream {
     // The purpose of this is to ensure that when used through egui_commonmark
-    // the genererated code can always find egui_commonmark_backend without the
+    // the generated code can always find egui_commonmark_backend without the
     // user having to import themselves.
     //
     // There are other ways to do this that does not depend on an external crate
