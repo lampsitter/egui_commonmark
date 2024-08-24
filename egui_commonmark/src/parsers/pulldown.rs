@@ -311,7 +311,9 @@ impl CommonMarkViewerInternal {
         ui: &mut Ui,
     ) {
         if self.is_blockquote {
-            let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
+            let mut collected_events = delayed_events(events, |tag| {
+                matches!(tag, pulldown_cmark::TagEnd::BlockQuote(_))
+            });
             self.line.try_insert_start(ui);
 
             // Currently the blockquotes are made in such a way that they need a newline at the end
@@ -562,6 +564,9 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Tag::HtmlBlock => {}
             pulldown_cmark::Tag::MetadataBlock(_) => {}
+            pulldown_cmark::Tag::DefinitionList
+            | pulldown_cmark::Tag::DefinitionListTitle
+            | pulldown_cmark::Tag::DefinitionListDefinition => {}
         }
     }
 
@@ -581,7 +586,7 @@ impl CommonMarkViewerInternal {
                 self.line.try_insert_end(ui);
                 self.text_style.heading = None;
             }
-            pulldown_cmark::TagEnd::BlockQuote => {}
+            pulldown_cmark::TagEnd::BlockQuote(_) => {}
             pulldown_cmark::TagEnd::CodeBlock => {
                 self.end_code_block(ui, cache, options, max_width);
             }
@@ -625,6 +630,9 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::TagEnd::HtmlBlock => {}
             pulldown_cmark::TagEnd::MetadataBlock(_) => {}
+            pulldown_cmark::TagEnd::DefinitionList
+            | pulldown_cmark::TagEnd::DefinitionListTitle
+            | pulldown_cmark::TagEnd::DefinitionListDefinition => {}
         }
     }
 

@@ -306,7 +306,9 @@ impl CommonMarkViewerInternal {
     ) -> TokenStream {
         let mut stream = TokenStream::new();
         if self.is_blockquote {
-            let mut collected_events = delayed_events(events, pulldown_cmark::TagEnd::BlockQuote);
+            let mut collected_events = delayed_events(events, |tag| {
+                matches!(tag, pulldown_cmark::TagEnd::BlockQuote(_))
+            });
             stream.extend(self.line.try_insert_start());
 
             self.line.should_start_newline = true;
@@ -612,6 +614,9 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::HtmlBlock | pulldown_cmark::Tag::MetadataBlock(_) => {
                 TokenStream::new()
             }
+            pulldown_cmark::Tag::DefinitionList
+            | pulldown_cmark::Tag::DefinitionListTitle
+            | pulldown_cmark::Tag::DefinitionListDefinition => TokenStream::new(),
         }
     }
 
@@ -627,7 +632,7 @@ impl CommonMarkViewerInternal {
                 self.text_style.heading = None;
                 self.line.try_insert_end()
             }
-            pulldown_cmark::TagEnd::BlockQuote => TokenStream::new(),
+            pulldown_cmark::TagEnd::BlockQuote(_) => TokenStream::new(),
             pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(cache),
             pulldown_cmark::TagEnd::List(_) => {
                 let s = self.list.end_level(self.line.can_insert_end());
@@ -712,6 +717,9 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::HtmlBlock | pulldown_cmark::TagEnd::MetadataBlock(_) => {
                 TokenStream::new()
             }
+            pulldown_cmark::TagEnd::DefinitionList
+            | pulldown_cmark::TagEnd::DefinitionListTitle
+            | pulldown_cmark::TagEnd::DefinitionListDefinition => TokenStream::new(),
         }
     }
 

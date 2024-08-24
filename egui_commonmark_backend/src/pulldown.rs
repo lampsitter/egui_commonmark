@@ -16,7 +16,7 @@ pub type EventIteratorItem<'e> = (usize, (pulldown_cmark::Event<'e>, Range<usize
 /// This is needed for multiple events that must be rendered inside a single widget
 pub fn delayed_events<'e>(
     events: &mut impl Iterator<Item = EventIteratorItem<'e>>,
-    end_at: pulldown_cmark::TagEnd,
+    end_at: impl Fn(pulldown_cmark::TagEnd) -> bool,
 ) -> Vec<(pulldown_cmark::Event<'e>, Range<usize>)> {
     let mut curr_event = events.next();
     let mut total_events = Vec::new();
@@ -24,7 +24,7 @@ pub fn delayed_events<'e>(
         if let Some(event) = curr_event.take() {
             total_events.push(event.1.clone());
             if let (_, (pulldown_cmark::Event::End(tag), _range)) = event {
-                if end_at == tag {
+                if end_at(tag) {
                     return total_events;
                 }
             }
@@ -95,7 +95,7 @@ fn parse_row<'e>(
 }
 
 pub fn parse_table<'e>(events: &mut impl Iterator<Item = EventIteratorItem<'e>>) -> Table<'e> {
-    let mut all_events = delayed_events(events, pulldown_cmark::TagEnd::Table)
+    let mut all_events = delayed_events(events, |end| matches!(end, pulldown_cmark::TagEnd::Table))
         .into_iter()
         .peekable();
 
