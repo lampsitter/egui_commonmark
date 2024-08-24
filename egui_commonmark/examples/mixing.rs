@@ -93,6 +93,10 @@ Term 2
 :   Definition 2
 
     Paragraph 2
+
+Term 3
+
+:   Definition 3
                         "#,
                 );
 

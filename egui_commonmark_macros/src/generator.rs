@@ -158,6 +158,12 @@ pub struct StyledImage {
     pub alt_text: Vec<StyledText>,
 }
 
+#[derive(Default)]
+struct DefinitionList {
+    is_first_item: bool,
+    is_def_list_def: bool,
+}
+
 pub(crate) struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
@@ -168,7 +174,7 @@ pub(crate) struct CommonMarkViewerInternal {
     line: Newline,
     fenced_code_block: Option<FencedCodeBlock>,
     is_list_item: bool,
-    is_def_list_def: bool,
+    def_list: DefinitionList,
     is_table: bool,
     is_blockquote: bool,
 
@@ -189,7 +195,7 @@ impl CommonMarkViewerInternal {
             image: None,
             line: Newline::default(),
             is_list_item: false,
-            is_def_list_def: false,
+            def_list: Default::default(),
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
@@ -279,8 +285,8 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
     ) -> TokenStream {
         let mut stream = TokenStream::new();
-        if self.is_def_list_def {
-            self.is_def_list_def = false;
+        if self.def_list.is_def_list_def {
+            self.def_list.is_def_list_def = false;
 
             let item_events = delayed_events(events, |tag| {
                 matches!(tag, pulldown_cmark::TagEnd::DefinitionListDefinition)
@@ -677,10 +683,21 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::HtmlBlock | pulldown_cmark::Tag::MetadataBlock(_) => {
                 TokenStream::new()
             }
-            pulldown_cmark::Tag::DefinitionList => self.line.try_insert_start(),
-            pulldown_cmark::Tag::DefinitionListTitle => TokenStream::new(),
+            pulldown_cmark::Tag::DefinitionList => {
+                let s = self.line.try_insert_start();
+                self.def_list.is_first_item = true;
+                s
+            }
+            pulldown_cmark::Tag::DefinitionListTitle => {
+                if !self.def_list.is_first_item {
+                    self.line.try_insert_start()
+                } else {
+                    self.def_list.is_first_item = false;
+                    TokenStream::new()
+                }
+            }
             pulldown_cmark::Tag::DefinitionListDefinition => {
-                self.is_def_list_def = true;
+                self.def_list.is_def_list_def = true;
                 TokenStream::new()
             }
         }

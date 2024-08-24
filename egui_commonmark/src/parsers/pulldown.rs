@@ -58,6 +58,12 @@ impl Newline {
     }
 }
 
+#[derive(Default)]
+struct DefinitionList {
+    is_first_item: bool,
+    is_def_list_def: bool,
+}
+
 pub struct CommonMarkViewerInternal {
     source_id: Id,
     curr_table: usize,
@@ -68,7 +74,7 @@ pub struct CommonMarkViewerInternal {
     line: Newline,
     fenced_code_block: Option<FencedCodeBlock>,
     is_list_item: bool,
-    is_def_list_def: bool,
+    def_list: DefinitionList,
     is_table: bool,
     is_blockquote: bool,
     checkbox_events: Vec<CheckboxClickEvent>,
@@ -90,7 +96,7 @@ impl CommonMarkViewerInternal {
             image: None,
             line: Newline::default(),
             is_list_item: false,
-            is_def_list_def: false,
+            def_list: Default::default(),
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
@@ -281,8 +287,8 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         ui: &mut Ui,
     ) {
-        if self.is_def_list_def {
-            self.is_def_list_def = false;
+        if self.def_list.is_def_list_def {
+            self.def_list.is_def_list_def = false;
 
             let item_events = delayed_events(events, |tag| {
                 matches!(tag, pulldown_cmark::TagEnd::DefinitionListDefinition)
@@ -631,10 +637,19 @@ impl CommonMarkViewerInternal {
 
             pulldown_cmark::Tag::DefinitionList => {
                 self.line.try_insert_start(ui);
+                self.def_list.is_first_item = true;
             }
-            pulldown_cmark::Tag::DefinitionListTitle => {}
+            pulldown_cmark::Tag::DefinitionListTitle => {
+                // we disable newline as the first title should not insert a newline
+                // as we have already done that upon the DefinitionList Tag
+                if !self.def_list.is_first_item {
+                    self.line.try_insert_start(ui)
+                } else {
+                    self.def_list.is_first_item = false;
+                }
+            }
             pulldown_cmark::Tag::DefinitionListDefinition => {
-                self.is_def_list_def = true;
+                self.def_list.is_def_list_def = true;
             }
         }
     }
