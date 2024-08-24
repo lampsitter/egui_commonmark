@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Added
+
+- Definition lists
+
 ## Changed
 
 - Updated pulldown-cmark to 0.12

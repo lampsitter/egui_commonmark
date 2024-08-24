@@ -109,15 +109,19 @@ fn main() -> eframe::Result {
                         content: include_str!("markdown/lists.md").to_owned(),
                     },
                     Page {
+                        name: "Definition lists".to_owned(),
+                        content: include_str!("markdown/definition_list.md").to_owned(),
+                    },
+                    Page {
                         name: "Code blocks".to_owned(),
                         content: include_str!("markdown/code-blocks.md").to_owned(),
                     },
                     Page {
-                        name: "Block Quotes ".to_owned(),
+                        name: "Block Quotes".to_owned(),
                         content: include_str!("markdown/blockquotes.md").to_owned(),
                     },
                     Page {
-                        name: "Tables ".to_owned(),
+                        name: "Tables".to_owned(),
                         content: include_str!("markdown/tables.md").to_owned(),
                     },
                 ],

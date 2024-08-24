@@ -168,6 +168,7 @@ pub(crate) struct CommonMarkViewerInternal {
     line: Newline,
     fenced_code_block: Option<FencedCodeBlock>,
     is_list_item: bool,
+    is_def_list_def: bool,
     is_table: bool,
     is_blockquote: bool,
 
@@ -188,6 +189,7 @@ impl CommonMarkViewerInternal {
             image: None,
             line: Newline::default(),
             is_list_item: false,
+            is_def_list_def: false,
             fenced_code_block: None,
             is_table: false,
             is_blockquote: false,
@@ -264,8 +266,69 @@ impl CommonMarkViewerInternal {
         let mut stream = self.event(event, cache, options);
 
         stream.extend(self.item_list_wrapping(events, cache, options));
+        stream.extend(self.def_list_def_wrapping(events, cache, options));
         stream.extend(self.table(events, cache, options));
         stream.extend(self.blockquote(events, cache, options));
+        stream
+    }
+
+    fn def_list_def_wrapping<'e>(
+        &mut self,
+        events: &mut Peekable<impl Iterator<Item = EventIteratorItem<'e>>>,
+        cache: &Expr,
+        options: &CommonMarkOptions,
+    ) -> TokenStream {
+        let mut stream = TokenStream::new();
+        if self.is_def_list_def {
+            self.is_def_list_def = false;
+
+            let item_events = delayed_events(events, |tag| {
+                matches!(tag, pulldown_cmark::TagEnd::DefinitionListDefinition)
+            });
+
+            let mut events_iter = item_events.into_iter().enumerate().peekable();
+
+            let mut inner = TokenStream::new();
+
+            stream.extend(self.line.try_insert_start());
+
+            // Proccess a single event separately so that we do not insert spaces where we do not
+            // want them
+            self.line.should_start_newline = false;
+            if let Some((_, (e, _))) = events_iter.next() {
+                inner.extend(self.process_event(&mut events_iter, e, cache, options));
+            }
+
+            self.line.should_start_newline = true;
+            self.line.should_end_newline = false;
+            while let Some((_, (e, _))) = events_iter.next() {
+                inner.extend(self.process_event(&mut events_iter, e, cache, options));
+            }
+            self.line.should_end_newline = true;
+
+            let spaces = " ".repeat(options.indentation_spaces);
+            stream.extend(quote!(ui.label(#spaces);));
+
+            // Required to ensure that the content is aligned with the identation
+            stream.extend(quote!(ui.horizontal_wrapped(|ui| {
+                    #inner
+            });));
+
+            // Only end the definition items line if it is not the last element in the list
+            if !matches!(
+                events.peek(),
+                Some((
+                    _,
+                    (
+                        pulldown_cmark::Event::End(pulldown_cmark::TagEnd::DefinitionList),
+                        _
+                    )
+                ))
+            ) {
+                stream.extend(self.line.try_insert_end());
+            }
+        }
+
         stream
     }
 
@@ -614,9 +677,12 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::HtmlBlock | pulldown_cmark::Tag::MetadataBlock(_) => {
                 TokenStream::new()
             }
-            pulldown_cmark::Tag::DefinitionList
-            | pulldown_cmark::Tag::DefinitionListTitle
-            | pulldown_cmark::Tag::DefinitionListDefinition => TokenStream::new(),
+            pulldown_cmark::Tag::DefinitionList => self.line.try_insert_start(),
+            pulldown_cmark::Tag::DefinitionListTitle => TokenStream::new(),
+            pulldown_cmark::Tag::DefinitionListDefinition => {
+                self.is_def_list_def = true;
+                TokenStream::new()
+            }
         }
     }
 
@@ -717,9 +783,9 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::HtmlBlock | pulldown_cmark::TagEnd::MetadataBlock(_) => {
                 TokenStream::new()
             }
-            pulldown_cmark::TagEnd::DefinitionList
-            | pulldown_cmark::TagEnd::DefinitionListTitle
-            | pulldown_cmark::TagEnd::DefinitionListDefinition => TokenStream::new(),
+            pulldown_cmark::TagEnd::DefinitionList => self.line.try_insert_end(),
+            pulldown_cmark::TagEnd::DefinitionListTitle => TokenStream::new(),
+            pulldown_cmark::TagEnd::DefinitionListDefinition => TokenStream::new(),
         }
     }
 

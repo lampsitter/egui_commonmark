@@ -16,29 +16,31 @@ macro_rules! m {
     };
 }
 
+#[cfg(feature = "macros")]
+const WINDOW_NAME: &str = "Mixed egui and markdown (macro version)";
+#[cfg(not(feature = "macros"))]
+const WINDOW_NAME: &str = "Mixed egui and markdown (normal version)";
+
 // This is more of an test...
 // Ensure that there are no newlines that should not be present when mixing markdown
 // and egui widgets.
 fn main() -> eframe::Result<()> {
     let mut cache = egui_commonmark::CommonMarkCache::default();
 
-    eframe::run_simple_native(
-        "Mixed egui and markdown",
-        Default::default(),
-        move |ctx, _frame| {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    m!(
-                        ui,
-                        cache,
-                        "Markdown *a*",
-                        "# Markdown (Deliberate space above)",
-                        "--------------------",
-                        r#"
+    eframe::run_simple_native(WINDOW_NAME, Default::default(), move |ctx, _frame| {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                m!(
+                    ui,
+                    cache,
+                    "Markdown *a*",
+                    "# Markdown (Deliberate space above)",
+                    "--------------------",
+                    r#"
 - Simple list 1
 - Simple list 2
                         "#,
-                        r#"
+                    r#"
 1. aaa
 2. aaa
     - abb
@@ -46,26 +48,26 @@ fn main() -> eframe::Result<()> {
 3. bbb
    - baa
                         "#,
-                        r#"
+                    r#"
 ```rust
 let x = 3;
 ```
                         "#,
-                        r#"
+                    r#"
 A footnote [^F1]
 
 [^F1]: The footnote"#,
-                        r#"
+                    r#"
 >
 > Test
 >
                         "#,
-                        r#"
+                    r#"
 > [!TIP]
 >
 > Test
                         "#,
-                        r#"
+                    r#"
 
 Column A   | Column B
 -----------|----------
@@ -75,17 +77,27 @@ item a3 | item b3
 item a4 | item b4
 
                         "#,
-                        r#"
+                    r#"
  ![Rust logo](egui_commonmark/examples/rust-logo-128x128.png)
                         "#,
-                        r#"
+                    r#"
 [Link to repo](https://github.com/lampsitter/egui_commonmark)
                         "#,
-                    );
+                    r#"
+Term 1
 
-                    ui.label("Label!");
-                });
+:   Definition 1
+
+Term 2
+
+:   Definition 2
+
+    Paragraph 2
+                        "#,
+                );
+
+                ui.label("Label!");
             });
-        },
-    )
+        });
+    })
 }

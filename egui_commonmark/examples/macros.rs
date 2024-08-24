@@ -72,6 +72,15 @@ impl eframe::App for App {
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/tables.md"
                 );
+                commonmark!("n12", ui, &mut self.cache, "------------");
+
+                commonmark_str!(
+                    "n13",
+                    ui,
+                    &mut self.cache,
+                    "egui_commonmark/examples/markdown/definition_list.md"
+                );
+                commonmark!("n14", ui, &mut self.cache, "------------");
             });
         });
     }
