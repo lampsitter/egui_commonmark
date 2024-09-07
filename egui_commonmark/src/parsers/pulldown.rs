@@ -679,6 +679,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::CodeBlock => {
                 self.end_code_block(ui, cache, options, max_width);
             }
+
             pulldown_cmark::TagEnd::List(_) => {
                 self.line.should_start_newline = true;
                 self.line.should_end_newline = true;
@@ -740,8 +741,8 @@ impl CommonMarkViewerInternal {
     ) {
         if let Some(block) = self.fenced_code_block.take() {
             block.end(ui, cache, options, max_width);
-            self.text_style.code = false;
             self.line.try_insert_end(ui);
         }
+        self.text_style.code = false;
     }
 }

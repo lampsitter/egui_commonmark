@@ -817,9 +817,10 @@ impl CommonMarkViewerInternal {
                     .end(ui, #cache, &options, max_width);
             ));
 
-            self.text_style.code = false;
             stream.extend(self.line.try_insert_end());
         }
+
+        self.text_style.code = false;
 
         stream
     }
