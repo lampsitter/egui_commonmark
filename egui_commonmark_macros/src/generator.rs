@@ -714,6 +714,11 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::List(_) => {
                 let s = self.list.end_level(self.line.can_insert_end());
 
+                if !self.list.is_inside_a_list() {
+                    // Reset all the state and make it ready for the next list that occurs
+                    self.list = List::default();
+                }
+
                 self.line.should_start_newline = true;
                 self.line.should_end_newline = true;
                 s

@@ -684,6 +684,11 @@ impl CommonMarkViewerInternal {
                 self.line.should_end_newline = true;
 
                 self.list.end_level(ui, self.line.can_insert_end());
+
+                if !self.list.is_inside_a_list() {
+                    // Reset all the state and make it ready for the next list that occurs
+                    self.list = List::default();
+                }
             }
             pulldown_cmark::TagEnd::Item => {}
             pulldown_cmark::TagEnd::FootnoteDefinition => {
