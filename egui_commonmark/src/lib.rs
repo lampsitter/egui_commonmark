@@ -86,16 +86,14 @@ pub use egui_commonmark_backend;
 
 use egui_commonmark_backend::*;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CommonMarkViewer {
     options: CommonMarkOptions,
 }
 
 impl CommonMarkViewer {
     pub fn new() -> Self {
-        Self {
-            options: CommonMarkOptions::default(),
-        }
+        Self::default()
     }
 
     /// The amount of spaces a bullet point is indented. By default this is 4
