@@ -6,11 +6,11 @@ macro_rules! m {
         $ui.label("Label!");
         #[cfg(feature = "macros")]
         {
-            egui_commonmark_macros::commonmark!("n1", $ui, &mut $cache, $a);
+            egui_commonmark_macros::commonmark!($ui, &mut $cache, $a);
         }
         #[cfg(not(feature = "macros"))]
         {
-            egui_commonmark::CommonMarkViewer::new("viewer").show($ui, &mut $cache, $a);
+            egui_commonmark::CommonMarkViewer::new().show($ui, &mut $cache, $a);
         }
         )*
     };

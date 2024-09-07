@@ -6,7 +6,6 @@ fn main() {
     let mut cache = egui_commonmark_backend::CommonMarkCache::default();
     __run_test_ui(|ui| {
         let _response: egui::InnerResponse<()> = commonmark_str!(
-            "a",
             ui,
             &mut cache,
             "../../../../egui_commonmark_macros/tests/file.md"

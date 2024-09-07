@@ -5,6 +5,6 @@ use egui_commonmark_macros::commonmark_str;
 fn main() {
     let mut cache = egui_commonmark_backend::CommonMarkCache::default();
     __run_test_ui(|ui| {
-        commonmark_str!("a", ui, &mut cache, "foo.md");
+        commonmark_str!(ui, &mut cache, "foo.md");
     });
 }

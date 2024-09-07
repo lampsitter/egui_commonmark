@@ -12,7 +12,7 @@
 //!
 //! The macro has the following format:
 //!
-//! commonmark!(id, ui, cache, text);
+//! commonmark!(ui, cache, text);
 //!
 //! #### Example
 //!
@@ -22,7 +22,7 @@
 //! # use egui_commonmark_macros::commonmark;
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
-//! let _response = commonmark!("example", ui, &mut cache, "# ATX Heading Level 1");
+//! let _response = commonmark!(ui, &mut cache, "# ATX Heading Level 1");
 //! # });
 //! ```
 //!
@@ -32,7 +32,7 @@
 //!
 //! The macro has the exact same format as the `commonmark!` macro:
 //!
-//! commonmark_str!(id, ui, cache, file_path);
+//! commonmark_str!(ui, cache, file_path);
 //!
 //! #### Example
 //!
@@ -43,7 +43,7 @@
 //! # use egui_commonmark_macros::commonmark_str;
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
-//! commonmark_str!("example", ui, &mut cache, "foo.md");
+//! commonmark_str!(ui, &mut cache, "foo.md");
 //! # });
 //! ```
 //!
@@ -64,7 +64,7 @@
 //! through code.
 //!
 //! ```rust,ignore
-//! let ... = commonmark!("example", ui, &mut cache, "- [ ] Task List");
+//! let ... = commonmark!(ui, &mut cache, "- [ ] Task List");
 //! task_list.set_checked(true); // No !!
 //! ```
 //!
@@ -81,7 +81,6 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::{parse_macro_input, Expr, LitStr, Token};
 
 struct Parameters {
-    id: LitStr,
     ui: Expr,
     cache: Expr,
     markdown: LitStr,
@@ -89,8 +88,6 @@ struct Parameters {
 
 impl Parse for Parameters {
     fn parse(input: ParseStream) -> Result<Self> {
-        let id: LitStr = input.parse()?;
-        input.parse::<Token![,]>()?;
         let ui: Expr = input.parse()?;
         input.parse::<Token![,]>()?;
         let cache: Expr = input.parse()?;
@@ -98,7 +95,6 @@ impl Parse for Parameters {
         let markdown: LitStr = input.parse()?;
 
         Ok(Parameters {
-            id,
             ui,
             cache,
             markdown,
@@ -106,8 +102,8 @@ impl Parse for Parameters {
     }
 }
 
-fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> proc_macro2::TokenStream {
-    let stream = CommonMarkViewerInternal::new(id.into()).show(ui, cache, &text);
+fn commonmark_impl(ui: Expr, cache: Expr, text: String) -> proc_macro2::TokenStream {
+    let stream = CommonMarkViewerInternal::new().show(ui, cache, &text);
 
     #[cfg(feature = "dump-macro")]
     {
@@ -125,19 +121,17 @@ fn commonmark_impl(id: String, ui: Expr, cache: Expr, text: String) -> proc_macr
 #[proc_macro]
 pub fn commonmark(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let Parameters {
-        id,
         ui,
         cache,
         markdown,
     } = parse_macro_input!(input as Parameters);
 
-    commonmark_impl(id.value(), ui, cache, markdown.value()).into()
+    commonmark_impl(ui, cache, markdown.value()).into()
 }
 
 #[proc_macro]
 pub fn commonmark_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let Parameters {
-        id,
         ui,
         cache,
         markdown,
@@ -158,7 +152,7 @@ pub fn commonmark_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         .into();
     };
 
-    commonmark_impl(id.value(), ui, cache, md).into()
+    commonmark_impl(ui, cache, md).into()
 }
 
 fn resolve_backend_crate_import() -> proc_macro2::TokenStream {

@@ -16,71 +16,64 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // Embed text directly
-                commonmark!("n1", ui, &mut self.cache, "Hello, world");
+                commonmark!(ui, &mut self.cache, "Hello, world");
 
                 // In cases like these it's better to use egui::Separator directly
-                commonmark!("n1-1", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 // From a file like include_str! NOTE: This does not cause a recompile when the
                 // file has changed!
                 commonmark_str!(
-                    "n2",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/hello_world.md"
                 );
-                commonmark!("n4", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(
-                    "n3",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/headers.md"
                 );
-                commonmark!("n5", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(
-                    "n6",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/lists.md"
                 );
 
-                commonmark!("n6", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(
-                    "n7",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/code-blocks.md"
                 );
 
-                commonmark!("n4", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(
-                    "n9",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/blockquotes.md"
                 );
 
-                commonmark!("n10", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(
-                    "n11",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/tables.md"
                 );
-                commonmark!("n12", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(
-                    "n13",
                     ui,
                     &mut self.cache,
                     "egui_commonmark/examples/markdown/definition_list.md"
                 );
-                commonmark!("n14", ui, &mut self.cache, "------------");
+                commonmark!(ui, &mut self.cache, "------------");
             });
         });
     }

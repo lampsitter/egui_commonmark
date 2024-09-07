@@ -4,8 +4,6 @@ use egui_commonmark_backend::{
     alerts::Alert, misc::Style, pulldown::*, CommonMarkOptions, FencedCodeBlock, Image,
 };
 
-use egui::Id;
-
 use proc_macro2::TokenStream;
 use pulldown_cmark::{CowStr, HeadingLevel};
 use quote::quote;
@@ -165,7 +163,6 @@ struct DefinitionList {
 }
 
 pub(crate) struct CommonMarkViewerInternal {
-    source_id: Id,
     curr_table: usize,
     text_style: Style,
     list: List,
@@ -185,9 +182,8 @@ pub(crate) struct CommonMarkViewerInternal {
 }
 
 impl CommonMarkViewerInternal {
-    pub fn new(source_id: Id) -> Self {
+    pub fn new() -> Self {
         Self {
-            source_id,
             curr_table: 0,
             text_style: Style::default(),
             list: List::default(),
@@ -440,9 +436,6 @@ impl CommonMarkViewerInternal {
         if self.is_table {
             stream.extend(self.line.try_insert_start());
 
-            let id = self.source_id.with(self.curr_table);
-            self.curr_table += 1;
-
             let Table { header, rows } = parse_table(events);
 
             let mut header_stream = TokenStream::new();
@@ -480,12 +473,11 @@ impl CommonMarkViewerInternal {
                 }
             }
 
-            let hash = id.value();
-
-            // FIXME: Hash is not the original
+            let curr_table = self.curr_table;
             stream.extend(quote!(
                 egui::Frame::group(ui.style()).show(ui, |ui| {
-                    egui::Grid::new(egui::Id::new(#hash)).striped(true).show(ui, |ui| {
+                    let id = ui.id().with("_table").with(#curr_table);
+                    egui::Grid::new(id).striped(true).show(ui, |ui| {
 
                     #header_stream
 
@@ -495,6 +487,8 @@ impl CommonMarkViewerInternal {
                     });
                 });
             ));
+
+            self.curr_table += 1;
 
             self.is_table = false;
 

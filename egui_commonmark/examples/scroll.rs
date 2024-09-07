@@ -35,9 +35,9 @@ vec.push(5);
         text += &repeating.repeat(1024);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            CommonMarkViewer::new("viewer")
+            CommonMarkViewer::new()
                 .max_image_width(Some(512))
-                .show_scrollable(ui, &mut self.cache, &text);
+                .show_scrollable("viewer", ui, &mut self.cache, &text);
         });
     }
 }
