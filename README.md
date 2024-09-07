@@ -28,7 +28,7 @@ r"# Hello world
 ";
 
 let mut cache = CommonMarkCache::default();
-CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
+CommonMarkViewer::new().show(ui, &mut cache, markdown);
 ```
 
 
@@ -42,7 +42,7 @@ This will do the parsing of the markdown at compile time and output egui widgets
 ```rust
 use egui_commonmark::{CommonMarkCache, commonmark};
 let mut cache = CommonMarkCache::default();
-let _response = commonmark!("example", ui, &mut cache, "# ATX Heading Level 1");
+let _response = commonmark!(ui, &mut cache, "# ATX Heading Level 1");
 ```
 
 Alternatively you can embed a file
@@ -52,7 +52,7 @@ Alternatively you can embed a file
 ```rust
 use egui_commonmark::{CommonMarkCache, commonmark_str};
 let mut cache = CommonMarkCache::default();
-commonmark_str!("example_file", ui, &mut cache, "content.md");
+commonmark_str!(ui, &mut cache, "content.md");
 ```
 
 
