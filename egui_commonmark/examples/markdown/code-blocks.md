@@ -26,4 +26,7 @@ image = { version = "0.24", default-features = false, features = ["png"] }
   ```
 - Code blocks can be in lists too :)
 
+
 More content...
+
+    Inline code blocks are supported if you for some reason need them

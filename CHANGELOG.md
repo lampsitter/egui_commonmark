@@ -5,6 +5,7 @@
 ### Added
 
 - Definition lists
+- Proper inline code block rendering
 
 ### Changed
 

@@ -54,6 +54,9 @@ let x = 3;
 ```
                         "#,
                     r#"
+    let x = 3;
+                        "#,
+                    r#"
 A footnote [^F1]
 
 [^F1]: The footnote"#,

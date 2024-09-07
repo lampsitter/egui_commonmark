@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use egui_commonmark_backend::{
-    alerts::Alert, misc::Style, pulldown::*, CommonMarkOptions, FencedCodeBlock, Image,
+    alerts::Alert, misc::Style, pulldown::*, CodeBlock, CommonMarkOptions, Image,
 };
 
 use proc_macro2::TokenStream;
@@ -169,7 +169,7 @@ pub(crate) struct CommonMarkViewerInternal {
     link: Option<StyledLink>,
     image: Option<StyledImage>,
     line: Newline,
-    fenced_code_block: Option<FencedCodeBlock>,
+    code_block: Option<CodeBlock>,
     is_list_item: bool,
     def_list: DefinitionList,
     is_table: bool,
@@ -192,7 +192,7 @@ impl CommonMarkViewerInternal {
             line: Newline::default(),
             is_list_item: false,
             def_list: Default::default(),
-            fenced_code_block: None,
+            code_block: None,
             is_table: false,
             is_blockquote: false,
             dumps_heading: false,
@@ -559,7 +559,7 @@ impl CommonMarkViewerInternal {
             image
                 .alt_text
                 .push(StyledText::new(self.text_style.clone(), text.to_string()));
-        } else if let Some(block) = &mut self.fenced_code_block {
+        } else if let Some(block) = &mut self.code_block {
             block.content.push_str(&text);
         } else if let Some(link) = &mut self.link {
             link.text
@@ -595,18 +595,22 @@ impl CommonMarkViewerInternal {
                 TokenStream::new()
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
-                self.text_style.code = true;
-
-                if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
-                    self.fenced_code_block = Some(FencedCodeBlock {
-                        lang: lang.to_string(),
-                        content: "".to_string(),
-                    });
-
-                    self.line.try_insert_start()
-                } else {
-                    TokenStream::new()
+                match c {
+                    pulldown_cmark::CodeBlockKind::Fenced(lang) => {
+                        self.code_block = Some(CodeBlock {
+                            lang: Some(lang.to_string()),
+                            content: "".to_string(),
+                        });
+                    }
+                    pulldown_cmark::CodeBlockKind::Indented => {
+                        self.code_block = Some(CodeBlock {
+                            lang: None,
+                            content: "".to_string(),
+                        });
+                    }
                 }
+
+                self.line.try_insert_start()
             }
 
             pulldown_cmark::Tag::List(point) => {
@@ -807,20 +811,21 @@ impl CommonMarkViewerInternal {
 
     fn end_code_block(&mut self, cache: &Expr) -> TokenStream {
         let mut stream = TokenStream::new();
-        if let Some(block) = self.fenced_code_block.take() {
-            let lang = block.lang;
+        if let Some(block) = self.code_block.take() {
             let content = block.content;
 
-            stream.extend(
-                quote!(
-                egui_commonmark_backend::FencedCodeBlock {lang: #lang.to_owned(), content: #content.to_owned()}
-                    .end(ui, #cache, &options, max_width);
-            ));
+            stream.extend(if let Some(lang) = block.lang {
+                quote!(egui_commonmark_backend::CodeBlock {
+                    lang: Some(#lang.to_owned()), content: #content.to_owned()}
+                    .end(ui, #cache, &options, max_width);)
+            } else {
+                quote!(egui_commonmark_backend::CodeBlock {
+                    lang: None, content: #content.to_owned()}
+                    .end(ui, #cache, &options, max_width);)
+            });
 
             stream.extend(self.line.try_insert_end());
         }
-
-        self.text_style.code = false;
 
         stream
     }

@@ -229,12 +229,12 @@ impl Image {
     }
 }
 
-pub struct FencedCodeBlock {
-    pub lang: String,
+pub struct CodeBlock {
+    pub lang: Option<String>,
     pub content: String,
 }
 
-impl FencedCodeBlock {
+impl CodeBlock {
     pub fn end(
         &self,
         ui: &mut Ui,
@@ -246,7 +246,12 @@ impl FencedCodeBlock {
             Self::pre_syntax_highlighting(cache, options, ui);
 
             let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
-                let mut job = self.syntax_highlighting(cache, options, &self.lang, ui, string);
+                let mut job = if let Some(lang) = &self.lang {
+                    self.syntax_highlighting(cache, options, lang, ui, string)
+                } else {
+                    plain_highlighting(ui, string)
+                };
+
                 job.wrap.max_width = wrap_width;
                 ui.fonts(|f| f.layout_job(job))
             };
@@ -257,7 +262,7 @@ impl FencedCodeBlock {
 }
 
 #[cfg(not(feature = "better_syntax_highlighting"))]
-impl FencedCodeBlock {
+impl CodeBlock {
     fn pre_syntax_highlighting(
         _cache: &mut CommonMarkCache,
         _options: &CommonMarkOptions,
@@ -274,12 +279,12 @@ impl FencedCodeBlock {
         ui: &Ui,
         text: &str,
     ) -> egui::text::LayoutJob {
-        plain_highlighting(ui, text, extension)
+        simple_highlighting(ui, text, extension)
     }
 }
 
 #[cfg(feature = "better_syntax_highlighting")]
-impl FencedCodeBlock {
+impl CodeBlock {
     fn pre_syntax_highlighting(
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
@@ -328,18 +333,31 @@ impl FencedCodeBlock {
 
             job
         } else {
-            plain_highlighting(ui, text, extension)
+            simple_highlighting(ui, text, extension)
         }
     }
 }
 
-fn plain_highlighting(ui: &Ui, text: &str, extension: &str) -> egui::text::LayoutJob {
+fn simple_highlighting(ui: &Ui, text: &str, extension: &str) -> egui::text::LayoutJob {
     egui_extras::syntax_highlighting::highlight(
         ui.ctx(),
         &egui_extras::syntax_highlighting::CodeTheme::from_style(ui.style()),
         text,
         extension,
     )
+}
+
+fn plain_highlighting(ui: &Ui, text: &str) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob::default();
+    job.append(
+        text,
+        0.0,
+        egui::TextFormat::simple(
+            TextStyle::Monospace.resolve(ui.style()),
+            ui.style().visuals.text_color(),
+        ),
+    );
+    job
 }
 
 #[cfg(feature = "better_syntax_highlighting")]

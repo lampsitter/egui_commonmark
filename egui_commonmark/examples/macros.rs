@@ -61,11 +61,17 @@ impl eframe::App for App {
 
                 commonmark!(ui, &mut self.cache, "------------");
 
-                commonmark_str!(
-                    ui,
-                    &mut self.cache,
-                    "egui_commonmark/examples/markdown/tables.md"
-                );
+                // The table will end up with the same id as the table in the hello_world file.
+                // Providing the id explicitly is annoying for all other widgets that are not tables
+                // so push_id must be used in this case.
+                ui.push_id("tables", |ui| {
+                    commonmark_str!(
+                        ui,
+                        &mut self.cache,
+                        "egui_commonmark/examples/markdown/tables.md"
+                    );
+                });
+
                 commonmark!(ui, &mut self.cache, "------------");
 
                 commonmark_str!(

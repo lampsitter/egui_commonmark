@@ -71,7 +71,7 @@ pub struct CommonMarkViewerInternal {
     link: Option<Link>,
     image: Option<Image>,
     line: Newline,
-    fenced_code_block: Option<FencedCodeBlock>,
+    code_block: Option<CodeBlock>,
     is_list_item: bool,
     def_list: DefinitionList,
     is_table: bool,
@@ -95,7 +95,7 @@ impl CommonMarkViewerInternal {
             line: Newline::default(),
             is_list_item: false,
             def_list: Default::default(),
-            fenced_code_block: None,
+            code_block: None,
             is_table: false,
             is_blockquote: false,
             checkbox_events: Vec::new(),
@@ -542,7 +542,7 @@ impl CommonMarkViewerInternal {
         let rich_text = self.text_style.to_richtext(ui, &text);
         if let Some(image) = &mut self.image {
             image.alt_text.push(rich_text);
-        } else if let Some(block) = &mut self.fenced_code_block {
+        } else if let Some(block) = &mut self.code_block {
             block.content.push_str(&text);
         } else if let Some(link) = &mut self.link {
             link.text.push(rich_text);
@@ -576,17 +576,23 @@ impl CommonMarkViewerInternal {
                 self.is_blockquote = true;
             }
             pulldown_cmark::Tag::CodeBlock(c) => {
-                if let pulldown_cmark::CodeBlockKind::Fenced(lang) = c {
-                    self.fenced_code_block = Some(crate::FencedCodeBlock {
-                        lang: lang.to_string(),
-                        content: "".to_string(),
-                    });
-
-                    self.line.try_insert_start(ui);
+                match c {
+                    pulldown_cmark::CodeBlockKind::Fenced(lang) => {
+                        self.code_block = Some(crate::CodeBlock {
+                            lang: Some(lang.to_string()),
+                            content: "".to_string(),
+                        });
+                    }
+                    pulldown_cmark::CodeBlockKind::Indented => {
+                        self.code_block = Some(crate::CodeBlock {
+                            lang: None,
+                            content: "".to_string(),
+                        });
+                    }
                 }
-
-                self.text_style.code = true;
+                self.line.try_insert_start(ui);
             }
+
             pulldown_cmark::Tag::List(point) => {
                 if !self.list.is_inside_a_list() && self.line.can_insert_start() {
                     newline(ui);
@@ -739,10 +745,9 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
-        if let Some(block) = self.fenced_code_block.take() {
+        if let Some(block) = self.code_block.take() {
             block.end(ui, cache, options, max_width);
             self.line.try_insert_end(ui);
         }
-        self.text_style.code = false;
     }
 }
