@@ -7,7 +7,7 @@ fn main() {
     __run_test_ui(|ui| {
         egui::ScrollArea::vertical().show(ui, |ui| {
             egui::Frame::none().show(ui, |not_named_ui| {
-                commonmark!("a", not_named_ui, &mut cache, "# Hello, World");
+                commonmark!(not_named_ui, &mut cache, "# Hello, World");
             })
         });
     });

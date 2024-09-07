@@ -47,7 +47,7 @@
 //! use egui_commonmark::{CommonMarkCache, commonmark};
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
-//! let _response = commonmark!("example", ui, &mut cache, "# ATX Heading Level 1");
+//! let _response = commonmark!( ui, &mut cache, "# ATX Heading Level 1");
 //! # });
 //! ```
 //!
@@ -60,7 +60,7 @@
 //! use egui_commonmark::{CommonMarkCache, commonmark_str};
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
-//! commonmark_str!("example_file", ui, &mut cache, "content.md");
+//! commonmark_str!(ui, &mut cache, "content.md");
 //! # });
 //! ```
 //!
