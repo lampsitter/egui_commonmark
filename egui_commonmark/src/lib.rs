@@ -14,7 +14,7 @@
 //!
 //! # __run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
-//! CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
+//! CommonMarkViewer::new().show(ui, &mut cache, markdown);
 //! # });
 //!
 //! ```
@@ -47,7 +47,7 @@
 //! use egui_commonmark::{CommonMarkCache, commonmark};
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
-//! let _response = commonmark!( ui, &mut cache, "# ATX Heading Level 1");
+//! let _response = commonmark!(ui, &mut cache, "# ATX Heading Level 1");
 //! # });
 //! ```
 //!
@@ -88,14 +88,12 @@ use egui_commonmark_backend::*;
 
 #[derive(Debug)]
 pub struct CommonMarkViewer {
-    source_id: Id,
     options: CommonMarkOptions,
 }
 
 impl CommonMarkViewer {
-    pub fn new(source_id: impl std::hash::Hash) -> Self {
+    pub fn new() -> Self {
         Self {
-            source_id: Id::new(source_id),
             options: CommonMarkOptions::default(),
         }
     }
@@ -133,7 +131,7 @@ impl CommonMarkViewer {
     /// # Example
     /// ```
     /// # use egui_commonmark::CommonMarkViewer;
-    /// CommonMarkViewer::new("viewer").default_implicit_uri_scheme("https://example.org/");
+    /// CommonMarkViewer::new().default_implicit_uri_scheme("https://example.org/");
     /// ```
     pub fn default_implicit_uri_scheme<S: Into<String>>(mut self, scheme: S) -> Self {
         self.options.default_implicit_uri_scheme = scheme.into();
@@ -181,12 +179,12 @@ impl CommonMarkViewer {
     ) -> egui::InnerResponse<()> {
         egui_commonmark_backend::prepare_show(cache, ui.ctx());
 
-        let (response, _) = parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show(
+        let (response, _) = parsers::pulldown::CommonMarkViewerInternal::new().show(
             ui,
             cache,
             &self.options,
             text,
-            false,
+            None,
         );
 
         response
@@ -204,10 +202,13 @@ impl CommonMarkViewer {
         self.options.mutable = true;
         egui_commonmark_backend::prepare_show(cache, ui.ctx());
 
-        let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new(
-            self.source_id,
-        )
-        .show(ui, cache, &self.options, text, false);
+        let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new().show(
+            ui,
+            cache,
+            &self.options,
+            text,
+            None,
+        );
 
         // Update source text for checkmarks that were clicked
         for ev in checkmark_events {
@@ -236,9 +237,16 @@ impl CommonMarkViewer {
     /// [`show`]: crate::CommonMarkViewer::show
     #[doc(hidden)] // Buggy in scenarios more complex than the example application
     #[cfg(feature = "pulldown_cmark")]
-    pub fn show_scrollable(self, ui: &mut egui::Ui, cache: &mut CommonMarkCache, text: &str) {
+    pub fn show_scrollable(
+        self,
+        source_id: impl std::hash::Hash,
+        ui: &mut egui::Ui,
+        cache: &mut CommonMarkCache,
+        text: &str,
+    ) {
         egui_commonmark_backend::prepare_show(cache, ui.ctx());
-        parsers::pulldown::CommonMarkViewerInternal::new(self.source_id).show_scrollable(
+        parsers::pulldown::CommonMarkViewerInternal::new().show_scrollable(
+            Id::new(source_id),
             ui,
             cache,
             &self.options,

@@ -10,7 +10,7 @@ macro_rules! m {
         }
         #[cfg(not(feature = "macros"))]
         {
-            egui_commonmark::CommonMarkViewer::new("viewer").show($ui, &mut $cache, $a);
+            egui_commonmark::CommonMarkViewer::new().show($ui, &mut $cache, $a);
         }
         )*
     };

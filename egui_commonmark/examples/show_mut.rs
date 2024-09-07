@@ -18,9 +18,11 @@ impl eframe::App for App {
                         .code_editor()
                         .desired_width(f32::INFINITY),
                 );
-                CommonMarkViewer::new("viewer")
-                    .max_image_width(Some(512))
-                    .show_mut(ui, &mut self.cache, &mut self.text_buffer);
+                CommonMarkViewer::new().max_image_width(Some(512)).show_mut(
+                    ui,
+                    &mut self.cache,
+                    &mut self.text_buffer,
+                );
             });
         });
     }

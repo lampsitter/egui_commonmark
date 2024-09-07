@@ -16,7 +16,7 @@ impl eframe::App for App {
         let text = include_str!("markdown/hello_world.md");
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                CommonMarkViewer::new("viewer")
+                CommonMarkViewer::new()
                     .max_image_width(Some(512))
                     .show(ui, &mut self.cache, text);
             });

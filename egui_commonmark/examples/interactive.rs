@@ -21,7 +21,7 @@ impl eframe::App for App {
                 .show_inside(ui, |ui| ui.text_edit_multiline(&mut self.markdown));
             egui::CentralPanel::default().show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    CommonMarkViewer::new("viewer").show(ui, &mut self.cache, &self.markdown);
+                    CommonMarkViewer::new().show(ui, &mut self.cache, &self.markdown);
                 });
             });
         });

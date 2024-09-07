@@ -65,7 +65,6 @@ struct DefinitionList {
 }
 
 pub struct CommonMarkViewerInternal {
-    source_id: Id,
     curr_table: usize,
     text_style: Style,
     list: List,
@@ -86,9 +85,8 @@ pub(crate) struct CheckboxClickEvent {
 }
 
 impl CommonMarkViewerInternal {
-    pub fn new(source_id: Id) -> Self {
+    pub fn new() -> Self {
         Self {
-            source_id,
             curr_table: 0,
             text_style: Style::default(),
             list: List::default(),
@@ -107,13 +105,14 @@ impl CommonMarkViewerInternal {
 
 impl CommonMarkViewerInternal {
     /// Be aware that this acquires egui::Context internally.
+    /// If Id is provided split then split points will be populated
     pub(crate) fn show(
         &mut self,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         text: &str,
-        populate_split_points: bool,
+        split_points_id: Option<Id>,
     ) -> (egui::InnerResponse<()>, Vec<CheckboxClickEvent>) {
         let max_width = options.max_width(ui);
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
@@ -139,19 +138,21 @@ impl CommonMarkViewerInternal {
 
                 self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
-                if populate_split_points && should_add_split_point {
-                    let scroll_cache = scroll_cache(cache, &self.source_id);
-                    let end_position = ui.next_widget_position();
+                if let Some(source_id) = split_points_id {
+                    if should_add_split_point {
+                        let scroll_cache = scroll_cache(cache, &source_id);
+                        let end_position = ui.next_widget_position();
 
-                    let split_point_exists = scroll_cache
-                        .split_points
-                        .iter()
-                        .any(|(i, _, _)| *i == index);
-
-                    if !split_point_exists {
-                        scroll_cache
+                        let split_point_exists = scroll_cache
                             .split_points
-                            .push((index, start_position, end_position));
+                            .iter()
+                            .any(|(i, _, _)| *i == index);
+
+                        if !split_point_exists {
+                            scroll_cache
+                                .split_points
+                                .push((index, start_position, end_position));
+                        }
                     }
                 }
 
@@ -160,31 +161,35 @@ impl CommonMarkViewerInternal {
                 }
             }
 
-            scroll_cache(cache, &self.source_id).page_size =
-                Some(ui.next_widget_position().to_vec2());
+            if let Some(source_id) = split_points_id {
+                scroll_cache(cache, &source_id).page_size =
+                    Some(ui.next_widget_position().to_vec2());
+            }
         });
+
         (re, std::mem::take(&mut self.checkbox_events))
     }
 
     pub(crate) fn show_scrollable(
         &mut self,
+        source_id: Id,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         text: &str,
     ) {
         let available_size = ui.available_size();
-        let scroll_id = self.source_id.with("_scroll_area");
+        let scroll_id = source_id.with("_scroll_area");
 
-        let Some(page_size) = scroll_cache(cache, &self.source_id).page_size else {
+        let Some(page_size) = scroll_cache(cache, &source_id).page_size else {
             egui::ScrollArea::vertical()
                 .id_source(scroll_id)
                 .auto_shrink([false, true])
                 .show(ui, |ui| {
-                    self.show(ui, cache, options, text, true);
+                    self.show(ui, cache, options, text, Some(source_id));
                 });
             // Prevent repopulating points twice at startup
-            scroll_cache(cache, &self.source_id).available_size = available_size;
+            scroll_cache(cache, &source_id).available_size = available_size;
             return;
         };
 
@@ -207,7 +212,7 @@ impl CommonMarkViewerInternal {
                 let max_width = options.max_width(ui);
                 ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
-                    let scroll_cache = scroll_cache(cache, &self.source_id);
+                    let scroll_cache = scroll_cache(cache, &source_id);
 
                     // finding the first element that's not in the viewport anymore
                     let (first_event_index, _, first_end_position) = scroll_cache
@@ -252,7 +257,7 @@ impl CommonMarkViewerInternal {
             });
 
         // Forcing full re-render to repopulate split points for the new size
-        let scroll_cache = scroll_cache(cache, &self.source_id);
+        let scroll_cache = scroll_cache(cache, &source_id);
         if available_size != scroll_cache.available_size {
             scroll_cache.available_size = available_size;
             scroll_cache.page_size = None;
