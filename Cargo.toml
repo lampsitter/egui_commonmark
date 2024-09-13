@@ -29,6 +29,6 @@ pulldown-cmark = { version = "0.12", default-features = false }
 
 
 [patch.crates-io]
-# eframe = { git = "https://github.com/emilk/egui.git", rev = "cbb5d6aa936c7498214dba03b594fbe75dbe7488" }      # egui master 2024-06-05
-# egui = { git = "https://github.com/emilk/egui.git", rev = "cbb5d6aa936c7498214dba03b594fbe75dbe7488" }        # egui master 2024-06-05
-# egui_extras = { git = "https://github.com/emilk/egui.git", rev = "cbb5d6aa936c7498214dba03b594fbe75dbe7488" } # egui master 2024-06-05
+eframe = { git = "https://github.com/emilk/egui.git", rev = "b01a7b1ee82181fb8c31e0c26c40ac8249d8b2ed" }      # egui master 2024-09-13
+egui = { git = "https://github.com/emilk/egui.git", rev = "b01a7b1ee82181fb8c31e0c26c40ac8249d8b2ed" }        # egui master 2024-09-13
+egui_extras = { git = "https://github.com/emilk/egui.git", rev = "b01a7b1ee82181fb8c31e0c26c40ac8249d8b2ed" } # egui master 2024-09-13
