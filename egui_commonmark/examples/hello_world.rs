@@ -34,9 +34,9 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             if let Some(theme) = args.next() {
                 if theme == "light" {
-                    cc.egui_ctx.set_visuals(egui::Visuals::light());
+                    cc.egui_ctx.set_theme(egui::Theme::Light);
                 } else if theme == "dark" {
-                    cc.egui_ctx.set_visuals(egui::Visuals::dark());
+                    cc.egui_ctx.set_theme(egui::Theme::Dark);
                 }
             }
 
