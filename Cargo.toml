@@ -16,8 +16,8 @@ version = "0.17.0"
 repository = "https://github.com/lampsitter/egui_commonmark"
 
 [workspace.dependencies]
-egui_extras = { version = "0.28", default-features = false }
-egui = { version = "0.28", default-features = false }
+egui_extras = { version = "0.29", default-features = false }
+egui = { version = "0.29", default-features = false }
 
 egui_commonmark_backend = { version = "0.17.0", path = "egui_commonmark_backend", default-features = false }
 egui_commonmark_macros = { version = "0.17.0", path = "egui_commonmark_macros", default-features = false }
@@ -29,6 +29,6 @@ pulldown-cmark = { version = "0.12", default-features = false }
 
 
 [patch.crates-io]
-# eframe = { git = "https://github.com/emilk/egui.git", rev = "cbb5d6aa936c7498214dba03b594fbe75dbe7488" }      # egui master 2024-06-05
-# egui = { git = "https://github.com/emilk/egui.git", rev = "cbb5d6aa936c7498214dba03b594fbe75dbe7488" }        # egui master 2024-06-05
-# egui_extras = { git = "https://github.com/emilk/egui.git", rev = "cbb5d6aa936c7498214dba03b594fbe75dbe7488" } # egui master 2024-06-05
+# eframe = { git = "https://github.com/emilk/egui.git", rev = "66076101e12eee01dec374285521b0bed4ecc40a" }      # egui master 2024-09-13
+# egui = { git = "https://github.com/emilk/egui.git", rev = "66076101e12eee01dec374285521b0bed4ecc40a" }        # egui master 2024-09-13
+# egui_extras = { git = "https://github.com/emilk/egui.git", rev = "66076101e12eee01dec374285521b0bed4ecc40a" } # egui master 2024-09-13

@@ -183,7 +183,7 @@ impl CommonMarkViewerInternal {
 
         let Some(page_size) = scroll_cache(cache, &source_id).page_size else {
             egui::ScrollArea::vertical()
-                .id_source(scroll_id)
+                .id_salt(scroll_id)
                 .auto_shrink([false, true])
                 .show(ui, |ui| {
                     self.show(ui, cache, options, text, Some(source_id));
@@ -200,7 +200,7 @@ impl CommonMarkViewerInternal {
         let num_rows = events.len();
 
         egui::ScrollArea::vertical()
-            .id_source(scroll_id)
+            .id_salt(scroll_id)
             // Elements have different widths, so the scroll area cannot try to shrink to the
             // content, as that will mean that the scroll bar will move when loading elements
             // with different widths.
