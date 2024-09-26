@@ -3,8 +3,8 @@ use egui_commonmark_macros::commonmark_str;
 
 // Testing all the different examples should give fairly good coverage
 fn main() {
-    let mut cache = egui_commonmark_backend::CommonMarkCache::default();
     __run_test_ui(|ui| {
+        let mut cache = egui_commonmark_backend::CommonMarkCache::default();
         commonmark_str!(
             ui,
             &mut cache,
