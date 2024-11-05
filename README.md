@@ -70,6 +70,21 @@ commonmark_str!(ui, &mut cache, "content.md");
 For an easy intro check out the `hello_world` example. To see all the different
 features egui_commonmark has to offer check out the `book` example.
 
+## FAQ
+
+### URL is not displayed when hovering over a link
+
+By default egui does not show urls when you hover hyperlinks. To enable it,
+you can do the following before calling any ui related functions:
+
+```rust
+ui.style_mut().url_in_tooltip = true;
+```
+
+## MSRV Policy
+
+This crate uses the same MSRV as the latest released egui version.
+
 ## License
 
 Licensed under either of

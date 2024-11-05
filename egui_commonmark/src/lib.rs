@@ -24,6 +24,9 @@
 //! ```toml
 //! image = { version = "0.25", default-features = false, features = ["png"] }
 //! ```
+//! # FAQ
+//!
+//! ## URL is not displayed when hovering over a link
 //!
 //! By default egui does not show urls when you hover hyperlinks. To enable it,
 //! you can do the following before calling any ui related functions:
