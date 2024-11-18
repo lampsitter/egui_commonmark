@@ -81,7 +81,7 @@ item a4 | item b4
 
                         "#,
                     r#"
- ![Rust logo](egui_commonmark/examples/rust-logo-128x128.png)
+ ![Ferris](egui_commonmark/examples/cuddlyferris.png)
                         "#,
                     r#"
 [Link to repo](https://github.com/lampsitter/egui_commonmark)
