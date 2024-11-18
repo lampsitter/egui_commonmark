@@ -15,7 +15,7 @@ jobs:
       run: cargo clippy -- -Dwarnings
 
     - name: Check all features pulldown
-      run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros
+      run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros,embedded_image
 
     - name: Cargo fmt
       run: cargo fmt --check -q

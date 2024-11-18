@@ -198,7 +198,7 @@ pub struct Image {
 impl Image {
     // FIXME: string conversion
     pub fn new(uri: &str, options: &CommonMarkOptions) -> Self {
-        let has_scheme = uri.contains("://");
+        let has_scheme = uri.contains("://") || uri.starts_with("data:");
         let uri = if options.use_explicit_uri_scheme || has_scheme {
             uri.to_string()
         } else {
@@ -543,6 +543,9 @@ pub fn prepare_show(cache: &mut CommonMarkCache, ctx: &egui::Context) {
         // cache free from egui's Ui and Context types as this allows it to be created before
         // any egui instances. It also keeps the API similar to before the introduction of the
         // image loaders.
+        #[cfg(feature = "embedded_image")]
+        crate::data_url_loader::install_loader(ctx);
+
         egui_extras::install_image_loaders(ctx);
         cache.has_installed_loaders = true;
     }

@@ -1,5 +1,11 @@
 # egui_commomnark changelog
 
+## Unreleased
+
+## Added
+
+- Support for loading images embedded in the markdown.
+
 ## 0.18.0 - 2024-09-26
 
 ### Added

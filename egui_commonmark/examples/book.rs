@@ -124,6 +124,10 @@ fn main() -> eframe::Result {
                         name: "Tables".to_owned(),
                         content: include_str!("markdown/tables.md").to_owned(),
                     },
+                    Page {
+                        name: "Embedded Image".to_owned(),
+                        content: include_str!("markdown/embedded_image.md").to_owned(),
+                    },
                 ],
             }))
         }),

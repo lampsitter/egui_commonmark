@@ -55,6 +55,16 @@ svg = ["egui_extras/svg"]
 ## Images with urls will be downloaded and displayed
 fetch = ["egui_extras/http"]
 
+## Allows loading base64 image data urls from within markdown files. e.g: `data:image/png;base64,...`
+## Note that this is really space inefficient. No size limit is in place for the maximum allowed
+## data in the url.
+##
+## This enables the data urls for your entire app as it installs an egui bytes loader in
+## in the background.
+##
+## Currently this does not support wasm.
+embedded_image = ["egui_commonmark_backend/embedded_image"]
+
 [dev-dependencies]
 eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
