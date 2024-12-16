@@ -20,7 +20,7 @@ include = ["src/**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 proc-macro = true
 
 [dependencies]
-syn = "2"
+syn = { version = "2", features = ["full"] }
 quote = { version = "1", default-features = false }
 proc-macro2 = { version = "1", default-features = false }
 
