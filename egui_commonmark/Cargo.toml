@@ -69,6 +69,7 @@ embedded_image = ["egui_commonmark_backend/embedded_image"]
 eframe = { version = "0.30", default-features = false, features = ["default_fonts", "glow"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 egui_commonmark_macros = { workspace = true } # Tests won't build otherswise
+home = "0.5.9"  # pinned for Rust 1.80.0, keep in sync with eframe
 
 [package.metadata.docs.rs]
 features = ["better_syntax_highlighting", "document-features", "macros"]
