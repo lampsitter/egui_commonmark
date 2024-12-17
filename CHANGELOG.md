@@ -4,7 +4,11 @@
 
 ## Added
 
-- Support for loading images embedded in the markdown.
+- Support for loading images embedded in the markdown with data urls.
+
+### Changed
+
+- Updated egui to 0.30 ([#69](https://github.com/lampsitter/egui_commonmark/pull/69) by [@abey79](https://github.com/abey79))
 
 ## 0.18.0 - 2024-09-26
 
