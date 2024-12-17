@@ -11,16 +11,16 @@ resolver = "2"
 [workspace.package]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.80"                                     # Follows egui
-version = "0.18.0"
+rust-version = "1.76"                                        # Follows egui
+version = "0.19.0"
 repository = "https://github.com/lampsitter/egui_commonmark"
 
 [workspace.dependencies]
 egui_extras = { version = "0.30", default-features = false }
 egui = { version = "0.30", default-features = false }
 
-egui_commonmark_backend = { version = "0.18.0", path = "egui_commonmark_backend", default-features = false }
-egui_commonmark_macros = { version = "0.18.0", path = "egui_commonmark_macros", default-features = false }
+egui_commonmark_backend = { version = "0.19.0", path = "egui_commonmark_backend", default-features = false }
+egui_commonmark_macros = { version = "0.19.0", path = "egui_commonmark_macros", default-features = false }
 
 # To add features to documentation
 document-features = { version = "0.2" }

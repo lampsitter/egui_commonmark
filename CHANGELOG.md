@@ -1,6 +1,6 @@
 # egui_commomnark changelog
 
-## Unreleased
+## 0.19.0 - 2024-12-17
 
 ## Added
 
