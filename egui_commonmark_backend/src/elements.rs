@@ -235,7 +235,7 @@ pub fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(
         // offset the frame so that we can use the space for the horizontal line and other stuff
         // By not using a separator we have better control
         .outer_margin(egui::Margin {
-            left: 10.0,
+            left: 10,
             ..Default::default()
         })
         .show(ui, add_contents)
