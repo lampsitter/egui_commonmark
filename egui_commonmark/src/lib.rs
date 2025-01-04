@@ -78,6 +78,7 @@ mod parsers;
 
 pub use egui_commonmark_backend::alerts::{Alert, AlertBundle};
 pub use egui_commonmark_backend::misc::CommonMarkCache;
+pub use egui_commonmark_backend::RenderMathFn;
 
 #[cfg(feature = "macros")]
 pub use egui_commonmark_macros::*;
@@ -89,14 +90,21 @@ pub use egui_commonmark_backend;
 
 use egui_commonmark_backend::*;
 
-#[derive(Debug, Default)]
-pub struct CommonMarkViewer {
-    options: CommonMarkOptions,
+// FIXME: Manual Debug impl
+// #[derive(Debug, Default)]
+#[derive(Default)]
+pub struct CommonMarkViewer<'a> {
+    options: CommonMarkOptions<'a>,
 }
 
-impl CommonMarkViewer {
+impl<'a> CommonMarkViewer<'a> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn render_math_fn(mut self, math_fn: Option<&'a RenderMathFn>) -> Self {
+        self.options.math_fn = math_fn;
+        self
     }
 
     /// The amount of spaces a bullet point is indented. By default this is 4
