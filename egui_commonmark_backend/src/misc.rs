@@ -17,8 +17,9 @@ const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
 #[cfg(feature = "better_syntax_highlighting")]
 const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
-#[derive(Debug)]
-pub struct CommonMarkOptions {
+// FIXME: Debug
+// #[derive(Debug)]
+pub struct CommonMarkOptions<'f> {
     pub indentation_spaces: usize,
     pub max_image_width: Option<usize>,
     pub show_alt_text_on_hover: bool,
@@ -32,9 +33,10 @@ pub struct CommonMarkOptions {
     pub alerts: AlertBundle,
     /// Whether to present a mutable ui for things like checkboxes
     pub mutable: bool,
+    pub math_fn: Option<&'f crate::RenderMathFn>,
 }
 
-impl Default for CommonMarkOptions {
+impl Default for CommonMarkOptions<'_> {
     fn default() -> Self {
         Self {
             indentation_spaces: 4,
@@ -49,11 +51,12 @@ impl Default for CommonMarkOptions {
             default_implicit_uri_scheme: "file://".to_owned(),
             alerts: AlertBundle::gfm(),
             mutable: false,
+            math_fn: None,
         }
     }
 }
 
-impl CommonMarkOptions {
+impl CommonMarkOptions<'_> {
     #[cfg(feature = "better_syntax_highlighting")]
     pub fn curr_theme(&self, ui: &Ui) -> &str {
         if ui.style().visuals.dark_mode {

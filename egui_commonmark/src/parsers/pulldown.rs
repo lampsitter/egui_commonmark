@@ -105,7 +105,7 @@ impl CommonMarkViewerInternal {
 
 impl CommonMarkViewerInternal {
     /// Be aware that this acquires egui::Context internally.
-    /// If Id is provided split then split points will be populated
+    /// If split Id is provided then split points will be populated
     pub(crate) fn show(
         &mut self,
         ui: &mut egui::Ui,
@@ -533,8 +533,16 @@ impl CommonMarkViewerInternal {
                     ui.add(ImmutableCheckbox::without_text(&mut checkbox));
                 }
             }
-
-            pulldown_cmark::Event::InlineMath(_) | pulldown_cmark::Event::DisplayMath(_) => {}
+            pulldown_cmark::Event::InlineMath(tex) => {
+                if let Some(math_fn) = options.math_fn {
+                    math_fn(ui, &tex, true);
+                }
+            }
+            pulldown_cmark::Event::DisplayMath(tex) => {
+                if let Some(math_fn) = options.math_fn {
+                    math_fn(ui, &tex, false);
+                }
+            }
         }
     }
 
