@@ -17,8 +17,6 @@ const DEFAULT_THEME_LIGHT: &str = "base16-ocean.light";
 #[cfg(feature = "better_syntax_highlighting")]
 const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
-// FIXME: Debug
-// #[derive(Debug)]
 pub struct CommonMarkOptions<'f> {
     pub indentation_spaces: usize,
     pub max_image_width: Option<usize>,
@@ -34,6 +32,30 @@ pub struct CommonMarkOptions<'f> {
     /// Whether to present a mutable ui for things like checkboxes
     pub mutable: bool,
     pub math_fn: Option<&'f crate::RenderMathFn>,
+}
+
+impl<'f> std::fmt::Debug for CommonMarkOptions<'f> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("CommonMarkOptions");
+
+        s.field("indentation_spaces", &self.indentation_spaces)
+            .field("max_image_width", &self.max_image_width)
+            .field("show_alt_text_on_hover", &self.show_alt_text_on_hover)
+            .field("default_width", &self.default_width);
+
+        #[cfg(feature = "better_syntax_highlighting")]
+        s.field("theme_light", &self.theme_light)
+            .field("theme_light", &self.theme_dark);
+
+        s.field("use_explicit_uri_scheme", &self.use_explicit_uri_scheme)
+            .field(
+                "default_implicit_uri_scheme",
+                &self.default_implicit_uri_scheme,
+            )
+            .field("alerts", &self.alerts)
+            .field("mutable", &self.mutable)
+            .finish()
+    }
 }
 
 impl Default for CommonMarkOptions<'_> {
