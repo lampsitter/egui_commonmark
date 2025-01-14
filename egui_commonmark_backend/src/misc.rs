@@ -45,7 +45,7 @@ impl<'f> std::fmt::Debug for CommonMarkOptions<'f> {
 
         #[cfg(feature = "better_syntax_highlighting")]
         s.field("theme_light", &self.theme_light)
-            .field("theme_light", &self.theme_dark);
+            .field("theme_dark", &self.theme_dark);
 
         s.field("use_explicit_uri_scheme", &self.use_explicit_uri_scheme)
             .field(
