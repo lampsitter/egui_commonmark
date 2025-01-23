@@ -180,6 +180,7 @@ pub fn parse_alerts<'a>(
 }
 
 /// Supported pulldown_cmark options
+#[inline]
 pub fn parser_options() -> Options {
     Options::ENABLE_TABLES
         | Options::ENABLE_TASKLISTS

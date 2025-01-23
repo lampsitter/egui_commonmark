@@ -103,9 +103,17 @@ impl CommonMarkViewerInternal {
     }
 }
 
+fn parser_options_math(is_math_enabled: bool) -> pulldown_cmark::Options {
+    if is_math_enabled {
+        parser_options() | pulldown_cmark::Options::ENABLE_MATH
+    } else {
+        parser_options()
+    }
+}
+
 impl CommonMarkViewerInternal {
     /// Be aware that this acquires egui::Context internally.
-    /// If Id is provided split then split points will be populated
+    /// If split Id is provided then split points will be populated
     pub(crate) fn show(
         &mut self,
         ui: &mut egui::Ui,
@@ -122,10 +130,13 @@ impl CommonMarkViewerInternal {
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
 
-            let mut events = pulldown_cmark::Parser::new_ext(text, parser_options())
-                .into_offset_iter()
-                .enumerate()
-                .peekable();
+            let mut events = pulldown_cmark::Parser::new_ext(
+                text,
+                parser_options_math(options.math_fn.is_some()),
+            )
+            .into_offset_iter()
+            .enumerate()
+            .peekable();
 
             while let Some((index, (e, src_span))) = events.next() {
                 let start_position = ui.next_widget_position();
@@ -193,9 +204,10 @@ impl CommonMarkViewerInternal {
             return;
         };
 
-        let events = pulldown_cmark::Parser::new_ext(text, parser_options())
-            .into_offset_iter()
-            .collect::<Vec<_>>();
+        let events =
+            pulldown_cmark::Parser::new_ext(text, parser_options_math(options.math_fn.is_some()))
+                .into_offset_iter()
+                .collect::<Vec<_>>();
 
         let num_rows = events.len();
 
@@ -533,8 +545,16 @@ impl CommonMarkViewerInternal {
                     ui.add(ImmutableCheckbox::without_text(&mut checkbox));
                 }
             }
-
-            pulldown_cmark::Event::InlineMath(_) | pulldown_cmark::Event::DisplayMath(_) => {}
+            pulldown_cmark::Event::InlineMath(tex) => {
+                if let Some(math_fn) = options.math_fn {
+                    math_fn(ui, &tex, true);
+                }
+            }
+            pulldown_cmark::Event::DisplayMath(tex) => {
+                if let Some(math_fn) = options.math_fn {
+                    math_fn(ui, &tex, false);
+                }
+            }
         }
     }
 

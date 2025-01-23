@@ -8,7 +8,7 @@ First of all thank you for considering it. Check out
 You won't be able to run the tests without enabling the `macros` feature
 as one of the examples depend on it.
 
-`cargo test --feature macros`
+`cargo test --features macros`
 
 
 ### Debugging the proc macros

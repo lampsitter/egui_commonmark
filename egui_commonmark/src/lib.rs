@@ -78,6 +78,7 @@ mod parsers;
 
 pub use egui_commonmark_backend::alerts::{Alert, AlertBundle};
 pub use egui_commonmark_backend::misc::CommonMarkCache;
+pub use egui_commonmark_backend::RenderMathFn;
 
 #[cfg(feature = "macros")]
 pub use egui_commonmark_macros::*;
@@ -90,11 +91,11 @@ pub use egui_commonmark_backend;
 use egui_commonmark_backend::*;
 
 #[derive(Debug, Default)]
-pub struct CommonMarkViewer {
-    options: CommonMarkOptions,
+pub struct CommonMarkViewer<'f> {
+    options: CommonMarkOptions<'f>,
 }
 
-impl CommonMarkViewer {
+impl<'f> CommonMarkViewer<'f> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -168,6 +169,48 @@ impl CommonMarkViewer {
     /// are used
     pub fn alerts(mut self, alerts: AlertBundle) -> Self {
         self.options.alerts = alerts;
+        self
+    }
+
+    /// Allows rendering math. This has to be done manually as you might want a different
+    /// implementation for the web and native.
+    ///
+    /// The example is template code for rendering a svg image. Make sure to enable the
+    /// `egui_extras/svg` feature for the result to show up.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
+    /// # use egui_commonmark::CommonMarkViewer;
+    /// let mut math_images = Rc::new(RefCell::new(HashMap::new()));
+    /// CommonMarkViewer::new()
+    ///     .render_math_fn(Some(&move |ui, math, inline| {
+    ///         let mut map = math_images.borrow_mut();
+    ///         let svg = map
+    ///             .entry(math.to_string())
+    ///             .or_insert_with(|| {
+    ///                 if (inline) {
+    ///                     // render as inline
+    ///                     // dummy data for the example
+    ///                     Arc::new([0])
+    ///                 } else {
+    ///                     Arc::new([0])
+    ///                 }
+    ///             });
+    ///
+    ///     let uri = format!("{}.svg", egui::Id::from(math.to_string()).value());
+    ///     ui.add(
+    ///          egui::Image::new(egui::ImageSource::Bytes {
+    ///             uri: uri.into(),
+    ///             bytes: egui::load::Bytes::Shared(svg.clone()),
+    ///          })
+    ///          .fit_to_original_size(1.0),
+    ///     );
+    ///     }));
+    /// ```
+    pub fn render_math_fn(mut self, math_fn: Option<&'f RenderMathFn>) -> Self {
+        self.options.math_fn = math_fn;
         self
     }
 
