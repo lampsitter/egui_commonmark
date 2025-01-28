@@ -190,7 +190,7 @@ impl<'f> CommonMarkViewer<'f> {
     ///         let svg = map
     ///             .entry(math.to_string())
     ///             .or_insert_with(|| {
-    ///                 if (inline) {
+    ///                 if inline {
     ///                     // render as inline
     ///                     // dummy data for the example
     ///                     Arc::new([0])
