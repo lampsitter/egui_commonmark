@@ -128,6 +128,10 @@ fn main() -> eframe::Result {
                         name: "Embedded Image".to_owned(),
                         content: include_str!("markdown/embedded_image.md").to_owned(),
                     },
+                    Page {
+                        name: "Html text".to_owned(),
+                        content: include_str!("markdown/html.md").to_owned(),
+                    },
                 ],
             }))
         }),

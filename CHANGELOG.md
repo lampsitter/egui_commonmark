@@ -1,5 +1,15 @@
 # egui_commomnark changelog
 
+## Unreleased
+
+### Added
+
+- Callback function `render_math_fn` for custom math rendering
+
+### Fixed
+
+- Html is rendered as text instead of not being displayed
+
 ## 0.19.0 - 2024-12-17
 
 ## Added

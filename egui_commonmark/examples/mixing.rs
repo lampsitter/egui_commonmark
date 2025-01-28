@@ -101,6 +101,13 @@ Term 3
 
 :   Definition 3
                         "#,
+                    r#"
+<a>Inline html</a>"#,
+                    r#"
+<p>
+Html
+block
+</p>"#,
                 );
 
                 ui.label("Label!");

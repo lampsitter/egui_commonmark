@@ -517,8 +517,12 @@ impl CommonMarkViewerInternal {
                 self.event_text(text, ui);
                 self.text_style.code = false;
             }
-            pulldown_cmark::Event::InlineHtml(_) => {}
-            pulldown_cmark::Event::Html(_) => {}
+            pulldown_cmark::Event::InlineHtml(text) => {
+                self.event_text(text, ui);
+            }
+            pulldown_cmark::Event::Html(node) => {
+                self.event_text(node, ui);
+            }
             pulldown_cmark::Event::FootnoteReference(footnote) => {
                 footnote_start(ui, &footnote);
             }
@@ -663,7 +667,9 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::Image { dest_url, .. } => {
                 self.image = Some(crate::Image::new(&dest_url, options));
             }
-            pulldown_cmark::Tag::HtmlBlock => {}
+            pulldown_cmark::Tag::HtmlBlock => {
+                self.line.try_insert_start(ui);
+            }
             pulldown_cmark::Tag::MetadataBlock(_) => {}
 
             pulldown_cmark::Tag::DefinitionList => {
