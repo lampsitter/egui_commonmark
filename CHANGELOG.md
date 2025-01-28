@@ -5,6 +5,7 @@
 ### Added
 
 - Callback function `render_math_fn` for custom math rendering
+- Callback function `render_html_fn` for custom html rendering
 
 ### Fixed
 

@@ -32,6 +32,7 @@ pub struct CommonMarkOptions<'f> {
     /// Whether to present a mutable ui for things like checkboxes
     pub mutable: bool,
     pub math_fn: Option<&'f crate::RenderMathFn>,
+    pub html_fn: Option<&'f crate::RenderHtmlFn>,
 }
 
 impl<'f> std::fmt::Debug for CommonMarkOptions<'f> {
@@ -74,6 +75,7 @@ impl Default for CommonMarkOptions<'_> {
             alerts: AlertBundle::gfm(),
             mutable: false,
             math_fn: None,
+            html_fn: None,
         }
     }
 }

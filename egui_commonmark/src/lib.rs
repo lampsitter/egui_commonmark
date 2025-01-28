@@ -209,8 +209,15 @@ impl<'f> CommonMarkViewer<'f> {
     ///     );
     ///     }));
     /// ```
-    pub fn render_math_fn(mut self, math_fn: Option<&'f RenderMathFn>) -> Self {
-        self.options.math_fn = math_fn;
+    pub fn render_math_fn(mut self, func: Option<&'f RenderMathFn>) -> Self {
+        self.options.math_fn = func;
+        self
+    }
+
+    /// Allows custom handling of html. Enabling this will disable plain text rendering
+    /// of html blocks. Nodes are included in the provided text
+    pub fn render_html_fn(mut self, func: Option<&'f RenderHtmlFn>) -> Self {
+        self.options.html_fn = func;
         self
     }
 

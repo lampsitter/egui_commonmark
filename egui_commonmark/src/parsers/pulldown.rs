@@ -72,6 +72,9 @@ pub struct CommonMarkViewerInternal {
     image: Option<Image>,
     line: Newline,
     code_block: Option<CodeBlock>,
+
+    /// Only populated if the html_fn option has been set
+    html_block: String,
     is_list_item: bool,
     def_list: DefinitionList,
     is_table: bool,
@@ -96,6 +99,7 @@ impl CommonMarkViewerInternal {
             is_list_item: false,
             def_list: Default::default(),
             code_block: None,
+            html_block: String::new(),
             is_table: false,
             is_blockquote: false,
             checkbox_events: Vec::new(),
@@ -520,8 +524,13 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Event::InlineHtml(text) => {
                 self.event_text(text, ui);
             }
-            pulldown_cmark::Event::Html(node) => {
-                self.event_text(node, ui);
+
+            pulldown_cmark::Event::Html(text) => {
+                if options.html_fn.is_some() {
+                    self.html_block.push_str(&text);
+                } else {
+                    self.event_text(text, ui);
+                }
             }
             pulldown_cmark::Event::FootnoteReference(footnote) => {
                 footnote_start(ui, &footnote);
@@ -755,7 +764,13 @@ impl CommonMarkViewerInternal {
                     image.end(ui, options);
                 }
             }
-            pulldown_cmark::TagEnd::HtmlBlock => {}
+            pulldown_cmark::TagEnd::HtmlBlock => {
+                if let Some(html_fn) = options.html_fn {
+                    html_fn(ui, &self.html_block);
+                    self.html_block.clear();
+                }
+            }
+
             pulldown_cmark::TagEnd::MetadataBlock(_) => {}
 
             pulldown_cmark::TagEnd::DefinitionList => self.line.try_insert_end(ui),
