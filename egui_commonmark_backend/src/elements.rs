@@ -118,6 +118,7 @@ pub fn code_block<'t>(
             ui.style().noninteractive().rounding,
             ui.visuals().extreme_bg_color,
             ui.visuals().widgets.noninteractive.bg_stroke,
+            egui::StrokeKind::Inside,
         ),
     );
 
@@ -210,6 +211,7 @@ impl<'a> egui::Widget for ImmutableCheckbox<'a> {
                 visuals.rounding,
                 visuals.bg_fill,
                 visuals.bg_stroke,
+                egui::StrokeKind::Inside,
             ));
 
             if *checked {
@@ -231,7 +233,7 @@ impl<'a> egui::Widget for ImmutableCheckbox<'a> {
 
 pub fn blockquote(ui: &mut Ui, accent: egui::Color32, add_contents: impl FnOnce(&mut Ui)) {
     let start = ui.painter().add(egui::Shape::Noop);
-    let response = egui::Frame::none()
+    let response = egui::Frame::new()
         // offset the frame so that we can use the space for the horizontal line and other stuff
         // By not using a separator we have better control
         .outer_margin(egui::Margin {
