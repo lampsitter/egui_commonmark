@@ -115,7 +115,7 @@ pub fn code_block<'t>(
         where_to_put_background,
         epaint::RectShape::new(
             frame_rect,
-            ui.style().noninteractive().rounding,
+            ui.style().noninteractive().corner_radius,
             ui.visuals().extreme_bg_color,
             ui.visuals().widgets.noninteractive.bg_stroke,
             egui::StrokeKind::Inside,
@@ -208,7 +208,7 @@ impl<'a> egui::Widget for ImmutableCheckbox<'a> {
             let (small_icon_rect, big_icon_rect) = ui.spacing().icon_rectangles(rect);
             ui.painter().add(epaint::RectShape::new(
                 big_icon_rect.expand(visuals.expansion),
-                visuals.rounding,
+                visuals.corner_radius,
                 visuals.bg_fill,
                 visuals.bg_stroke,
                 egui::StrokeKind::Inside,
