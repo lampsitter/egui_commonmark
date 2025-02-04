@@ -11,13 +11,13 @@ resolver = "2"
 [workspace.package]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.76"                                        # Follows egui
+rust-version = "1.81"                                        # Follows egui
 version = "0.19.0"
 repository = "https://github.com/lampsitter/egui_commonmark"
 
 [workspace.dependencies]
-egui_extras = { version = "0.30", default-features = false }
-egui = { version = "0.30", default-features = false }
+egui_extras = { version = "0.31", default-features = false }
+egui = { version = "0.31", default-features = false }
 
 egui_commonmark_backend = { version = "0.19.0", path = "egui_commonmark_backend", default-features = false }
 egui_commonmark_macros = { version = "0.19.0", path = "egui_commonmark_macros", default-features = false }
@@ -29,6 +29,10 @@ pulldown-cmark = { version = "0.12", default-features = false }
 
 
 [patch.crates-io]
-# eframe = { git = "https://github.com/emilk/egui.git", rev = "66076101e12eee01dec374285521b0bed4ecc40a" }      # egui master 2024-09-13
-# egui = { git = "https://github.com/emilk/egui.git", rev = "66076101e12eee01dec374285521b0bed4ecc40a" }        # egui master 2024-09-13
-# egui_extras = { git = "https://github.com/emilk/egui.git", rev = "66076101e12eee01dec374285521b0bed4ecc40a" } # egui master 2024-09-13
+# eframe = { git = "https://github.com/emilk/egui.git", branch = "master" }
+# egui = { git = "https://github.com/emilk/egui.git", branch = "master" }
+# egui_extras = { git = "https://github.com/emilk/egui.git", branch = "master" }
+
+# eframe = { path = "../../egui/crates/eframe" }
+# egui = { path = "../../egui/crates/egui" }
+# egui_extras = { path = "../../egui/crates/egui_extras" }

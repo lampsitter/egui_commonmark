@@ -47,8 +47,8 @@ impl App {
     fn content_panel(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             // Add a frame with margin to prevent the content from hugging the sidepanel
-            egui::Frame::none()
-                .inner_margin(egui::Margin::symmetric(5.0, 0.0))
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(5, 0))
                 .show(ui, |ui| {
                     CommonMarkViewer::new()
                         .default_width(Some(200))
