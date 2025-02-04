@@ -1,2 +1,3 @@
 **/target
+Cargo.lock
 egui_commonmark_macros/wip/
