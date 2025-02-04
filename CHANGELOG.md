@@ -10,7 +10,7 @@
 ### Changed
 
 - Updated egui to 0.31 ([#71](https://github.com/lampsitter/egui_commonmark/pull/71) by
-  [@Wumpf](https://github.com/Wumpf) and [@emilk](https://github.com/emilk)
+  [@Wumpf](https://github.com/Wumpf) and [@emilk](https://github.com/emilk))
 
 ### Fixed
 
