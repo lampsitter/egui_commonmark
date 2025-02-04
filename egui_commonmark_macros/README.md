@@ -14,7 +14,7 @@ this crate through `egui_commonmark` by enabling the `macros` feature.
 In Cargo.toml:
 
 ```toml
-egui_commonmark = "0.19"
+egui_commonmark = "0.20"
 # Specify what image formats you want to use
 image = { version = "0.25", default-features = false, features = ["png"] }
 ```

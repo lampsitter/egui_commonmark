@@ -1,11 +1,16 @@
 # egui_commomnark changelog
 
-## Unreleased
+## 0.20.0 - 2025-02-04
 
 ### Added
 
 - Callback function `render_math_fn` for custom math rendering
 - Callback function `render_html_fn` for custom html rendering
+
+### Changed
+
+- Updated egui to 0.31 ([#71](https://github.com/lampsitter/egui_commonmark/pull/71) by
+  [@Wumpf](https://github.com/Wumpf) and [@emilk](https://github.com/emilk)
 
 ### Fixed
 
