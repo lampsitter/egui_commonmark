@@ -118,7 +118,7 @@ pub fn code_block<'t>(
             ui.style().noninteractive().corner_radius,
             ui.visuals().extreme_bg_color,
             ui.visuals().widgets.noninteractive.bg_stroke,
-            egui::StrokeKind::Inside,
+            egui::StrokeKind::Outside,
         ),
     );
 
