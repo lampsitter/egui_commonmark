@@ -518,8 +518,8 @@ impl CommonMarkViewerInternal {
                 self.text_style.code = false;
                 s
             }
-            pulldown_cmark::Event::InlineHtml(_) | pulldown_cmark::Event::Html(_) => {
-                TokenStream::new()
+            pulldown_cmark::Event::InlineHtml(text) | pulldown_cmark::Event::Html(text) => {
+                self.event_text(text)
             }
             pulldown_cmark::Event::FootnoteReference(footnote) => {
                 let footnote = footnote.to_string();
@@ -679,7 +679,7 @@ impl CommonMarkViewerInternal {
                 TokenStream::new()
             }
             pulldown_cmark::Tag::HtmlBlock | pulldown_cmark::Tag::MetadataBlock(_) => {
-                TokenStream::new()
+                self.line.try_insert_start()
             }
             pulldown_cmark::Tag::DefinitionList => {
                 let s = self.line.try_insert_start();

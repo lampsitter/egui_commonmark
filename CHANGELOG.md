@@ -6,6 +6,11 @@
 
 - Updated to pulldown-cmark 0.13
 
+
+### Fixed
+
+- Rendering of html in macros
+
 ## 0.20.0 - 2025-02-04
 
 ### Added
