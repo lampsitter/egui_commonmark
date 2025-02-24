@@ -697,6 +697,8 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::DefinitionListDefinition => {
                 self.def_list.is_def_list_def = true;
             }
+            // Not yet supported
+            pulldown_cmark::Tag::Superscript | pulldown_cmark::Tag::Subscript => {}
         }
     }
 
@@ -776,6 +778,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::DefinitionList => self.line.try_insert_end(ui),
             pulldown_cmark::TagEnd::DefinitionListTitle
             | pulldown_cmark::TagEnd::DefinitionListDefinition => {}
+            pulldown_cmark::TagEnd::Superscript | pulldown_cmark::TagEnd::Subscript => {}
         }
     }
 

@@ -25,7 +25,7 @@ egui_commonmark_macros = { version = "0.20.0", path = "egui_commonmark_macros", 
 # To add features to documentation
 document-features = { version = "0.2" }
 
-pulldown-cmark = { version = "0.12", default-features = false }
+pulldown-cmark = { version = "0.13", default-features = false }
 
 
 [patch.crates-io]

@@ -698,6 +698,7 @@ impl CommonMarkViewerInternal {
                 self.def_list.is_def_list_def = true;
                 TokenStream::new()
             }
+            pulldown_cmark::Tag::Superscript | pulldown_cmark::Tag::Subscript => TokenStream::new(),
         }
     }
 
@@ -806,6 +807,9 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::DefinitionList => self.line.try_insert_end(),
             pulldown_cmark::TagEnd::DefinitionListTitle => TokenStream::new(),
             pulldown_cmark::TagEnd::DefinitionListDefinition => TokenStream::new(),
+            pulldown_cmark::TagEnd::Superscript | pulldown_cmark::TagEnd::Subscript => {
+                TokenStream::new()
+            }
         }
     }
 
