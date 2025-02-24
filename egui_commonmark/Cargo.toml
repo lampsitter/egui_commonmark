@@ -63,7 +63,7 @@ fetch = ["egui_extras/http"]
 ## Note that this is really space inefficient. No size limit is in place for the maximum allowed
 ## data in the url.
 ##
-## This enables the data urls for your entire app as it installs an egui bytes loader in
+## This enables the data urls for your entire app as it installs an egui bytes loader
 ## in the background.
 ##
 ## Currently this does not support wasm.
