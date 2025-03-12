@@ -753,7 +753,7 @@ impl CommonMarkViewerInternal {
                 self.text_style.strikethrough = false;
                 TokenStream::new()
             }
-            pulldown_cmark::TagEnd::Link { .. } => {
+            pulldown_cmark::TagEnd::Link => {
                 if let Some(link) = self.link.take() {
                     let StyledLink { destination, text } = link;
                     let mut text_stream = TokenStream::new();
@@ -772,7 +772,7 @@ impl CommonMarkViewerInternal {
                     TokenStream::new()
                 }
             }
-            pulldown_cmark::TagEnd::Image { .. } => {
+            pulldown_cmark::TagEnd::Image => {
                 let mut stream = TokenStream::new();
                 if let Some(image) = self.image.take() {
                     // FIXME: Try to reduce code duplication here

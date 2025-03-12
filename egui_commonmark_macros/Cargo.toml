@@ -20,9 +20,9 @@ include = ["src/**/*.rs", "LICENSE-MIT", "LICENSE-APACHE", "Cargo.toml"]
 proc-macro = true
 
 [dependencies]
-syn = "2"
-quote = { version = "1", default-features = false }
-proc-macro2 = { version = "1", default-features = false }
+syn = "2.0"
+quote = { version = "1.0", default-features = false }
+proc-macro2 = { version = "1.0", default-features = false }
 
 pulldown-cmark = { workspace = true, default-features = false }
 

@@ -756,12 +756,12 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::Strikethrough => {
                 self.text_style.strikethrough = false;
             }
-            pulldown_cmark::TagEnd::Link { .. } => {
+            pulldown_cmark::TagEnd::Link => {
                 if let Some(link) = self.link.take() {
                     link.end(ui, cache);
                 }
             }
-            pulldown_cmark::TagEnd::Image { .. } => {
+            pulldown_cmark::TagEnd::Image => {
                 if let Some(image) = self.image.take() {
                     image.end(ui, options);
                 }
