@@ -72,7 +72,7 @@
 #![cfg_attr(feature = "document-features", doc = "# Features")]
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 
-use egui::{self, Id};
+use egui::{self, Id, Response};
 
 mod parsers;
 
@@ -254,13 +254,14 @@ impl<'f> CommonMarkViewer<'f> {
         self.options.mutable = true;
         egui_commonmark_backend::prepare_show(cache, ui.ctx());
 
-        let (response, checkmark_events) = parsers::pulldown::CommonMarkViewerInternal::new().show(
-            ui,
-            cache,
-            &self.options,
-            text,
-            None,
-        );
+        let (mut inner_response, checkmark_events) =
+            parsers::pulldown::CommonMarkViewerInternal::new().show(
+                ui,
+                cache,
+                &self.options,
+                text,
+                None,
+            );
 
         // Update source text for checkmarks that were clicked
         for ev in checkmark_events {
@@ -269,9 +270,10 @@ impl<'f> CommonMarkViewer<'f> {
             } else {
                 text.replace_range(ev.span, "[ ]")
             }
+            inner_response.response.mark_changed();
         }
 
-        response
+        inner_response
     }
 
     /// Shows markdown inside a [`ScrollArea`].
