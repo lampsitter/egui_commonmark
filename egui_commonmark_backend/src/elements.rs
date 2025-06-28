@@ -191,7 +191,7 @@ impl<'a> ImmutableCheckbox<'a> {
     }
 }
 
-impl<'a> egui::Widget for ImmutableCheckbox<'a> {
+impl egui::Widget for ImmutableCheckbox<'_> {
     fn ui(self, ui: &mut Ui) -> egui::Response {
         let ImmutableCheckbox { checked } = self;
 
