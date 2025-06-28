@@ -1,5 +1,5 @@
 use crate::alerts::AlertBundle;
-use egui::{text::LayoutJob, RichText, TextStyle, Ui};
+use egui::{text::LayoutJob, RichText, TextBuffer, TextStyle, Ui};
 use std::collections::HashMap;
 
 use crate::pulldown::ScrollableCache;
@@ -272,11 +272,11 @@ impl CodeBlock {
         ui.scope(|ui| {
             Self::pre_syntax_highlighting(cache, options, ui);
 
-            let mut layout = |ui: &Ui, string: &str, wrap_width: f32| {
+            let mut layout = |ui: &Ui, string: &dyn TextBuffer, wrap_width: f32| {
                 let mut job = if let Some(lang) = &self.lang {
-                    self.syntax_highlighting(cache, options, lang, ui, string)
+                    self.syntax_highlighting(cache, options, lang, ui, string.as_str())
                 } else {
-                    plain_highlighting(ui, string)
+                    plain_highlighting(ui, string.as_str())
                 };
 
                 job.wrap.max_width = wrap_width;
