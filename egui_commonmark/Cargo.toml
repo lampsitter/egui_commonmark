@@ -32,7 +32,7 @@ default = ["load-images", "pulldown_cmark"]
 ## Enable proc macros for compile time generation of egui widgets from markdown
 macros = [
     "dep:egui_commonmark_macros",
-] # For simplicity it only supports pulldown-cmark
+]
 
 ## Builds upon the `macros` feature. Enables tracking of markdown files to recompile
 ## when their content changes. Uses nightly features
@@ -76,6 +76,7 @@ eframe = { version = "0.31", default-features = false, features = [
     "wayland",
     "x11",
 ] }
+
 image = { version = "0.25", default-features = false, features = ["png"] }
 egui_commonmark_macros = { workspace = true } # Tests won't build otherswise
 
