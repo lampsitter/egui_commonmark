@@ -5,12 +5,12 @@ members = [
     "egui_commonmark_backend",
 ]
 
-resolver = "2"
+resolver = "3"
 
 
 [workspace.package]
 license = "MIT OR Apache-2.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.85"                                        # Follows egui
 version = "0.20.0"
 repository = "https://github.com/lampsitter/egui_commonmark"
