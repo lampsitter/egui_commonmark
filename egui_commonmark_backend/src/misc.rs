@@ -1,5 +1,5 @@
 use crate::alerts::AlertBundle;
-use egui::{text::LayoutJob, RichText, TextStyle, Ui};
+use egui::{RichText, TextStyle, Ui, text::LayoutJob};
 use std::collections::HashMap;
 
 use crate::pulldown::ScrollableCache;

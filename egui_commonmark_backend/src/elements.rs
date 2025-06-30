@@ -1,4 +1,4 @@
-use egui::{self, epaint, NumExt, RichText, Sense, TextStyle, Ui, Vec2};
+use egui::{self, NumExt, RichText, Sense, TextStyle, Ui, Vec2, epaint};
 
 #[inline]
 pub fn rule(ui: &mut Ui, end_line: bool) {
