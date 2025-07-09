@@ -1,11 +1,11 @@
-# egui_commomnark changelog
+# egui_commonmark changelog
 
 ## Unreleased
 
 ### Changed
 
+- Updated to egui 0.32.0
 - Updated to pulldown-cmark 0.13
-
 
 ### Fixed
 
