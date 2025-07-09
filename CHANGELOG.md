@@ -10,6 +10,9 @@
 ### Fixed
 
 - Rendering of html in macros
+- Mark response as changed when clicking a checkbox using `show_mut`
+  ([#75](https://github.com/lampsitter/egui_commonmark/pull/75) by
+  [nacl42](https://github.com/nacl42)
 
 ## 0.20.0 - 2025-02-04
 
