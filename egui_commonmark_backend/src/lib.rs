@@ -17,10 +17,10 @@ mod data_url_loader;
 // For ease of use in proc macros
 #[doc(hidden)]
 pub use {
-    alerts::{alert_ui, Alert, AlertBundle},
+    alerts::{Alert, AlertBundle, alert_ui},
     // Pretty much every single element in this module is used by the proc macros
     elements::*,
-    misc::{prepare_show, CodeBlock, CommonMarkOptions, Image, Link},
+    misc::{CodeBlock, CommonMarkOptions, Image, Link, prepare_show},
 };
 
 // The only struct that is allowed to use directly. (If one does not need egui_commonmark)

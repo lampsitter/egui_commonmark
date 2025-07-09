@@ -16,25 +16,24 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         *self.counter.as_ref().borrow_mut() = 0;
 
+        let counter = Rc::clone(&self.counter);
+        let func = move |ui: &mut egui::Ui, html: &str| {
+            // For simplicity lets just hide the content regardless of what kind of
+            // node it is.
+            ui.collapsing(format!("Collapsed {}", counter.as_ref().borrow()), |ui| {
+                ui.label(html);
+            });
+
+            *counter.as_ref().borrow_mut() += 1;
+        };
+
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                CommonMarkViewer::new()
-                    .render_html_fn({
-                        let counter = Rc::clone(&self.counter);
-                        Some(&move |ui, html| {
-                            // For simplicity lets just hide the content regardless of what kind of
-                            // node it is.
-                            ui.collapsing(
-                                format!("Collapsed {}", counter.as_ref().borrow()),
-                                |ui| {
-                                    ui.label(html);
-                                },
-                            );
-
-                            *counter.as_ref().borrow_mut() += 1;
-                        })
-                    })
-                    .show(ui, &mut self.cache, EXAMPLE_TEXT);
+                CommonMarkViewer::new().render_html_fn(Some(&func)).show(
+                    ui,
+                    &mut self.cache,
+                    EXAMPLE_TEXT,
+                );
             });
         });
     }

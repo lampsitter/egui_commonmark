@@ -1,5 +1,5 @@
 use crate::alerts::AlertBundle;
-use egui::{text::LayoutJob, RichText, TextBuffer, TextStyle, Ui};
+use egui::{RichText, TextBuffer, TextStyle, Ui, text::LayoutJob};
 use std::collections::HashMap;
 
 use crate::pulldown::ScrollableCache;
@@ -35,7 +35,7 @@ pub struct CommonMarkOptions<'f> {
     pub html_fn: Option<&'f crate::RenderHtmlFn>,
 }
 
-impl<'f> std::fmt::Debug for CommonMarkOptions<'f> {
+impl std::fmt::Debug for CommonMarkOptions<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = f.debug_struct("CommonMarkOptions");
 

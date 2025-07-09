@@ -1,4 +1,4 @@
-use egui::{self, epaint, NumExt, RichText, Sense, TextBuffer, TextStyle, Ui, Vec2};
+use egui::{self, NumExt, RichText, Sense, TextBuffer, TextStyle, Ui, Vec2, epaint};
 
 #[inline]
 pub fn rule(ui: &mut Ui, end_line: bool) {
@@ -191,7 +191,7 @@ impl<'a> ImmutableCheckbox<'a> {
     }
 }
 
-impl<'a> egui::Widget for ImmutableCheckbox<'a> {
+impl egui::Widget for ImmutableCheckbox<'_> {
     fn ui(self, ui: &mut Ui) -> egui::Response {
         let ImmutableCheckbox { checked } = self;
 
