@@ -29,9 +29,9 @@ pulldown-cmark = { version = "0.13", default-features = false }
 
 
 [patch.crates-io]
- eframe = { git = "https://github.com/emilk/egui.git", branch = "master" }
- egui = { git = "https://github.com/emilk/egui.git", branch = "master" }
- egui_extras = { git = "https://github.com/emilk/egui.git", branch = "master" }
+ eframe = { git = "https://github.com/emilk/egui.git", branch = "main" }
+ egui = { git = "https://github.com/emilk/egui.git", branch = "main" }
+ egui_extras = { git = "https://github.com/emilk/egui.git", branch = "main" }
 
 # eframe = { path = "../../egui/crates/eframe" }
 # egui = { path = "../../egui/crates/egui" }
