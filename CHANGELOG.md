@@ -5,6 +5,8 @@
 ### Changed
 
 - Updated to pulldown-cmark 0.13
+- Updated egui to 0.32 ([#76](https://github.com/lampsitter/egui_commonmark/pull/76) by
+  [@lucasmerlin](https://github.com/lucasmerlin))
 
 
 ### Fixed
@@ -55,7 +57,7 @@
 
 - Updated pulldown-cmark to 0.12
 - Newlines are no longer inserted before/after markdown ([#56](https://github.com/lampsitter/egui_commonmark/pull/56))
-    > For the old behaviour you can call `ui.label("");` before and and after
+    > For the old behaviour you can call `ui.label("");` before and after
 
 ### Removed
 

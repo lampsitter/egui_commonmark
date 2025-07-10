@@ -17,5 +17,5 @@ To see the output of the macros enable the `dump-macro` feature.
 For the macro example the output can be viewed like this:
 
 ```sh
-cargo r --example macro --features dump-macro,macros -- dark | rustfmt --edition=2021 | less
+cargo r --example macro --features dump-macro,macros -- dark | rustfmt --edition=2024 | less
 ```
