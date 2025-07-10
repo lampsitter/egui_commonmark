@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.21.0 - 2025-07-10
+
 ### Changed
 
 - Updated to pulldown-cmark 0.13
