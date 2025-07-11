@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+
+### Fixed
+
+- Loose lists would get a newline between the bullet point and the text when it
+  is the first markdown element.
+
 ## 0.21.0 - 2025-07-10
 
 ### Changed

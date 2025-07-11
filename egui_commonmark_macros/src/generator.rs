@@ -10,6 +10,9 @@ use quote::quote;
 use syn::Expr;
 
 struct Newline {
+    /// Whether a newline should not be inserted before a widget. This is only for
+    /// the first widget.
+    should_not_start_newline_forced: bool,
     /// Whether an element should insert a newline before it
     should_start_newline: bool,
     /// Whether an element should end it's own line using a newline
@@ -23,8 +26,8 @@ struct Newline {
 impl Default for Newline {
     fn default() -> Self {
         Self {
-            // Default as false as the first line should not have a newline above it
-            should_start_newline: false,
+            should_not_start_newline_forced: true,
+            should_start_newline: true,
             should_end_newline: true,
             should_end_newline_forced: true,
         }
@@ -37,12 +40,12 @@ impl Newline {
     }
 
     pub fn can_insert_start(&self) -> bool {
-        self.should_start_newline
+        self.should_start_newline && !self.should_not_start_newline_forced
     }
 
     #[must_use]
     pub fn try_insert_start(&self) -> TokenStream {
-        if self.should_start_newline {
+        if self.can_insert_start() {
             quote!(egui_commonmark_backend::newline(ui);)
         } else {
             TokenStream::new()
@@ -219,7 +222,7 @@ impl CommonMarkViewerInternal {
             let e = self.process_event(&mut events, e, &cache, &options);
 
             if i == 0 {
-                self.line.should_start_newline = true;
+                self.line.should_not_start_newline_forced = false;
             }
 
             event_stream.extend(e);
@@ -376,7 +379,8 @@ impl CommonMarkViewerInternal {
             });
             stream.extend(self.line.try_insert_start());
 
-            self.line.should_start_newline = true;
+            // See non proc macro version for reaseon
+            self.line.should_not_start_newline_forced = false;
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 let Alert {
                     accent_color,

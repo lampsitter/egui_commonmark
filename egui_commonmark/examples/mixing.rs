@@ -49,6 +49,11 @@ fn main() -> eframe::Result<()> {
    - baa
                         "#,
                     r#"
+1. Loose list
+
+2. aaa
+                        "#,
+                    r#"
 ```rust
 let x = 3;
 ```

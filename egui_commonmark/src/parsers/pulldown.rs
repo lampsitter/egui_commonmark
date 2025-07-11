@@ -15,6 +15,9 @@ use pulldown_cmark::{CowStr, HeadingLevel};
 /// All elements try to insert a newline before them (if they are allowed)
 /// and end their own line.
 struct Newline {
+    /// Whether a newline should not be inserted before a widget. This is only for
+    /// the first widget.
+    should_not_start_newline_forced: bool,
     /// Whether an element should insert a newline before it
     should_start_newline: bool,
     /// Whether an element should end it's own line using a newline
@@ -28,8 +31,8 @@ struct Newline {
 impl Default for Newline {
     fn default() -> Self {
         Self {
-            // Default as false as the first line should not have a newline above it
-            should_start_newline: false,
+            should_not_start_newline_forced: true,
+            should_start_newline: true,
             should_end_newline: true,
             should_end_newline_forced: true,
         }
@@ -42,11 +45,11 @@ impl Newline {
     }
 
     pub fn can_insert_start(&self) -> bool {
-        self.should_start_newline
+        self.should_start_newline && !self.should_not_start_newline_forced
     }
 
     pub fn try_insert_start(&self, ui: &mut Ui) {
-        if self.should_start_newline {
+        if self.can_insert_start() {
             newline(ui);
         }
     }
@@ -172,7 +175,7 @@ impl CommonMarkViewerInternal {
                 }
 
                 if index == 0 {
-                    self.line.should_start_newline = true;
+                    self.line.should_not_start_newline_forced = false;
                 }
             }
 
@@ -266,7 +269,7 @@ impl CommonMarkViewerInternal {
                         self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
                         if i == 0 {
-                            self.line.should_start_newline = true;
+                            self.line.should_not_start_newline_forced = false;
                         }
                     }
                 });
@@ -410,7 +413,7 @@ impl CommonMarkViewerInternal {
             // Currently the blockquotes are made in such a way that they need a newline at the end
             // and the start so when this is the first element in the markdown the newline must be
             // manually enabled
-            self.line.should_start_newline = true;
+            self.line.should_not_start_newline_forced = false;
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
                 egui_commonmark_backend::alert_ui(alert, ui, |ui| {
                     for (event, src_span) in collected_events {
