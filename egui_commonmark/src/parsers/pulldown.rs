@@ -727,8 +727,10 @@ impl CommonMarkViewerInternal {
             }
 
             pulldown_cmark::TagEnd::List(_) => {
-                self.line.should_start_newline = true;
-                self.line.should_end_newline = true;
+                if self.list.is_last_level() {
+                    self.line.should_start_newline = true;
+                    self.line.should_end_newline = true;
+                }
 
                 self.list.end_level(ui, self.line.can_insert_end());
 

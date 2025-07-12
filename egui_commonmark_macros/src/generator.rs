@@ -89,6 +89,10 @@ impl List {
         !self.items.is_empty()
     }
 
+    pub fn is_last_level(&self) -> bool {
+        self.items.len() == 1
+    }
+
     pub fn start_item(&mut self, options: &CommonMarkOptions) -> TokenStream {
         let mut stream = TokenStream::new();
 
@@ -721,6 +725,11 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::BlockQuote(_) => TokenStream::new(),
             pulldown_cmark::TagEnd::CodeBlock => self.end_code_block(cache),
             pulldown_cmark::TagEnd::List(_) => {
+                if self.list.is_last_level() {
+                    self.line.should_start_newline = true;
+                    self.line.should_end_newline = true;
+                }
+
                 let s = self.list.end_level(self.line.can_insert_end());
 
                 if !self.list.is_inside_a_list() {
@@ -728,8 +737,6 @@ impl CommonMarkViewerInternal {
                     self.list = List::default();
                 }
 
-                self.line.should_start_newline = true;
-                self.line.should_end_newline = true;
                 s
             }
             pulldown_cmark::TagEnd::FootnoteDefinition => {

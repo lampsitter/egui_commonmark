@@ -337,6 +337,10 @@ impl List {
         !self.items.is_empty()
     }
 
+    pub fn is_last_level(&self) -> bool {
+        self.items.len() == 1
+    }
+
     pub fn start_item(&mut self, ui: &mut egui::Ui, options: &CommonMarkOptions) {
         // To ensure that newlines are only inserted within the list and not before it
         if self.has_list_begun {
