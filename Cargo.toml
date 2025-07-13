@@ -19,7 +19,7 @@ repository = "https://github.com/lampsitter/egui_commonmark"
 egui_extras = { version = "0.32", default-features = false }
 egui = { version = "0.32", default-features = false }
 
-egui_commonmark_backend = { version = "0.21.1", path = "egui_commonmark_backend", default-features = false }
+egui_commonmark_backend = { version = "0.21.0", path = "egui_commonmark_backend", default-features = false }
 egui_commonmark_macros = { version = "0.21.1", path = "egui_commonmark_macros", default-features = false }
 
 # To add features to documentation
