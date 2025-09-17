@@ -83,7 +83,7 @@ fn height_body(ui: &Ui) -> f32 {
 
 fn width_body_space(ui: &Ui) -> f32 {
     let id = TextStyle::Body.resolve(ui.style());
-    ui.fonts(|f| f.glyph_width(&id, ' '))
+    ui.fonts_mut(|f| f.glyph_width(&id, ' '))
 }
 
 /// Enhanced/specialized version of egui's code blocks. This one features copy button and borders

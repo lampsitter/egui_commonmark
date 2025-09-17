@@ -280,7 +280,7 @@ impl CodeBlock {
                 };
 
                 job.wrap.max_width = wrap_width;
-                ui.fonts(|f| f.layout_job(job))
+                ui.fonts_mut(|f| f.layout_job(job))
             };
 
             crate::elements::code_block(ui, max_width, &self.content, &mut layout);
