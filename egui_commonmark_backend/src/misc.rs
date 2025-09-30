@@ -499,7 +499,7 @@ impl CommonMarkCache {
     /// ```rust
     /// # use egui::__run_test_ctx;
     /// # __run_test_ctx(|ctx| {
-    /// ctx.output_mut(|o| for command in o.commands {
+    /// ctx.output_mut(|o| for command in &o.commands {
     ///     matches!(command, egui::OutputCommand::OpenUrl(_));
     /// });
     /// # });
