@@ -500,7 +500,7 @@ impl CommonMarkCache {
     /// # use egui::__run_test_ctx;
     /// # __run_test_ctx(|ctx| {
     /// ctx.output_mut(|o| for command in o.commands {
-    ///     matches!(command, egui::Command::OpenUrl(_))
+    ///     matches!(command, egui::OutputCommand::OpenUrl(_));
     /// });
     /// # });
     /// ```
