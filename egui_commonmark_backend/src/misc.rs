@@ -486,6 +486,7 @@ impl CommonMarkCache {
     pub fn clear_scrollable_with_id(&mut self, source_id: impl std::hash::Hash) -> bool {
         self.scroll.remove(&egui::Id::new(source_id)).is_some()
     }
+
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
     /// specified with this method will be set to true. It's status can be acquired
     /// with [`get_link_hook`](Self::get_link_hook). Be aware that all hook state is reset once
@@ -498,7 +499,9 @@ impl CommonMarkCache {
     /// ```rust
     /// # use egui::__run_test_ctx;
     /// # __run_test_ctx(|ctx| {
-    /// ctx.output_mut(|o| o.open_url.is_some());
+    /// ctx.output_mut(|o| for command in o.commands {
+    ///     matches!(command, egui::Command::OpenUrl(_))
+    /// });
     /// # });
     /// ```
     ///
