@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Update egui to 0.33.0
+- Update msrv to 1.88
+
 ## 0.21.1 - 2025-07-13
 
 ### Fixed
