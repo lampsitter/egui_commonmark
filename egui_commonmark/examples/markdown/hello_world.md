@@ -1,3 +1,7 @@
+---
+frontmatter: Is not rendered!
+---
+
 # Commonmark Viewer Example
 
 A *bunch* ~~of~~ __different__ `text` styles.

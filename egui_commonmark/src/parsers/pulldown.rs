@@ -82,6 +82,7 @@ pub struct CommonMarkViewerInternal {
     def_list: DefinitionList,
     is_table: bool,
     is_blockquote: bool,
+    is_metadata_block: bool,
     checkbox_events: Vec<CheckboxClickEvent>,
 }
 
@@ -105,6 +106,7 @@ impl CommonMarkViewerInternal {
             html_block: String::new(),
             is_table: false,
             is_blockquote: false,
+            is_metadata_block: false,
             checkbox_events: Vec::new(),
         }
     }
@@ -513,6 +515,23 @@ impl CommonMarkViewerInternal {
         options: &CommonMarkOptions,
         max_width: f32,
     ) {
+        // Skip metadata blocks entirely
+        if self.is_metadata_block {
+            if matches!(
+                event,
+                pulldown_cmark::Event::End(pulldown_cmark::TagEnd::MetadataBlock(_))
+            ) {
+                self.is_metadata_block = false;
+            }
+            return;
+        } else if matches!(
+            event,
+            pulldown_cmark::Event::Start(pulldown_cmark::Tag::MetadataBlock(_))
+        ) {
+            self.is_metadata_block = true;
+            return;
+        }
+
         match event {
             pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
             pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
