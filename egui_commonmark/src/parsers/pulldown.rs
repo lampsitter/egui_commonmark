@@ -11,6 +11,247 @@ use egui_commonmark_backend::misc::*;
 use egui_commonmark_backend::pulldown::*;
 use pulldown_cmark::{CowStr, HeadingLevel};
 
+/// Keeps track of good places to break a long row of text.
+/// Based on egui's line breaking heuristics.
+#[derive(Clone, Copy, Default)]
+struct RowBreakCandidates {
+    space: Option<usize>,
+    cjk: Option<usize>,
+    pre_cjk: Option<usize>,
+    dash: Option<usize>,
+    punctuation: Option<usize>,
+    any: Option<usize>,
+}
+
+impl RowBreakCandidates {
+    fn add(&mut self, index: usize, ch: char, next: Option<char>, within_width: bool) {
+        const NON_BREAKING_SPACE: char = '\u{A0}';
+        if !within_width {
+            return;
+        }
+        if ch.is_whitespace() && ch != NON_BREAKING_SPACE {
+            self.space = Some(index);
+        } else if is_cjk(ch) && next.map_or(true, is_cjk_break_allowed) {
+            self.cjk = Some(index);
+        } else if ch == '-' {
+            self.dash = Some(index);
+        } else if ch.is_ascii_punctuation() {
+            self.punctuation = Some(index);
+        } else if next.map_or(false, is_cjk) {
+            self.pre_cjk = Some(index);
+        }
+        self.any = Some(index);
+    }
+
+    fn word_boundary(&self) -> Option<usize> {
+        [self.space, self.cjk, self.pre_cjk]
+            .into_iter()
+            .max()
+            .flatten()
+    }
+
+    fn get(&self) -> Option<usize> {
+        self.word_boundary()
+            .or(self.dash)
+            .or(self.punctuation)
+            .or(self.any)
+    }
+}
+
+#[inline]
+fn is_cjk_ideograph(c: char) -> bool {
+    ('\u{4E00}' <= c && c <= '\u{9FFF}')
+        || ('\u{3400}' <= c && c <= '\u{4DBF}')
+        || ('\u{2B740}' <= c && c <= '\u{2B81F}')
+}
+
+#[inline]
+fn is_kana(c: char) -> bool {
+    ('\u{3040}' <= c && c <= '\u{309F}') // Hiragana block
+        || ('\u{30A0}' <= c && c <= '\u{30FF}') // Katakana block
+}
+
+#[inline]
+fn is_cjk(c: char) -> bool {
+    // TODO: Add support for Korean Hangul.
+    is_cjk_ideograph(c) || is_kana(c)
+}
+
+#[inline]
+fn is_cjk_break_allowed(c: char) -> bool {
+    // See: https://en.wikipedia.org/wiki/Line_breaking_rules_in_East_Asian_languages#Characters_not_permitted_on_the_start_of_a_line.
+    !")]｝〕〉》」』】〙〗〟'\"｠»ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻‐゠–〜?!‼⁇⁈⁉・、:;,。.".contains(c)
+}
+
+fn code_font(ui: &Ui, heading_level: Option<u8>) -> (egui::FontId, Option<f32>) {
+    let mono = TextStyle::Monospace.resolve(ui.style());
+    if let Some(level) = heading_level {
+        let max_h = ui
+            .style()
+            .text_styles
+            .get(&TextStyle::Heading)
+            .map_or(32.0, |d| d.size);
+        let min_h = ui
+            .style()
+            .text_styles
+            .get(&TextStyle::Body)
+            .map_or(14.0, |d| d.size);
+        let diff = max_h - min_h;
+        let size = match level {
+            0 => max_h,
+            1 => min_h + diff * 0.835,
+            2 => min_h + diff * 0.668,
+            3 => min_h + diff * 0.501,
+            4 => min_h + diff * 0.334,
+            _ => min_h + diff * 0.167,
+        };
+        (egui::FontId::new(size, mono.family.clone()), Some(size))
+    } else {
+        (mono, None)
+    }
+}
+
+fn glyph_width(ui: &Ui, font_id: &egui::FontId, ch: char) -> f32 {
+    ui.fonts(|f| f.glyph_width(font_id, ch))
+}
+
+fn measure_line_width(ui: &Ui, font_id: &egui::FontId, line: &[char]) -> f32 {
+    line.iter().map(|ch| glyph_width(ui, font_id, *ch)).sum()
+}
+
+fn rebuild_candidates(line: &[char], ui: &Ui, font_id: &egui::FontId, available: f32) -> RowBreakCandidates {
+    let mut c = RowBreakCandidates::default();
+    let mut width = 0.0;
+    for (i, ch) in line.iter().enumerate() {
+        width += glyph_width(ui, font_id, *ch);
+        let next = line.get(i + 1).copied();
+        c.add(i, *ch, next, width <= available);
+    }
+    c
+}
+
+fn render_inline_code_wrapped(ui: &mut Ui, text: &str, heading_level: Option<u8>) {
+    let (font_id, size_opt) = code_font(ui, heading_level);
+    let chars: Vec<char> = text.chars().collect();
+    let max_rect = ui.max_rect();
+    let full_width = if max_rect.width().is_finite() && max_rect.width() > 0.0 {
+        max_rect.width()
+    } else {
+        ui.available_width()
+    };
+    let indent = (ui.cursor().min.x - max_rect.left()).max(0.0);
+    let mut available = (full_width - indent).max(0.0);
+
+    // If the text overflows the remaining space and there are no break
+    // candidates within that space, move the entire span to a new line.
+    // Otherwise let the normal wrapping logic break at word boundaries.
+    if available < full_width {
+        let mut probe_width = 0.0;
+        let mut candidates = RowBreakCandidates::default();
+        let mut overflowed = false;
+        for (i, ch) in chars.iter().enumerate() {
+            probe_width += glyph_width(ui, &font_id, *ch);
+            let next = chars.get(i + 1).copied();
+            candidates.add(i, *ch, next, probe_width <= available);
+            if probe_width > available {
+                overflowed = true;
+                break;
+            }
+        }
+        if overflowed && candidates.get().is_none() {
+            newline(ui);
+            available = full_width;
+        }
+    }
+
+    let mut line: Vec<char> = Vec::new();
+    let mut line_width = 0.0;
+    let mut candidates = RowBreakCandidates::default();
+
+    let flush_line = |ui: &mut Ui, line: &mut Vec<char>, size_opt: Option<f32>| {
+        if line.is_empty() {
+            return;
+        }
+        let s: String = line.iter().collect();
+        let mut rich = egui::RichText::new(s).code();
+        if let Some(size) = size_opt {
+            rich = rich.size(size);
+        }
+        ui.label(rich);
+        line.clear();
+    };
+
+    let break_and_reset =
+        |ui: &mut Ui, line: &mut Vec<char>, size_opt: Option<f32>, available: &mut f32| {
+            flush_line(ui, line, size_opt);
+            newline(ui);
+            *available = full_width;
+        };
+
+    let mut i = 0usize;
+    while i < chars.len() {
+        let ch = chars[i];
+
+        if ch == '\n' || ch == '\r' {
+            break_and_reset(ui, &mut line, size_opt, &mut available);
+            line_width = 0.0;
+            candidates = RowBreakCandidates::default();
+            i += 1;
+            continue;
+        }
+
+        line.push(ch);
+        line_width += glyph_width(ui, &font_id, ch);
+        let next = chars.get(i + 1).copied();
+        candidates.add(line.len() - 1, ch, next, line_width <= available);
+
+        if line_width > available && !line.is_empty() {
+            let break_at = candidates
+                .get()
+                .unwrap_or(line.len().saturating_sub(1));
+            let split_at = (break_at + 1).min(line.len());
+
+            let head: Vec<char> = line[..split_at].to_vec();
+            let mut tail: Vec<char> = line[split_at..].to_vec();
+
+            // Trim leading whitespace on the next line.
+            while matches!(tail.first(), Some(c) if c.is_whitespace()) {
+                tail.remove(0);
+            }
+
+            line = head;
+            break_and_reset(ui, &mut line, size_opt, &mut available);
+
+            line = tail;
+            line_width = measure_line_width(ui, &font_id, &line);
+            candidates = rebuild_candidates(&line, ui, &font_id, available);
+
+            while line_width > available && !line.is_empty() {
+                let bi = candidates.get();
+                if bi.is_none() || bi == Some(line.len() - 1) {
+                    break;
+                }
+                let split_at = (bi.unwrap() + 1).min(line.len());
+                let head: Vec<char> = line[..split_at].to_vec();
+                let mut tail: Vec<char> = line[split_at..].to_vec();
+                while matches!(tail.first(), Some(c) if c.is_whitespace()) {
+                    tail.remove(0);
+                }
+                line = head;
+                break_and_reset(ui, &mut line, size_opt, &mut available);
+                line = tail;
+                line_width = measure_line_width(ui, &font_id, &line);
+                candidates = rebuild_candidates(&line, ui, &font_id, available);
+            }
+        }
+
+        i += 1;
+    }
+
+    if !line.is_empty() {
+        flush_line(ui, &mut line, size_opt);
+    }
+}
 /// Newline logic is constructed by the following:
 /// All elements try to insert a newline before them (if they are allowed)
 /// and end their own line.
@@ -502,7 +743,7 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::Event::Code(text) => {
                 self.text_style.code = true;
-                self.event_text(text, ui);
+                render_inline_code_wrapped(ui, &text, self.text_style.heading);
                 self.text_style.code = false;
             }
             pulldown_cmark::Event::InlineHtml(_) => {}
