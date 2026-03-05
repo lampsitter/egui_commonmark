@@ -30,10 +30,3 @@ changing a markdown page in a book without displaying the destination link.
 
 Shows commonmark elements mixed with egui widgets. It displays the widgets with
 no spaces in between as if the markdown was egui widgets.
-
-## scroll.rs
-
-Intended to allow showing a long markdown text and only process the displayed
-parts. Currently it only works in very basic cases, the feature requires some
-more work to be generally useful.
-
