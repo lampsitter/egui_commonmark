@@ -81,6 +81,9 @@ pub use egui_commonmark_backend::RenderMathFn;
 pub use egui_commonmark_backend::alerts::{Alert, AlertBundle};
 pub use egui_commonmark_backend::misc::CommonMarkCache;
 
+#[cfg(feature = "better_syntax_highlighting")]
+pub use egui_commonmark_backend::syntect;
+
 #[cfg(feature = "macros")]
 pub use egui_commonmark_macros::*;
 

@@ -443,10 +443,15 @@ impl CommonMarkCache {
     }
 
     #[cfg(feature = "better_syntax_highlighting")]
-    pub fn add_syntax_from_str(&mut self, s: &str, fallback_name: Option<&str>) {
+    pub fn add_syntax_from_str(
+        &mut self,
+        s: &str,
+        fallback_name: Option<&str>,
+    ) -> Result<(), syntect::parsing::ParseSyntaxError> {
         let mut builder = self.ps.clone().into_builder();
-        let _ = SyntaxDefinition::load_from_str(s, true, fallback_name).map(|d| builder.add(d));
+        SyntaxDefinition::load_from_str(s, true, fallback_name).map(|d| builder.add(d))?;
         self.ps = builder.build();
+        Ok(())
     }
 
     #[cfg(feature = "better_syntax_highlighting")]

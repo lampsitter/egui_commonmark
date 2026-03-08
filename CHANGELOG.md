@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Re-export `syntect` when the `better_syntax_highlighting` feature is enabled
+
+### Changed
+
+- Return Result from `add_syntax_from_str`
+
 ## 0.22.0 - 2025-10-09
 
 ### Changed
