@@ -23,10 +23,10 @@ pub fn delayed_events<'e>(
     loop {
         if let Some(event) = curr_event.take() {
             total_events.push(event.1.clone());
-            if let (_, (pulldown_cmark::Event::End(tag), _range)) = event {
-                if end_at(tag) {
-                    return total_events;
-                }
+            if let (_, (pulldown_cmark::Event::End(tag), _range)) = event
+                && end_at(tag)
+            {
+                return total_events;
             }
         } else {
             return total_events;
