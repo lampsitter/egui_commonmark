@@ -22,9 +22,9 @@ struct App {
 
 impl App {
     fn sidepanel(&mut self, ui: &mut egui::Ui) {
-        egui::SidePanel::left("left_documentation_panel")
+        egui::Panel::left("left_documentation_panel")
             .resizable(false)
-            .default_width(100.0)
+            .default_size(100.0)
             .show_inside(ui, |ui| {
                 let style = ui.style_mut();
                 style.visuals.widgets.active.bg_stroke = egui::Stroke::NONE;
@@ -64,8 +64,8 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             self.sidepanel(ui);
             self.content_panel(ui);
         });
@@ -87,7 +87,7 @@ fn main() -> eframe::Result {
                     cc.egui_ctx.set_theme(egui::Theme::Dark);
                 }
             }
-            cc.egui_ctx.style_mut(|style| {
+            cc.egui_ctx.global_style_mut(|style| {
                 // Show the url of a hyperlink on hover
                 style.url_in_tooltip = true;
             });

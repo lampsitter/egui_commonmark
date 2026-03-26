@@ -15,14 +15,12 @@ struct App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            egui::SidePanel::left("left_panel")
-                .show_inside(ui, |ui| ui.text_edit_multiline(&mut self.markdown));
-            egui::CentralPanel::default().show_inside(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    CommonMarkViewer::new().show(ui, &mut self.cache, &self.markdown);
-                });
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::Panel::left("left_panel")
+            .show_inside(ui, |ui| ui.text_edit_multiline(&mut self.markdown));
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                CommonMarkViewer::new().show(ui, &mut self.cache, &self.markdown);
             });
         });
     }
@@ -44,7 +42,7 @@ fn main() -> eframe::Result {
                 }
             }
 
-            cc.egui_ctx.style_mut(|style| {
+            cc.egui_ctx.global_style_mut(|style| {
                 // Show the url of a hyperlink on hover
                 style.url_in_tooltip = true;
             });

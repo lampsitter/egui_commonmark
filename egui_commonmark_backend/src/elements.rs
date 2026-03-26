@@ -174,7 +174,7 @@ pub fn code_block<'t>(
         } else {
             text.to_owned()
         };
-        ui.ctx().copy_text(copy_text);
+        ui.copy_text(copy_text);
     }
 }
 

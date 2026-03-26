@@ -12,9 +12,9 @@ struct App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let text = include_str!("markdown/hello_world.md");
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 CommonMarkViewer::new()
                     .max_image_width(Some(512))
@@ -40,7 +40,7 @@ fn main() -> eframe::Result {
                 }
             }
 
-            cc.egui_ctx.style_mut(|style| {
+            cc.egui_ctx.global_style_mut(|style| {
                 // Show the url of a hyperlink on hover
                 style.url_in_tooltip = true;
             });
