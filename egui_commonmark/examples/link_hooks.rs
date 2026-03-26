@@ -10,7 +10,7 @@ struct App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let p1 = r#"# Page 1
 Check out the [next](#next) page."#;
         let p2 = r#"# Page 2
@@ -26,7 +26,7 @@ Notice how the destination is not shown on [hover](#prev) unlike with [urls](htt
             self.curr_page = 0;
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 CommonMarkViewer::new().show(ui, &mut self.cache, p[self.curr_page]);
             });
@@ -50,7 +50,7 @@ fn main() -> eframe::Result {
                 }
             }
 
-            cc.egui_ctx.style_mut(|style| {
+            cc.egui_ctx.global_style_mut(|style| {
                 // Show the url of a hyperlink on hover. The demonstration of
                 // the link hooks would be a little pointless without this
                 style.url_in_tooltip = true;

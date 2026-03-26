@@ -156,21 +156,21 @@ impl CommonMarkViewerInternal {
 
                 self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
-                if let Some(source_id) = split_points_id {
-                    if should_add_split_point {
-                        let scroll_cache = scroll_cache(cache, &source_id);
-                        let end_position = ui.next_widget_position();
+                if let Some(source_id) = split_points_id
+                    && should_add_split_point
+                {
+                    let scroll_cache = scroll_cache(cache, &source_id);
+                    let end_position = ui.next_widget_position();
 
-                        let split_point_exists = scroll_cache
+                    let split_point_exists = scroll_cache
+                        .split_points
+                        .iter()
+                        .any(|(i, _, _)| *i == index);
+
+                    if !split_point_exists {
+                        scroll_cache
                             .split_points
-                            .iter()
-                            .any(|(i, _, _)| *i == index);
-
-                        if !split_point_exists {
-                            scroll_cache
-                                .split_points
-                                .push((index, start_position, end_position));
-                        }
+                            .push((index, start_position, end_position));
                     }
                 }
 
