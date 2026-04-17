@@ -53,6 +53,7 @@ impl App {
                     CommonMarkViewer::new()
                         .default_width(Some(200))
                         .max_image_width(Some(512))
+                        .enable_scroll_to_heading(true)
                         .show(
                             ui,
                             &mut self.cache,
@@ -103,6 +104,10 @@ fn main() -> eframe::Result {
                     Page {
                         name: "Headers".to_owned(),
                         content: include_str!("markdown/headers.md").to_owned(),
+                    },
+                    Page {
+                        name: "Scroll to heading".to_owned(),
+                        content: include_str!("markdown/scroll_to_heading.md").to_owned(),
                     },
                     Page {
                         name: "Lists".to_owned(),
