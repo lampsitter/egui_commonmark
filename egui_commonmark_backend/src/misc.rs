@@ -33,6 +33,9 @@ pub struct CommonMarkOptions<'f> {
     pub mutable: bool,
     pub math_fn: Option<&'f crate::RenderMathFn>,
     pub html_fn: Option<&'f crate::RenderHtmlFn>,
+    /// Whether to enable scrolling to headings by their ID.
+    /// To give a heading an ID, use the syntax `# Heading {#myheadingid}`. Then links to `#myheadingid` e.g. `[click me!](#myheadingid)` will scroll to that heading.
+    pub enable_scroll_to_heading: bool,
 }
 
 impl std::fmt::Debug for CommonMarkOptions<'_> {
@@ -76,6 +79,7 @@ impl Default for CommonMarkOptions<'_> {
             mutable: false,
             math_fn: None,
             html_fn: None,
+            enable_scroll_to_heading: false,
         }
     }
 }
@@ -194,7 +198,13 @@ pub struct Link {
 }
 
 impl Link {
-    pub fn end(self, ui: &mut Ui, cache: &mut CommonMarkCache) {
+    pub fn end(
+        self,
+        ui: &mut Ui,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        scroll_to_heading: &mut Option<String>,
+    ) {
         let Self { destination, text } = self;
 
         let mut layout_job = LayoutJob::default();
@@ -211,6 +221,12 @@ impl Link {
             if ui_link.clicked() || ui_link.middle_clicked() {
                 cache.link_hooks_mut().insert(destination, true);
             }
+        } else if options.enable_scroll_to_heading
+            && let Some(stripped) = destination.strip_prefix("#")
+        {
+            if ui.link(layout_job).clicked() {
+                scroll_to_heading.replace(stripped.to_string());
+            };
         } else {
             ui.hyperlink_to(layout_job, destination);
         }
@@ -413,6 +429,8 @@ pub struct CommonMarkCache {
     #[cfg(feature = "better_syntax_highlighting")]
     ts: ThemeSet,
 
+    /// The ID of the heading to scroll to. This is set when a link whose destination is a fragment (e.g. `#my-heading`) has been clicked.
+    scroll_to_id_target: Option<String>,
     link_hooks: HashMap<String, bool>,
 
     scroll: HashMap<egui::Id, ScrollableCache>,
@@ -429,6 +447,7 @@ impl Default for CommonMarkCache {
             ts: ThemeSet::load_defaults(),
             link_hooks: HashMap::new(),
             scroll: Default::default(),
+            scroll_to_id_target: None,
             has_installed_loaders: false,
         }
     }
@@ -479,6 +498,16 @@ impl CommonMarkCache {
             .themes
             .insert(name.into(), ThemeSet::load_from_reader(&mut cursor)?);
         Ok(())
+    }
+
+    /// Get the desired fragment. This is the id which will be scrolled to if it is found in the markdown.
+    pub fn scroll_to_id_target(&self) -> Option<&str> {
+        self.scroll_to_id_target.as_deref()
+    }
+
+    /// Get mutable access to the desired fragment. Setting this will cause the viewer to scroll to the heading with this id if it exists. Setting it to None will prevent scrolling.
+    pub fn scroll_to_id_target_mut(&mut self) -> &mut Option<String> {
+        &mut self.scroll_to_id_target
     }
 
     /// Clear the cache for all scrollable elements
