@@ -225,6 +225,13 @@ impl<'f> CommonMarkViewer<'f> {
         self
     }
 
+    /// Enable scrolling to headings by their ID.
+    /// To give a heading an ID, use the syntax `# Heading {#myheadingid}`. Then links to `#myheadingid` e.g. `[click me!](#myheadingid)` will scroll to that heading.
+    pub fn enable_scroll_to_heading(mut self, enable: bool) -> Self {
+        self.options.enable_scroll_to_heading = enable;
+        self
+    }
+
     /// Shows rendered markdown
     pub fn show(
         self,

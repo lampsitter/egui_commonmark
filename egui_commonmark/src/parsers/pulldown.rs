@@ -83,6 +83,7 @@ pub struct CommonMarkViewerInternal {
     is_table: bool,
     is_blockquote: bool,
     checkbox_events: Vec<CheckboxClickEvent>,
+    deferred_scroll_to_heading: Option<String>,
 }
 
 pub(crate) struct CheckboxClickEvent {
@@ -106,16 +107,23 @@ impl CommonMarkViewerInternal {
             is_table: false,
             is_blockquote: false,
             checkbox_events: Vec::new(),
+            deferred_scroll_to_heading: None,
         }
     }
 }
 
-fn parser_options_math(is_math_enabled: bool) -> pulldown_cmark::Options {
+fn parser_options_extras(
+    is_math_enabled: bool,
+    is_scroll_to_heading_enabled: bool,
+) -> pulldown_cmark::Options {
+    let mut result = parser_options();
     if is_math_enabled {
-        parser_options() | pulldown_cmark::Options::ENABLE_MATH
-    } else {
-        parser_options()
+        result |= pulldown_cmark::Options::ENABLE_MATH;
     }
+    if is_scroll_to_heading_enabled {
+        result |= pulldown_cmark::Options::ENABLE_HEADING_ATTRIBUTES;
+    }
+    result
 }
 
 impl CommonMarkViewerInternal {
@@ -139,7 +147,7 @@ impl CommonMarkViewerInternal {
 
             let mut events = pulldown_cmark::Parser::new_ext(
                 text,
-                parser_options_math(options.math_fn.is_some()),
+                parser_options_extras(options.math_fn.is_some(), options.enable_scroll_to_heading),
             )
             .into_offset_iter()
             .enumerate()
@@ -179,6 +187,9 @@ impl CommonMarkViewerInternal {
                 }
             }
 
+            // deferral to make it consistent no matter whether the target is before or after the link
+            *cache.scroll_to_id_target_mut() = self.deferred_scroll_to_heading.take();
+
             if let Some(source_id) = split_points_id {
                 scroll_cache(cache, &source_id).page_size =
                     Some(ui.next_widget_position().to_vec2());
@@ -211,10 +222,12 @@ impl CommonMarkViewerInternal {
             return;
         };
 
-        let events =
-            pulldown_cmark::Parser::new_ext(text, parser_options_math(options.math_fn.is_some()))
-                .into_offset_iter()
-                .collect::<Vec<_>>();
+        let events = pulldown_cmark::Parser::new_ext(
+            text,
+            parser_options_extras(options.math_fn.is_some(), options.enable_scroll_to_heading),
+        )
+        .into_offset_iter()
+        .collect::<Vec<_>>();
 
         let num_rows = events.len();
 
@@ -514,7 +527,7 @@ impl CommonMarkViewerInternal {
         max_width: f32,
     ) {
         match event {
-            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, options),
+            pulldown_cmark::Event::Start(tag) => self.start_tag(ui, tag, cache, options),
             pulldown_cmark::Event::End(tag) => self.end_tag(ui, tag, cache, options, max_width),
             pulldown_cmark::Event::Text(text) => {
                 self.event_text(text, ui);
@@ -587,12 +600,26 @@ impl CommonMarkViewerInternal {
         }
     }
 
-    fn start_tag(&mut self, ui: &mut Ui, tag: pulldown_cmark::Tag, options: &CommonMarkOptions) {
+    fn start_tag(
+        &mut self,
+        ui: &mut Ui,
+        tag: pulldown_cmark::Tag,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+    ) {
         match tag {
             pulldown_cmark::Tag::Paragraph => {
                 self.line.try_insert_start(ui);
             }
-            pulldown_cmark::Tag::Heading { level, .. } => {
+            pulldown_cmark::Tag::Heading { level, id, .. } => {
+                if let Some(scroll_target) = cache.scroll_to_id_target()
+                    && let Some(id) = id
+                    && id.into_string() == scroll_target
+                {
+                    ui.scroll_to_cursor(Some(egui::Align::TOP));
+                    cache.scroll_to_id_target_mut().take();
+                }
+
                 // Headings should always insert a newline even if it is at the start.
                 // Whether this is okay in all scenarios is a different question.
                 newline(ui);
@@ -763,7 +790,7 @@ impl CommonMarkViewerInternal {
             }
             pulldown_cmark::TagEnd::Link => {
                 if let Some(link) = self.link.take() {
-                    link.end(ui, cache);
+                    link.end(ui, cache, options, &mut self.deferred_scroll_to_heading);
                 }
             }
             pulldown_cmark::TagEnd::Image => {
