@@ -22,12 +22,20 @@ egui_commonmark_macros = { workspace = true, optional = true }
 egui_extras = { workspace = true }
 egui = { workspace = true }
 
+egui-twemoji = { version = "0.8.0", default-features = false, features = [
+    "svg",
+], optional = true }
+
 document-features = { workspace = true, optional = true }
 
 pulldown-cmark = { workspace = true }
 
 [features]
-default = ["load-images", "pulldown_cmark"]
+default = ["load-images", "pulldown_cmark", "twemoji"]
+
+## Render emojis as Twemoji images via `egui-twemoji`.
+## Requires the `svg` feature (enabled automatically).
+twemoji = ["dep:egui-twemoji", "svg"]
 
 ## Enable proc macros for compile time generation of egui widgets from markdown
 macros = [
