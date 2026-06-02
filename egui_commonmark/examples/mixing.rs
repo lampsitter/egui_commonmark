@@ -28,7 +28,7 @@ fn main() -> eframe::Result<()> {
     let mut cache = egui_commonmark::CommonMarkCache::default();
 
     eframe::run_ui_native(WINDOW_NAME, Default::default(), move |ui, _frame| {
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 m!(
                     ui,

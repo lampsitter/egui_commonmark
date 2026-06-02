@@ -331,9 +331,9 @@ dependencies = [
 
 [[package]]
 name = "color"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a18ef4657441fb193b65f34dc39b3781f0dfec23d3bd94d0eeb4e88cde421edb"
+checksum = "2ec7c5eb7a16992b1904d76c517d170ab353b0e0b3d5a0c81a8a0cd1037893cf"
 dependencies = [
  "bytemuck",
 ]
@@ -508,9 +508,8 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "ecolor"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbb993f120d46ca077a18f166175b94c6edeb994d812cbd07a4a03cfced2713c"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "bytemuck",
  "emath",
@@ -518,9 +517,8 @@ dependencies = [
 
 [[package]]
 name = "eframe"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fd6562766ec6b921232ceb960acdb405f91971f59c17604840fd9485fee0dc3"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -553,15 +551,15 @@ dependencies = [
 
 [[package]]
 name = "egui"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b71aaacbe69e214aebf7b8d5eacd6256d0d2ca5ff9525c28d1dd7f377f430a9"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "accesskit",
  "ahash",
  "bitflags 2.11.0",
  "emath",
  "epaint",
+ "itertools",
  "log",
  "nohash-hasher",
  "profiling",
@@ -571,9 +569,8 @@ dependencies = [
 
 [[package]]
 name = "egui-wgpu"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "111e54ac54bf9d767ce8970a454f720878875bca1f2e63f781c722e98f466971"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -591,9 +588,8 @@ dependencies = [
 
 [[package]]
 name = "egui-winit"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ed6af7dad7dd045b77731fe6dc291b835489a104d3cd2428a945e71e2265df3"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "arboard",
  "bytemuck",
@@ -652,15 +648,15 @@ dependencies = [
 
 [[package]]
 name = "egui_extras"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8844ef47969c00cc186e06e9721ac952758c0e5cd5f579468037f19c7f49566d"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "ahash",
  "egui",
  "ehttp",
  "enum-map",
  "image",
+ "itertools",
  "log",
  "mime_guess2",
  "profiling",
@@ -669,9 +665,8 @@ dependencies = [
 
 [[package]]
 name = "egui_glow"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91c5dea15932abd0a953fefc8d8490002204808a2e087147aac48608eea9ef79"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "bytemuck",
  "egui",
@@ -679,8 +674,6 @@ dependencies = [
  "log",
  "memoffset",
  "profiling",
- "wasm-bindgen",
- "web-sys",
  "winit",
 ]
 
@@ -699,10 +692,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "emath"
-version = "0.34.0"
+name = "either"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8490360fc83eb3a2b20aba120457f7d91c3042d7c628e4f90b43a97b6adf1255"
+checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
+
+[[package]]
+name = "emath"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "bytemuck",
 ]
@@ -729,9 +727,8 @@ dependencies = [
 
 [[package]]
 name = "epaint"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d76f9fdbf72eaf0dc3198d90e7bff267b45866f660f8cf49caeb9dcab93342e0"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -739,6 +736,7 @@ dependencies = [
  "emath",
  "epaint_default_fonts",
  "font-types",
+ "harfrust",
  "log",
  "nohash-hasher",
  "parking_lot",
@@ -746,14 +744,15 @@ dependencies = [
  "self_cell",
  "skrifa",
  "smallvec",
+ "unicode-general-category",
+ "unicode-segmentation",
  "vello_cpu",
 ]
 
 [[package]]
 name = "epaint_default_fonts"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a1a65f42685d25419a67fd3175e11dfecdd268b0478aaba76785b0a896884e0"
+version = "0.34.3"
+source = "git+https://github.com/emilk/egui.git?branch=main#db7559368dc38704194d48f13400a98c2cf09584"
 
 [[package]]
 name = "equivalent"
@@ -828,12 +827,9 @@ dependencies = [
 
 [[package]]
 name = "fearless_simd"
-version = "0.3.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fb2907d1f08b2b316b9223ced5b0e89d87028ba8deae9764741dba8ff7f3903"
-dependencies = [
- "bytemuck",
-]
+checksum = "b97b65636e5b9ef369943878ac74335ba1c55c1cb6adbf1e2c293c624248d693"
 
 [[package]]
 name = "find-msvc-tools"
@@ -871,9 +867,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "font-types"
-version = "0.11.1"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73829a7b5c91198af28a99159b7ae4afbb252fb906159ff7f189f3a2ceaa3df2"
+checksum = "5b38ad915f6dadd993ced50848a8291a543bd41ca62bc10740d5e64e2ab4cfd7"
 dependencies = [
  "bytemuck",
 ]
@@ -983,6 +979,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "glifo"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d99fc21d493812643aae86d53b7bbd02f376434a90317e8a790bc209fdd6605e"
+dependencies = [
+ "bytemuck",
+ "foldhash",
+ "hashbrown 0.17.1",
+ "log",
+ "peniko",
+ "skrifa",
+ "smallvec",
+ "vello_common 0.0.9",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1067,6 +1079,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "guillotiere"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b17e70c989c36bad147b27a58d148c0741c51448aa5653436547323e524d0ab"
+dependencies = [
+ "euclid",
+]
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1079,10 +1100,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "harfrust"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0431e8e389aa0f1e72bb9d1c2db8957a1a7a3580e8ed97db819c14837aac9b3e"
+dependencies = [
+ "bitflags 2.11.0",
+ "bytemuck",
+ "read-fonts",
+ "smallvec",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
+dependencies = [
+ "foldhash",
+]
+
+[[package]]
+name = "hashbrown"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 dependencies = [
  "foldhash",
 ]
@@ -1244,7 +1286,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
 dependencies = [
  "equivalent",
- "hashbrown",
+ "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -1350,12 +1401,13 @@ dependencies = [
 
 [[package]]
 name = "kurbo"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7564e90fe3c0d5771e1f0bc95322b21baaeaa0d9213fa6a0b61c99f8b17b3bfb"
+checksum = "4b60dfc32f652b926df6192e55525b16d186c69d47876c3ead4da5cc9f8450e2"
 dependencies = [
  "arrayvec",
  "euclid",
+ "polycool",
  "smallvec",
 ]
 
@@ -1508,9 +1560,9 @@ dependencies = [
 
 [[package]]
 name = "naga"
-version = "29.0.0"
+version = "29.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85b4372fed0bd362d646d01b6926df0e837859ccc522fed720c395e0460f29c8"
+checksum = "0dd91265cc2454558f659b3b4b9640f0ddb8cc6521277f166b8a8c181c898079"
 dependencies = [
  "arrayvec",
  "bit-set 0.9.1",
@@ -1519,7 +1571,7 @@ dependencies = [
  "cfg_aliases",
  "codespan-reporting",
  "half",
- "hashbrown",
+ "hashbrown 0.16.1",
  "hexf-parse",
  "indexmap",
  "libm",
@@ -1930,13 +1982,13 @@ dependencies = [
 
 [[package]]
 name = "peniko"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a2b6aadb221872732e87d465213e9be5af2849b0e8cc5300a8ba98fffa2e00a"
+checksum = "839c8299360d2e998bdb106dc0a6cd71dcc5f4df51df1b620361bf50e283cca6"
 dependencies = [
  "bytemuck",
  "color",
- "kurbo 0.13.0",
+ "kurbo 0.13.1",
  "linebender_resource_handle",
  "smallvec",
 ]
@@ -2089,6 +2141,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "polycool"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50596ddc09eb5ad5f75cacd40209568e66df71baf86e1499a0e99c4cff12a5a6"
+dependencies = [
+ "arrayvec",
+]
+
+[[package]]
 name = "portable-atomic"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2138,9 +2199,9 @@ dependencies = [
 
 [[package]]
 name = "profiling"
-version = "1.0.17"
+version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
+checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 
 [[package]]
 name = "pulldown-cmark"
@@ -2221,9 +2282,9 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "read-fonts"
-version = "0.37.0"
+version = "0.39.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b634fabf032fab15307ffd272149b622260f55974d9fad689292a5d33df02e5"
+checksum = "c4ed38b89c2c77ff968c524145ad65fb010f38af5c7a224b53b81d47ac2daa81"
 dependencies = [
  "bytemuck",
  "font-types",
@@ -2539,9 +2600,9 @@ checksum = "b2aa850e253778c88a04c3d7323b043aeda9d3e30d5971937c1855769763678e"
 
 [[package]]
 name = "skrifa"
-version = "0.40.0"
+version = "0.42.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fbdfe3d2475fbd7ddd1f3e5cf8288a30eb3e5f95832829570cd88115a7434ac"
+checksum = "0c34617370ae968efb7161bb2beb517d9084659aae19e24b89e3db25b46e4564"
 dependencies = [
  "bytemuck",
  "read-fonts",
@@ -2955,6 +3016,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142"
 
 [[package]]
+name = "unicode-general-category"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b993bddc193ae5bd0d623b49ec06ac3e9312875fdae725a975c51db1cc1677f"
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3061,28 +3128,46 @@ checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
 
 [[package]]
 name = "vello_common"
-version = "0.0.6"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bd1a4c633ce09e7d713df1a6e036644a125e15e0c169cfb5180ddf5836ca04b"
+checksum = "3361bff7f7d82c0c496b92048db83846691f0e844cc28dee92b1c824291b55ee"
 dependencies = [
  "bytemuck",
  "fearless_simd",
- "hashbrown",
+ "guillotiere",
+ "hashbrown 0.17.1",
  "log",
  "peniko",
- "skrifa",
  "smallvec",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "vello_common"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19d672facaa2d697285a786cd9d44d614cd2ce54cdc022504bf339f8fff3b750"
+dependencies = [
+ "bytemuck",
+ "fearless_simd",
+ "guillotiere",
+ "hashbrown 0.17.1",
+ "log",
+ "peniko",
+ "smallvec",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "vello_cpu"
-version = "0.0.6"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0162bfe48aabf6a9fdcd401b628c7d9f260c2cbabb343c70a65feba6f7849edc"
+checksum = "6d8ded630e8316bb94a55881256506d1f3b9947b5f66db8a7d32ca7ba02decd0"
 dependencies = [
  "bytemuck",
- "hashbrown",
- "vello_common",
+ "glifo",
+ "hashbrown 0.17.1",
+ "vello_common 0.0.8",
 ]
 
 [[package]]
@@ -3363,9 +3448,9 @@ checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
 name = "wgpu"
-version = "29.0.0"
+version = "29.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78f9f386699b1fb8b8a05bfe82169b24d151f05702d2905a0bf93bc454fcc825"
+checksum = "bb3feacc458f7bee8bc1737149b42b6c731aa461039a4264a67bb6681646b250"
 dependencies = [
  "arrayvec",
  "bitflags 2.11.0",
@@ -3373,7 +3458,7 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "document-features",
- "hashbrown",
+ "hashbrown 0.16.1",
  "js-sys",
  "log",
  "portable-atomic",
@@ -3391,9 +3476,9 @@ dependencies = [
 
 [[package]]
 name = "wgpu-core"
-version = "29.0.0"
+version = "29.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c34181b0acb8f98168f78f8e57ec66f57df5522b39143dbe5f2f45d7ca927c"
+checksum = "02da3ad1b568337f25513b317870960ef87073ea0945502e44b864b67a8c77b7"
 dependencies = [
  "arrayvec",
  "bit-set 0.9.1",
@@ -3402,7 +3487,7 @@ dependencies = [
  "bytemuck",
  "cfg_aliases",
  "document-features",
- "hashbrown",
+ "hashbrown 0.16.1",
  "indexmap",
  "log",
  "naga",
@@ -3431,9 +3516,9 @@ dependencies = [
 
 [[package]]
 name = "wgpu-hal"
-version = "29.0.0"
+version = "29.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "058b6047337cf323a4f092486443a9337f3d81325347e5d77deed7e563aeaedc"
+checksum = "31f8e1a9e7a8512f276f7c62e018c7fa8d60954303fed2e5750114332049193f"
 dependencies = [
  "bitflags 2.11.0",
  "cfg-if",
@@ -3452,9 +3537,9 @@ dependencies = [
 
 [[package]]
 name = "wgpu-naga-bridge"
-version = "29.0.0"
+version = "29.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0b8e1e505095f24cb4a578f04b1421d456257dca7fac114d9d9dd3d978c34b8"
+checksum = "59c654c483f058800972c3645e95388a7eca31bf9fe1933bc20e036588a0be02"
 dependencies = [
  "naga",
  "wgpu-types",
@@ -3462,9 +3547,9 @@ dependencies = [
 
 [[package]]
 name = "wgpu-types"
-version = "29.0.0"
+version = "29.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d15ece45db77dd5451f11c0ce898334317ce8502d304a20454b531fdc0652fae"
+checksum = "a9bcc31518a0e9735aefebedb5f7a9ef3ed1c42549c9f4c882fa9060ceaac639"
 dependencies = [
  "bitflags 2.11.0",
  "bytemuck",

@@ -304,7 +304,7 @@ impl<'f> CommonMarkViewer<'f> {
     #[cfg(feature = "pulldown_cmark")]
     pub fn show_scrollable(
         self,
-        source_id: impl std::hash::Hash,
+        source_id: impl egui::AsId,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         text: &str,
