@@ -8,6 +8,10 @@ pub struct ScrollableCache {
     pub available_size: Vec2,
     pub page_size: Option<Vec2>,
     pub split_points: Vec<(usize, Pos2, Pos2)>,
+    pub parsed_events: Vec<(pulldown_cmark::Event<'static>, Range<usize>)>,
+    pub parsed_text_ptr: usize,
+    pub parsed_text_len: usize,
+    pub parser_options_bits: u32,
 }
 
 pub type EventIteratorItem<'e> = (usize, (pulldown_cmark::Event<'e>, Range<usize>));

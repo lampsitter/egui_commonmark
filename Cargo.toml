@@ -36,3 +36,10 @@ pulldown-cmark = { version = "0.13", default-features = false }
 # eframe = { path = "../../egui/crates/eframe" }
 # egui = { path = "../../egui/crates/egui" }
 # egui_extras = { path = "../../egui/crates/egui_extras" }
+
+[profile.release]
+opt-level = 3     # Fast and small wasm
+lto = true        # Link Time Optimization
+codegen-units = 1 # Reduce number of codegen units to increase optimizations
+panic = 'abort'   # Abort on panic (smaller wasm size)
+strip = true      # Strip symbols from binary

@@ -1,9 +1,10 @@
 use std::iter::Peekable;
 use std::ops::Range;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::{CommonMarkCache, CommonMarkOptions};
 
-use egui::{self, Id, Pos2, TextStyle, Ui};
+use egui::{self, Id, TextStyle, Ui};
 
 use crate::List;
 use egui_commonmark_backend::elements::*;
@@ -14,6 +15,7 @@ use pulldown_cmark::{CowStr, HeadingLevel};
 /// Newline logic is constructed by the following:
 /// All elements try to insert a newline before them (if they are allowed)
 /// and end their own line.
+#[derive(Clone)]
 struct Newline {
     /// Whether a newline should not be inserted before a widget. This is only for
     /// the first widget.
@@ -61,7 +63,7 @@ impl Newline {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct DefinitionList {
     is_first_item: bool,
     is_def_list_def: bool,
@@ -91,6 +93,45 @@ pub(crate) struct CheckboxClickEvent {
     pub(crate) span: Range<usize>,
 }
 
+const CHECKPOINT_STRIDE_EVENTS: usize = 4;
+const CHECKPOINT_OVERSCAN: usize = 0;
+
+#[derive(Clone)]
+struct RenderCheckpoint {
+    event_index: usize,
+    start_y: f32,
+    end_y: f32,
+    snapshot: RenderSnapshot,
+}
+
+#[derive(Clone)]
+struct RenderSnapshot {
+    curr_table: usize,
+    text_style: Style,
+    list_numbers: Vec<Option<u64>>,
+    list_has_begun: bool,
+    line: Newline,
+    is_list_item: bool,
+    def_list: DefinitionList,
+    is_table: bool,
+    is_blockquote: bool,
+}
+
+#[derive(Default)]
+struct LocalVirtualizationCache {
+    checkpoints: Vec<RenderCheckpoint>,
+    page_height: f32,
+    text_ptr: usize,
+    text_len: usize,
+    parser_options_bits: u32,
+    available_width_bits: u32,
+    just_changed: bool,
+}
+
+thread_local! {
+    static LOCAL_VIRTUAL_CACHE: RefCell<HashMap<Id, LocalVirtualizationCache>> = RefCell::new(HashMap::new());
+}
+
 impl CommonMarkViewerInternal {
     pub fn new() -> Self {
         Self {
@@ -110,6 +151,45 @@ impl CommonMarkViewerInternal {
             deferred_scroll_to_heading: None,
         }
     }
+
+    fn can_checkpoint(&self) -> bool {
+        self.link.is_none()
+            && self.image.is_none()
+            && self.code_block.is_none()
+            && self.html_block.is_empty()
+    }
+
+    fn snapshot(&self) -> RenderSnapshot {
+        let (list_numbers, list_has_begun) = self.list.checkpoint();
+        RenderSnapshot {
+            curr_table: self.curr_table,
+            text_style: self.text_style.clone(),
+            list_numbers,
+            list_has_begun,
+            line: self.line.clone(),
+            is_list_item: self.is_list_item,
+            def_list: self.def_list.clone(),
+            is_table: self.is_table,
+            is_blockquote: self.is_blockquote,
+        }
+    }
+
+    fn restore_from_snapshot(&mut self, snapshot: &RenderSnapshot) {
+        self.curr_table = snapshot.curr_table;
+        self.text_style = snapshot.text_style.clone();
+        self.list = List::from_checkpoint(snapshot.list_numbers.clone(), snapshot.list_has_begun);
+        self.line = snapshot.line.clone();
+        self.is_list_item = snapshot.is_list_item;
+        self.def_list = snapshot.def_list.clone();
+        self.is_table = snapshot.is_table;
+        self.is_blockquote = snapshot.is_blockquote;
+        self.link = None;
+        self.image = None;
+        self.code_block = None;
+        self.html_block.clear();
+        self.checkbox_events.clear();
+        self.deferred_scroll_to_heading = None;
+    }
 }
 
 fn parser_options_extras(
@@ -124,6 +204,124 @@ fn parser_options_extras(
         result |= pulldown_cmark::Options::ENABLE_HEADING_ATTRIBUTES;
     }
     result
+}
+
+fn clamp_to_char_boundary(text: &str, mut index: usize) -> usize {
+    if index > text.len() {
+        index = text.len();
+    }
+    while index > 0 && !text.is_char_boundary(index) {
+        index -= 1;
+    }
+    index
+}
+
+fn fence_marker(line: &str) -> Option<(u8, usize)> {
+    let trimmed = line.trim_start_matches([' ', '\t']);
+    let indent = line.len().saturating_sub(trimmed.len());
+    if indent > 3 {
+        return None;
+    }
+    let bytes = trimmed.as_bytes();
+    if bytes.is_empty() {
+        return None;
+    }
+    let marker = bytes[0];
+    if marker != b'`' && marker != b'~' {
+        return None;
+    }
+    let run_len = bytes.iter().take_while(|b| **b == marker).count();
+    if run_len >= 3 {
+        Some((marker, run_len))
+    } else {
+        None
+    }
+}
+
+fn inside_unclosed_fence(prefix: &str) -> bool {
+    let mut current_fence: Option<(u8, usize)> = None;
+    for line in prefix.lines() {
+        if let Some((marker, run_len)) = fence_marker(line) {
+            if let Some((open_marker, open_len)) = current_fence {
+                if marker == open_marker && run_len >= open_len {
+                    current_fence = None;
+                }
+            } else {
+                current_fence = Some((marker, run_len));
+            }
+        }
+    }
+    current_fence.is_some()
+}
+
+fn incremental_reparse_start(text: &str, previous_len: usize) -> usize {
+    // Be conservative for correctness: reparse from the last blank-line boundary
+    // in a larger context window, since markdown block semantics can depend on
+    // lines before the append point.
+    let context_start = clamp_to_char_boundary(text, previous_len.saturating_sub(64 * 1024));
+    let window = &text[context_start..previous_len];
+    let candidate = if let Some(blank_line_pos) = window.rfind("\n\n") {
+        context_start + blank_line_pos + 2
+    } else if let Some(last_newline) = window.as_bytes().iter().rposition(|b| *b == b'\n') {
+        context_start + last_newline + 1
+    } else {
+        0
+    };
+
+    if candidate > 0 && inside_unclosed_fence(&text[..candidate]) {
+        0
+    } else {
+        candidate
+    }
+}
+
+fn width_cache_key(width: f32) -> u32 {
+    width.max(0.0).round() as u32
+}
+
+fn appended_text_needs_full_reparse(appended: &str) -> bool {
+    // Reference-style link / footnote definitions appended later can affect
+    // earlier inline parsing, so incremental tail-only reparsing is unsafe.
+    appended.lines().any(|line| {
+        let trimmed = line.trim_start_matches([' ', '\t']);
+        trimmed.starts_with('[') && trimmed.contains("]:")
+    })
+}
+
+fn try_incremental_append_parse(
+    scroll_cache: &mut ScrollableCache,
+    text: &str,
+    parser_options: pulldown_cmark::Options,
+    text_len: usize,
+) -> Option<usize> {
+    if scroll_cache.parsed_events.is_empty()
+        || scroll_cache.parser_options_bits != parser_options.bits()
+        || text_len <= scroll_cache.parsed_text_len
+    {
+        return None;
+    }
+
+    let previous_len = scroll_cache.parsed_text_len;
+    if appended_text_needs_full_reparse(&text[previous_len..text_len]) {
+        return None;
+    }
+    let reparse_start = incremental_reparse_start(text, previous_len);
+    scroll_cache
+        .parsed_events
+        .retain(|(_, span)| span.end <= reparse_start);
+    let changed_event_start = scroll_cache.parsed_events.len();
+
+    let reparsed_tail = pulldown_cmark::Parser::new_ext(&text[reparse_start..], parser_options)
+        .into_offset_iter()
+        .map(|(event, span)| {
+            (
+                event.into_static(),
+                (span.start + reparse_start)..(span.end + reparse_start),
+            )
+        });
+    scroll_cache.parsed_events.extend(reparsed_tail);
+    scroll_cache.parsed_text_len = text_len;
+    Some(changed_event_start)
 }
 
 impl CommonMarkViewerInternal {
@@ -144,55 +342,320 @@ impl CommonMarkViewerInternal {
             ui.spacing_mut().item_spacing.x = 0.0;
             let height = ui.text_style_height(&TextStyle::Body);
             ui.set_row_height(height);
+            let parser_options =
+                parser_options_extras(options.math_fn.is_some(), options.enable_scroll_to_heading);
+            let text_ptr = text.as_ptr() as usize;
+            let text_len = text.len();
+            let mut collect_checkpoints = false;
+            let mut top_spacer_height = 0.0_f32;
+            let mut bottom_spacer_height = 0.0_f32;
+            let mut restore_snapshot = None;
+            let mut collected_checkpoints = Vec::<RenderCheckpoint>::new();
+            let first_position_y = ui.next_widget_position().y;
+            let (indexed_events, total_event_count, text_changed_this_frame) =
+                if let Some(source_id) = split_points_id {
+                    let available_size = ui.available_size();
+                    let viewport = ui.clip_rect();
+                    let scroll_cache = scroll_cache(cache, &source_id);
+                    let size_changed = (scroll_cache.available_size.x - available_size.x).abs()
+                        > 0.5
+                        || (scroll_cache.available_size.y - available_size.y).abs() > 0.5;
+                    let mut changed_event_start = None;
 
-            let mut events = pulldown_cmark::Parser::new_ext(
-                text,
-                parser_options_extras(options.math_fn.is_some(), options.enable_scroll_to_heading),
-            )
-            .into_offset_iter()
-            .enumerate()
-            .peekable();
+                    let cache_is_stale = scroll_cache.parsed_text_ptr != text_ptr
+                        || scroll_cache.parsed_text_len != text_len
+                        || scroll_cache.parser_options_bits != parser_options.bits()
+                        || scroll_cache.parsed_events.is_empty()
+                        || size_changed;
+
+                    if cache_is_stale {
+                        changed_event_start = try_incremental_append_parse(
+                            scroll_cache,
+                            text,
+                            parser_options,
+                            text_len,
+                        );
+                        if changed_event_start.is_none() {
+                            scroll_cache.parsed_events =
+                                pulldown_cmark::Parser::new_ext(text, parser_options)
+                                    .into_offset_iter()
+                                    .map(|(event, span)| (event.into_static(), span))
+                                    .collect();
+                            changed_event_start = Some(0);
+                        }
+                        scroll_cache.parsed_text_ptr = text_ptr;
+                        scroll_cache.parsed_text_len = text_len;
+                        scroll_cache.parser_options_bits = parser_options.bits();
+                        scroll_cache.page_size = None;
+                        scroll_cache.split_points.clear();
+                    }
+
+                    let total_events = scroll_cache.parsed_events.len();
+                    let available_width_bits = width_cache_key(available_size.x);
+                    let local = LOCAL_VIRTUAL_CACHE.with(|cache_by_id| {
+                        let mut cache_by_id = cache_by_id.borrow_mut();
+                        cache_by_id.remove(&source_id).unwrap_or_default()
+                    });
+                    let text_changed = local.text_ptr != text_ptr || local.text_len != text_len;
+                    let text_appended = text_len > local.text_len;
+                    let stale_non_append_text = text_len < local.text_len
+                        || (text_len == local.text_len && local.text_ptr != text_ptr);
+                    let stale_parser = local.parser_options_bits != parser_options.bits();
+                    let stale_width = local.available_width_bits != available_width_bits;
+                    let stale_checkpoints = local.checkpoints.len() < 2;
+                    let stale_just_changed = !text_changed && local.just_changed;
+                    let local_is_stale = stale_non_append_text
+                        || stale_parser
+                        || stale_width
+                        || stale_checkpoints
+                        || stale_just_changed;
+                    let mut partial_rebuild_state: Option<(usize, Vec<RenderCheckpoint>)> = None;
+                    let mut append_offscreen_safe_reuse = false;
+                    if text_changed && text_appended && !local_is_stale {
+                        if let Some(changed_start) = changed_event_start {
+                            let viewport_max = viewport.max.y - first_position_y;
+                            let near_bottom = viewport_max >= (local.page_height - 1.0);
+                            let viewport_end_checkpoint_index = local
+                                .checkpoints
+                                .iter()
+                                .position(|checkpoint| checkpoint.start_y >= viewport_max)
+                                .unwrap_or(local.checkpoints.len().saturating_sub(1))
+                                .saturating_add(CHECKPOINT_OVERSCAN)
+                                .min(local.checkpoints.len().saturating_sub(1));
+                            let viewport_end_event_index = local.checkpoints
+                                [viewport_end_checkpoint_index]
+                                .event_index
+                                .min(total_events);
+                            let safety_margin_events = CHECKPOINT_STRIDE_EVENTS.saturating_mul(2);
+                            append_offscreen_safe_reuse = !near_bottom
+                                && changed_start
+                                    > viewport_end_event_index.saturating_add(safety_margin_events);
+                            let changed_rebuild_pos = local
+                                .checkpoints
+                                .iter()
+                                .rposition(|checkpoint| checkpoint.event_index <= changed_start);
+                            let viewport_min = viewport.min.y - first_position_y;
+                            let viewport_rebuild_pos = local
+                                .checkpoints
+                                .iter()
+                                .rposition(|checkpoint| checkpoint.end_y <= viewport_min)
+                                .unwrap_or(0)
+                                .saturating_sub(CHECKPOINT_OVERSCAN);
+                            if let Some(changed_rebuild_pos) = changed_rebuild_pos
+                                && !append_offscreen_safe_reuse
+                            {
+                                let rebuild_pos = changed_rebuild_pos.min(viewport_rebuild_pos);
+                                let rebuild_checkpoint = local.checkpoints[rebuild_pos].clone();
+                                top_spacer_height = rebuild_checkpoint.start_y.max(0.0);
+                                restore_snapshot = Some(rebuild_checkpoint.snapshot.clone());
+                                let prefix = local.checkpoints[..=rebuild_pos].to_vec();
+                                partial_rebuild_state =
+                                    Some((rebuild_checkpoint.event_index, prefix));
+                            }
+                        }
+                    }
+
+                    let events = if local_is_stale
+                        || (text_changed
+                            && partial_rebuild_state.is_none()
+                            && !append_offscreen_safe_reuse)
+                    {
+                        collect_checkpoints = true;
+                        collected_checkpoints.push(RenderCheckpoint {
+                            event_index: 0,
+                            start_y: 0.0,
+                            end_y: 0.0,
+                            snapshot: self.snapshot(),
+                        });
+                        scroll_cache.available_size = available_size;
+                        scroll_cache
+                            .parsed_events
+                            .iter()
+                            .cloned()
+                            .enumerate()
+                            .collect::<Vec<_>>()
+                    } else if let Some((rebuild_start_event_index, prefix_checkpoints)) =
+                        partial_rebuild_state
+                    {
+                        collect_checkpoints = true;
+                        collected_checkpoints = prefix_checkpoints;
+                        scroll_cache.available_size = available_size;
+                        scroll_cache
+                            .parsed_events
+                            .iter()
+                            .cloned()
+                            .enumerate()
+                            .skip(rebuild_start_event_index)
+                            .collect::<Vec<_>>()
+                    } else {
+                        let checkpoints = local.checkpoints;
+                        let viewport_min = viewport.min.y - first_position_y;
+                        let viewport_max = viewport.max.y - first_position_y;
+                        let start_checkpoint_index = checkpoints
+                            .iter()
+                            .rposition(|checkpoint| checkpoint.end_y <= viewport_min)
+                            .unwrap_or(0)
+                            .saturating_sub(CHECKPOINT_OVERSCAN);
+
+                        let end_checkpoint_index = checkpoints
+                            .iter()
+                            .position(|checkpoint| checkpoint.start_y >= viewport_max)
+                            .unwrap_or(checkpoints.len().saturating_sub(1))
+                            .saturating_add(CHECKPOINT_OVERSCAN)
+                            .min(checkpoints.len().saturating_sub(1));
+
+                        let start_checkpoint = &checkpoints[start_checkpoint_index];
+                        let end_checkpoint = &checkpoints[end_checkpoint_index];
+                        let start_event_index = start_checkpoint.event_index.min(total_events);
+                        let render_to_tail = text_appended && !append_offscreen_safe_reuse;
+                        let end_event_index = if render_to_tail {
+                            total_events
+                        } else {
+                            end_checkpoint
+                                .event_index
+                                .max(start_event_index)
+                                .min(total_events)
+                        };
+
+                        restore_snapshot = Some(start_checkpoint.snapshot.clone());
+                        top_spacer_height = start_checkpoint.start_y.max(0.0);
+                        bottom_spacer_height = if render_to_tail {
+                            0.0
+                        } else {
+                            (local.page_height - end_checkpoint.start_y).max(0.0)
+                        };
+
+                        let selected = scroll_cache
+                            .parsed_events
+                            .iter()
+                            .cloned()
+                            .enumerate()
+                            .skip(start_event_index)
+                            .take(end_event_index.saturating_sub(start_event_index))
+                            .collect::<Vec<_>>();
+                        LOCAL_VIRTUAL_CACHE.with(|cache_by_id| {
+                            cache_by_id.borrow_mut().insert(
+                                source_id,
+                                LocalVirtualizationCache {
+                                    checkpoints,
+                                    page_height: local.page_height,
+                                    text_ptr,
+                                    text_len,
+                                    parser_options_bits: parser_options.bits(),
+                                    available_width_bits,
+                                    just_changed: false,
+                                },
+                            );
+                        });
+
+                        selected
+                    };
+
+                    (events, total_events, text_changed)
+                } else {
+                    let events = pulldown_cmark::Parser::new_ext(text, parser_options)
+                        .into_offset_iter()
+                        .map(|(event, span)| (event.into_static(), span))
+                        .enumerate()
+                        .collect::<Vec<_>>();
+                    let total_events = events.len();
+                    (events, total_events, false)
+                };
+
+            if let Some(snapshot) = restore_snapshot.as_ref() {
+                self.restore_from_snapshot(snapshot);
+            }
+
+            if top_spacer_height > 0.0 {
+                ui.allocate_space(egui::vec2(0.0, top_spacer_height));
+            }
+
+            let mut events = indexed_events.into_iter().peekable();
 
             while let Some((index, (e, src_span))) = events.next() {
                 let start_position = ui.next_widget_position();
-                let is_element_end = matches!(e, pulldown_cmark::Event::End(_));
-                let should_add_split_point = self.list.is_inside_a_list() && is_element_end;
+                let should_checkpoint = collect_checkpoints
+                    && index > 0
+                    && index % CHECKPOINT_STRIDE_EVENTS == 0
+                    && collected_checkpoints
+                        .last()
+                        .is_none_or(|checkpoint| checkpoint.event_index != index)
+                    && self.can_checkpoint();
+                if should_checkpoint {
+                    collected_checkpoints.push(RenderCheckpoint {
+                        event_index: index,
+                        start_y: start_position.y - first_position_y,
+                        end_y: start_position.y - first_position_y,
+                        snapshot: self.snapshot(),
+                    });
+                }
 
-                if events.peek().is_none() {
+                if events.peek().is_none() && index + 1 == total_event_count {
                     self.line.should_end_newline_forced = false;
                 }
 
                 self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
 
-                if let Some(source_id) = split_points_id
-                    && should_add_split_point
-                {
-                    let scroll_cache = scroll_cache(cache, &source_id);
-                    let end_position = ui.next_widget_position();
-
-                    let split_point_exists = scroll_cache
-                        .split_points
-                        .iter()
-                        .any(|(i, _, _)| *i == index);
-
-                    if !split_point_exists {
-                        scroll_cache
-                            .split_points
-                            .push((index, start_position, end_position));
-                    }
-                }
-
                 if index == 0 {
                     self.line.should_not_start_newline_forced = false;
                 }
+            }
+            if bottom_spacer_height > 0.0 {
+                ui.allocate_space(egui::vec2(0.0, bottom_spacer_height));
             }
 
             // deferral to make it consistent no matter whether the target is before or after the link
             *cache.scroll_to_id_target_mut() = self.deferred_scroll_to_heading.take();
 
             if let Some(source_id) = split_points_id {
-                scroll_cache(cache, &source_id).page_size =
-                    Some(ui.next_widget_position().to_vec2());
+                if collect_checkpoints {
+                    let page_size = ui.next_widget_position().to_vec2();
+                    let page_height = (page_size.y - first_position_y).max(0.0);
+                    let scroll_cache = scroll_cache(cache, &source_id);
+                    scroll_cache.page_size = Some(page_size);
+                    scroll_cache.split_points.clear();
+
+                    let total_events = scroll_cache.parsed_events.len();
+                    let mut checkpoints = collected_checkpoints;
+                    let needs_sentinel = checkpoints
+                        .last()
+                        .is_none_or(|checkpoint| checkpoint.event_index != total_events);
+                    if needs_sentinel {
+                        checkpoints.push(RenderCheckpoint {
+                            event_index: total_events,
+                            start_y: page_height,
+                            end_y: page_height,
+                            snapshot: self.snapshot(),
+                        });
+                    }
+                    for i in 0..checkpoints.len() {
+                        let next_start = checkpoints
+                            .get(i + 1)
+                            .map_or(page_height, |next| next.start_y);
+                        checkpoints[i].end_y = next_start;
+                    }
+
+                    let available_width_bits = width_cache_key(scroll_cache.available_size.x);
+                    LOCAL_VIRTUAL_CACHE.with(|cache_by_id| {
+                        cache_by_id.borrow_mut().insert(
+                            source_id,
+                            LocalVirtualizationCache {
+                                checkpoints,
+                                page_height,
+                                text_ptr,
+                                text_len,
+                                parser_options_bits: parser_options.bits(),
+                                available_width_bits,
+                                just_changed: text_changed_this_frame,
+                            },
+                        );
+                    });
+                } else if restore_snapshot.is_some() {
+                    let scroll_cache = scroll_cache(cache, &source_id);
+                    if scroll_cache.page_size.is_none() {
+                        scroll_cache.page_size = Some(ui.next_widget_position().to_vec2());
+                    }
+                }
             }
         });
 
@@ -210,87 +673,21 @@ impl CommonMarkViewerInternal {
         let available_size = ui.available_size();
         let scroll_id = source_id.with("_scroll_area");
 
-        let Some(page_size) = scroll_cache(cache, &source_id).page_size else {
-            egui::ScrollArea::vertical()
-                .id_salt(scroll_id)
-                .auto_shrink([false, true])
-                .show(ui, |ui| {
-                    self.show(ui, cache, options, text, Some(source_id));
-                });
-            // Prevent repopulating points twice at startup
-            scroll_cache(cache, &source_id).available_size = available_size;
-            return;
-        };
-
-        let events = pulldown_cmark::Parser::new_ext(
-            text,
-            parser_options_extras(options.math_fn.is_some(), options.enable_scroll_to_heading),
-        )
-        .into_offset_iter()
-        .collect::<Vec<_>>();
-
-        let num_rows = events.len();
-
         egui::ScrollArea::vertical()
             .id_salt(scroll_id)
             // Elements have different widths, so the scroll area cannot try to shrink to the
             // content, as that will mean that the scroll bar will move when loading elements
             // with different widths.
             .auto_shrink([false, true])
-            .show_viewport(ui, |ui, viewport| {
-                ui.set_height(page_size.y);
-                let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
-
-                let max_width = options.max_width(ui);
-                ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    let scroll_cache = scroll_cache(cache, &source_id);
-
-                    // finding the first element that's not in the viewport anymore
-                    let (first_event_index, _, first_end_position) = scroll_cache
-                        .split_points
-                        .iter()
-                        .filter(|(_, _, end_position)| end_position.y < viewport.min.y)
-                        .nth_back(1)
-                        .copied()
-                        .unwrap_or((0, Pos2::ZERO, Pos2::ZERO));
-
-                    // finding the last element that's just outside the viewport
-                    let last_event_index = scroll_cache
-                        .split_points
-                        .iter()
-                        .filter(|(_, start_position, _)| start_position.y > viewport.max.y)
-                        .nth(1)
-                        .map(|(index, _, _)| *index)
-                        .unwrap_or(num_rows);
-
-                    ui.allocate_space(first_end_position.to_vec2());
-
-                    // only rendering the elements that are inside the viewport
-                    let mut events = events
-                        .into_iter()
-                        .enumerate()
-                        .skip(first_event_index)
-                        .take(last_event_index - first_event_index)
-                        .peekable();
-
-                    while let Some((i, (e, src_span))) = events.next() {
-                        if events.peek().is_none() {
-                            self.line.should_end_newline_forced = false;
-                        }
-
-                        self.process_event(ui, &mut events, e, src_span, cache, options, max_width);
-
-                        if i == 0 {
-                            self.line.should_not_start_newline_forced = false;
-                        }
-                    }
-                });
+            .show(ui, |ui| {
+                self.show(ui, cache, options, text, Some(source_id));
             });
 
         // Forcing full re-render to repopulate split points for the new size
         let scroll_cache = scroll_cache(cache, &source_id);
-        if available_size != scroll_cache.available_size {
+        if (available_size.x - scroll_cache.available_size.x).abs() > 0.5
+            || (available_size.y - scroll_cache.available_size.y).abs() > 0.5
+        {
             scroll_cache.available_size = available_size;
             scroll_cache.page_size = None;
             scroll_cache.split_points.clear();

@@ -47,7 +47,8 @@
 //! ## Example
 //!
 //! ```
-//! use egui_commonmark::{CommonMarkCache, commonmark};
+//! use egui_commonmark::{CommonMarkCache};
+//! use egui_commonmark_macros::{commonmark};
 //! # egui::__run_test_ui(|ui| {
 //! let mut cache = CommonMarkCache::default();
 //! let _response = commonmark!(ui, &mut cache, "# ATX Heading Level 1");
@@ -246,7 +247,7 @@ impl<'f> CommonMarkViewer<'f> {
             cache,
             &self.options,
             text,
-            None,
+            Some(ui.id().with("_show_virtualized")),
         );
 
         response
@@ -270,7 +271,7 @@ impl<'f> CommonMarkViewer<'f> {
                 cache,
                 &self.options,
                 text,
-                None,
+                Some(ui.id().with("_show_virtualized")),
             );
 
         // Update source text for checkmarks that were clicked
@@ -320,6 +321,7 @@ impl<'f> CommonMarkViewer<'f> {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct ListLevel {
     current_number: Option<u64>,
 }
@@ -349,6 +351,23 @@ impl List {
 
     pub fn is_last_level(&self) -> bool {
         self.items.len() == 1
+    }
+
+    pub(crate) fn checkpoint(&self) -> (Vec<Option<u64>>, bool) {
+        (
+            self.items.iter().map(|item| item.current_number).collect(),
+            self.has_list_begun,
+        )
+    }
+
+    pub(crate) fn from_checkpoint(current_numbers: Vec<Option<u64>>, has_list_begun: bool) -> Self {
+        Self {
+            items: current_numbers
+                .into_iter()
+                .map(|current_number| ListLevel { current_number })
+                .collect(),
+            has_list_begun,
+        }
     }
 
     pub fn start_item(&mut self, ui: &mut egui::Ui, options: &CommonMarkOptions) {
