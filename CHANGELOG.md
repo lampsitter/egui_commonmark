@@ -1,5 +1,17 @@
 # egui_commonmark changelog
 
+## 0.24.0 - 2026-06-26
+
+### Added
+
+- Scroll to heading functionality ([#90](https://github.com/lampsitter/egui_commonmark/pull/90) by
+  [@ashley-hawkins](https://github.com/ashley-hawkins))
+
+### Changed
+
+- Update egui to 0.35 ([#93](https://github.com/lampsitter/egui_commonmark/pull/93) by
+  [@lucasmerlin](https://github.com/lucasmerlin))
+
 ## 0.23.0 - 2026-03-26
 
 ### Added
