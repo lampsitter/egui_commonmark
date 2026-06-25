@@ -16,8 +16,8 @@ version = "0.23.0"
 repository = "https://github.com/lampsitter/egui_commonmark"
 
 [workspace.dependencies]
-egui_extras = { version = "0.34.0", default-features = false }
-egui = { version = "0.34.0", default-features = false }
+egui_extras = { version = "0.35.0", default-features = false }
+egui = { version = "0.35.0", default-features = false }
 
 egui_commonmark_backend = { version = "0.23.0", path = "egui_commonmark_backend", default-features = false }
 egui_commonmark_macros = { version = "0.23.0", path = "egui_commonmark_macros", default-features = false }
