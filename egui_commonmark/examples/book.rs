@@ -25,7 +25,7 @@ impl App {
         egui::Panel::left("left_documentation_panel")
             .resizable(false)
             .default_size(100.0)
-            .show_inside(ui, |ui| {
+            .show(ui, |ui| {
                 let style = ui.style_mut();
                 style.visuals.widgets.active.bg_stroke = egui::Stroke::NONE;
                 style.visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
@@ -66,7 +66,7 @@ impl App {
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             self.sidepanel(ui);
             self.content_panel(ui);
         });
