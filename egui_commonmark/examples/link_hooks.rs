@@ -26,7 +26,7 @@ Notice how the destination is not shown on [hover](#prev) unlike with [urls](htt
             self.curr_page = 0;
         }
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 CommonMarkViewer::new().show(ui, &mut self.cache, p[self.curr_page]);
             });

@@ -17,8 +17,8 @@ struct App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::left("left_panel")
-            .show_inside(ui, |ui| ui.text_edit_multiline(&mut self.markdown));
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+            .show(ui, |ui| ui.text_edit_multiline(&mut self.markdown));
+        egui::CentralPanel::default().show(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 CommonMarkViewer::new().show(ui, &mut self.cache, &self.markdown);
             });

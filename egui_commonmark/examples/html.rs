@@ -27,7 +27,7 @@ impl eframe::App for App {
             *counter.as_ref().borrow_mut() += 1;
         };
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 CommonMarkViewer::new().render_html_fn(Some(&func)).show(
                     ui,
