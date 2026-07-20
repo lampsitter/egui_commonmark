@@ -207,6 +207,14 @@ impl Link {
     ) {
         let Self { destination, text } = self;
 
+        // When a link wraps an image (`[![alt](img)](url)`), all text events are captured
+        // by the image widget and link.text is never populated. Rendering an empty Label in
+        // a wrapping layout resets cursor.min.x to 0, superimposing subsequent elements on
+        // the image that was just drawn. Nothing to render, so return early.
+        if text.is_empty() {
+            return;
+        }
+
         let mut layout_job = LayoutJob::default();
         for t in text {
             t.append_to(
