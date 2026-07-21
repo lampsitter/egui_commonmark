@@ -137,6 +137,10 @@ fn main() -> eframe::Result {
                         name: "Html text".to_owned(),
                         content: include_str!("markdown/html.md").to_owned(),
                     },
+                    Page {
+                        name: "Badges".to_owned(),
+                        content: include_str!("markdown/badges.md").to_owned(),
+                    },
                 ],
             }))
         }),
