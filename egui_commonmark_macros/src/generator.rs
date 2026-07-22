@@ -767,18 +767,25 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::Link => {
                 if let Some(link) = self.link.take() {
                     let StyledLink { destination, text } = link;
-                    let mut text_stream = TokenStream::new();
-                    for text_style in text {
-                        text_stream
-                            .extend(self.richtext_tokenstream(&text_style.style, &text_style.text));
-                        text_stream.extend(quote!(,));
+                    // When a link wraps an image (`[![alt](img)](url)`), text is empty.
+                    // Emitting Link::end with empty text resets the layout cursor to x=0,
+                    // superimposing subsequent elements on the image just drawn.
+                    if text.is_empty() {
+                        TokenStream::new()
+                    } else {
+                        let mut text_stream = TokenStream::new();
+                        for text_style in text {
+                            text_stream.extend(
+                                self.richtext_tokenstream(&text_style.style, &text_style.text),
+                            );
+                            text_stream.extend(quote!(,));
+                        }
+                        quote!(
+                        egui_commonmark_backend::Link {
+                            destination: #destination.to_owned(),
+                            text: vec![#text_stream]
+                        }.end(ui, #cache, &options, &mut None);)
                     }
-
-                    quote!(
-                    egui_commonmark_backend::Link {
-                        destination: #destination.to_owned(),
-                        text: vec![#text_stream]
-                    }.end(ui, #cache, &options, &mut None);)
                 } else {
                     TokenStream::new()
                 }
