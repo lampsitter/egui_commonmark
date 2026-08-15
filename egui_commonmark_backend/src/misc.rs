@@ -36,10 +36,6 @@ pub struct CommonMarkOptions<'f> {
     /// Whether to enable scrolling to headings by their ID.
     /// To give a heading an ID, use the syntax `# Heading {#myheadingid}`. Then links to `#myheadingid` e.g. `[click me!](#myheadingid)` will scroll to that heading.
     pub enable_scroll_to_heading: bool,
-    /// When `true`, `show_scrollable` only renders the visible slice of the
-    /// document each frame. When `false` (the default) the full document is
-    /// rendered every frame and egui clips what is off-screen.
-    pub use_viewport_cache: bool,
 }
 
 impl std::fmt::Debug for CommonMarkOptions<'_> {
@@ -84,7 +80,6 @@ impl Default for CommonMarkOptions<'_> {
             math_fn: None,
             html_fn: None,
             enable_scroll_to_heading: false,
-            use_viewport_cache: false,
         }
     }
 }
@@ -465,6 +460,7 @@ pub struct CommonMarkCache {
     pub(self) has_installed_loaders: bool,
     /// Keyboard / programmatic scroll delta applied inside the next
     /// `show_scrollable` call and then cleared.
+    #[doc(hidden)]
     pub pending_scroll_delta: egui::Vec2,
 }
 
