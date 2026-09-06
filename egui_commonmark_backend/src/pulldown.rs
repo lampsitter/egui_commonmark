@@ -165,7 +165,7 @@ pub fn parse_alerts<'a>(
             // remove the text that identifies it as an alert so that it won't end up in the
             // render
             //
-            // FIMXE: performance improvement potential
+            // FIXME: performance improvement potential
             if has_extra_line {
                 for _ in 0..=alert_ident_ends_at {
                     events.remove(0);

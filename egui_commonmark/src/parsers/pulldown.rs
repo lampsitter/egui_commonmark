@@ -521,7 +521,7 @@ impl CommonMarkViewerInternal {
 
             self.line.try_insert_start(ui);
 
-            // Proccess a single event separately so that we do not insert spaces where we do not
+            // Process a single event separately so that we do not insert spaces where we do not
             // want them
             self.line.should_start_newline = false;
             if let Some((_, (e, src_span))) = events_iter.next() {
@@ -531,7 +531,7 @@ impl CommonMarkViewerInternal {
             ui.label(" ".repeat(options.indentation_spaces));
             self.line.should_start_newline = true;
             self.line.should_end_newline = false;
-            // Required to ensure that the content is aligned with the identation
+            // Required to ensure that the content is aligned with the indentation
             ui.horizontal_wrapped(|ui| {
                 while let Some((_, (e, src_span))) = events_iter.next() {
                     self.process_event(

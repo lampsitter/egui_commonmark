@@ -146,7 +146,7 @@ pub fn code_block<'t>(
         )
         // workaround for a regression after egui 0.27 where the edit cursor was shown even when
         // hovering over the button. We try interact_cursor first to allow the cursor to be
-        // overriden
+        // overridden
         .on_hover_cursor(
             ui.visuals()
                 .interact_cursor
