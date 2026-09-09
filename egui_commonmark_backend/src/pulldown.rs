@@ -65,8 +65,10 @@ pub fn delayed_events_list_item<'e>(
     }
 }
 
-type Column<'e> = Vec<(pulldown_cmark::Event<'e>, Range<usize>)>;
-type Row<'e> = Vec<Column<'e>>;
+/// The events of one table cell.
+pub type Column<'e> = Vec<(pulldown_cmark::Event<'e>, Range<usize>)>;
+/// The cells of one table row.
+pub type Row<'e> = Vec<Column<'e>>;
 
 pub struct Table<'e> {
     pub header: Row<'e>,
@@ -109,7 +111,10 @@ pub fn parse_table<'e>(events: &mut impl Iterator<Item = EventIteratorItem<'e>>)
     let mut rows = Vec::new();
     while all_events.peek().is_some() {
         let row = parse_row(&mut all_events);
-        rows.push(row);
+        // The trailing `End(Table)` event yields an empty row:
+        if !row.is_empty() {
+            rows.push(row);
+        }
     }
 
     Table { header, rows }
