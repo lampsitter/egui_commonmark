@@ -9,6 +9,7 @@ use crate::List;
 use egui_commonmark_backend::elements::*;
 use egui_commonmark_backend::misc::*;
 use egui_commonmark_backend::pulldown::*;
+use egui_commonmark_backend::table::{TableLayout, align_from_alignment, cell_text, measure_cell};
 use pulldown_cmark::{CowStr, HeadingLevel};
 
 /// Newline logic is constructed by the following:
@@ -81,6 +82,7 @@ pub struct CommonMarkViewerInternal {
     is_list_item: bool,
     def_list: DefinitionList,
     is_table: bool,
+    table_alignments: Vec<pulldown_cmark::Alignment>,
     is_blockquote: bool,
     checkbox_events: Vec<CheckboxClickEvent>,
     deferred_scroll_to_heading: Option<String>,
@@ -109,6 +111,7 @@ impl CommonMarkViewerInternal {
             code_block: None,
             html_block: String::new(),
             is_table: false,
+            table_alignments: Vec::new(),
             is_blockquote: false,
             checkbox_events: Vec::new(),
             deferred_scroll_to_heading: None,
@@ -498,7 +501,7 @@ impl CommonMarkViewerInternal {
 
         self.def_list_def_wrapping(events, max_width, cache, options, ui);
         self.item_list_wrapping(events, max_width, cache, options, ui);
-        self.table(events, cache, options, ui, max_width);
+        self.table(events, cache, options, ui);
         self.blockquote(events, max_width, cache, options, ui);
     }
 
@@ -644,73 +647,99 @@ impl CommonMarkViewerInternal {
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
         ui: &mut Ui,
-        max_width: f32,
     ) {
-        if self.is_table {
-            self.line.try_insert_start(ui);
+        if !self.is_table {
+            return;
+        }
 
-            let id = ui.id().with("_table").with(self.curr_table);
-            self.curr_table += 1;
+        self.line.try_insert_start(ui);
 
-            egui::Frame::group(ui.style()).show(ui, |ui| {
-                let Table { header, rows } = parse_table(events);
+        let id = ui.id().with("_table").with(self.curr_table);
+        self.curr_table += 1;
 
-                ui.spacing_mut().scroll.content_margin.bottom = ui.spacing().scroll.bar_width as i8;
-                egui::ScrollArea::horizontal()
-                    .id_salt(id.with("_hscroll"))
-                    .show(ui, |ui| {
-                        egui::Grid::new(id).striped(true).show(ui, |ui| {
-                            for col in header {
-                                ui.horizontal(|ui| {
-                                    for (e, src_span) in col {
-                                        let tmp_start = std::mem::replace(
-                                            &mut self.line.should_start_newline,
-                                            false,
-                                        );
-                                        let tmp_end = std::mem::replace(
-                                            &mut self.line.should_end_newline,
-                                            false,
-                                        );
-                                        self.event(ui, e, src_span, cache, options, max_width);
-                                        self.line.should_start_newline = tmp_start;
-                                        self.line.should_end_newline = tmp_end;
-                                    }
-                                });
-                            }
+        let Table { header, rows } = parse_table(events);
+        let aligns: Vec<egui::Align> = std::mem::take(&mut self.table_alignments)
+            .into_iter()
+            .map(align_from_alignment)
+            .collect();
 
-                            ui.end_row();
+        let header_style = Style {
+            strong: true,
+            ..self.text_style.clone()
+        };
+        let measure_row = |ui: &Ui, row: &Row<'_>, style: &Style| -> Vec<Option<f32>> {
+            row.iter()
+                .map(|cell| measure_cell(ui, &cell_text(ui, style, cell)))
+                .collect()
+        };
+        let header_widths = measure_row(ui, &header, &header_style);
+        let row_widths: Vec<Vec<Option<f32>>> = rows
+            .iter()
+            .map(|row| measure_row(ui, row, &self.text_style))
+            .collect();
 
-                            for row in rows {
-                                for col in row {
-                                    ui.horizontal(|ui| {
-                                        for (e, src_span) in col {
-                                            let tmp_start = std::mem::replace(
-                                                &mut self.line.should_start_newline,
-                                                false,
-                                            );
-                                            let tmp_end = std::mem::replace(
-                                                &mut self.line.should_end_newline,
-                                                false,
-                                            );
-                                            self.event(ui, e, src_span, cache, options, max_width);
-                                            self.line.should_start_newline = tmp_start;
-                                            self.line.should_end_newline = tmp_end;
-                                        }
-                                    });
-                                }
+        let num_columns = header.len();
+        let mut natural_widths = vec![0.0_f32; num_columns];
+        for widths in std::iter::once(&header_widths).chain(&row_widths) {
+            for (natural, width) in std::iter::zip(&mut natural_widths, widths) {
+                *natural = natural.max(width.unwrap_or(0.0));
+            }
+        }
 
-                                ui.end_row();
-                            }
-                        });
+        let available_width = ui.available_width();
+        let mut layout = TableLayout::new(ui, &natural_widths, aligns, available_width);
+        layout.show(ui, id, |layout, ui| {
+            layout.row(ui, true, |layout, ui| {
+                for (cell, width) in std::iter::zip(header, header_widths) {
+                    layout.cell(ui, width, |ui| {
+                        let was_strong = self.text_style.strong;
+                        self.text_style.strong = true;
+                        self.table_cell_contents(ui, cell, cache, options, true);
+                        self.text_style.strong = was_strong;
                     });
+                }
             });
 
-            self.is_table = false;
-            if events.peek().is_none() {
-                self.line.should_end_newline_forced = false;
+            for (row, widths) in std::iter::zip(rows, row_widths) {
+                layout.row(ui, false, |layout, ui| {
+                    for (cell, width) in std::iter::zip(row, widths) {
+                        layout.cell(ui, width, |ui| {
+                            self.table_cell_contents(ui, cell, cache, options, false);
+                        });
+                    }
+                });
             }
+        });
 
-            self.line.try_insert_end(ui);
+        self.is_table = false;
+        if events.peek().is_none() {
+            self.line.should_end_newline_forced = false;
+        }
+
+        self.line.try_insert_end(ui);
+    }
+
+    /// Render the events of one table cell, without the newlines that would
+    /// normally surround block elements.
+    fn table_cell_contents(
+        &mut self,
+        ui: &mut Ui,
+        cell: Column<'_>,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+        is_header: bool,
+    ) {
+        let max_width = ui.max_rect().width();
+        for (e, src_span) in cell {
+            let tmp_start = std::mem::replace(&mut self.line.should_start_newline, false);
+            let tmp_end = std::mem::replace(&mut self.line.should_end_newline, false);
+            self.event(ui, e, src_span, cache, options, max_width);
+            self.line.should_start_newline = tmp_start;
+            self.line.should_end_newline = tmp_end;
+            if is_header {
+                // Header cells stay strong even after inline `**bold**` ends.
+                self.text_style.strong = true;
+            }
         }
     }
 
@@ -879,8 +908,9 @@ impl CommonMarkViewerInternal {
                 self.line.should_end_newline = false;
                 footnote(ui, &note);
             }
-            pulldown_cmark::Tag::Table(_) => {
+            pulldown_cmark::Tag::Table(alignments) => {
                 self.is_table = true;
+                self.table_alignments = alignments;
             }
             pulldown_cmark::Tag::TableHead => {}
             pulldown_cmark::Tag::TableRow => {}
@@ -972,10 +1002,7 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::Table => {}
             pulldown_cmark::TagEnd::TableHead => {}
             pulldown_cmark::TagEnd::TableRow => {}
-            pulldown_cmark::TagEnd::TableCell => {
-                // Ensure space between cells
-                ui.label("  ");
-            }
+            pulldown_cmark::TagEnd::TableCell => {}
             pulldown_cmark::TagEnd::Emphasis => {
                 self.text_style.emphasis = false;
             }
