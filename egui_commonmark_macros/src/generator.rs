@@ -2,6 +2,7 @@ use std::iter::Peekable;
 
 use egui_commonmark_backend::{
     CodeBlock, CommonMarkOptions, Image, alerts::Alert, misc::Style, pulldown::*,
+    table::cell_text_pieces,
 };
 
 use proc_macro2::TokenStream;
@@ -180,6 +181,7 @@ pub(crate) struct CommonMarkViewerInternal {
     is_list_item: bool,
     def_list: DefinitionList,
     is_table: bool,
+    table_alignments: Vec<pulldown_cmark::Alignment>,
     is_blockquote: bool,
 
     /// Informs that a calculation of heading sizes is required.
@@ -201,6 +203,7 @@ impl CommonMarkViewerInternal {
             def_list: Default::default(),
             code_block: None,
             is_table: false,
+            table_alignments: Vec::new(),
             is_blockquote: false,
             dumps_heading: false,
         }
@@ -446,55 +449,83 @@ impl CommonMarkViewerInternal {
 
             let Table { header, rows } = parse_table(events);
 
-            let mut header_stream = TokenStream::new();
-            for col in header {
-                let mut inner = TokenStream::new();
-                for (e, _) in col {
-                    self.line.should_start_newline = false;
-                    self.line.should_end_newline = false;
-                    inner.extend(self.event(e, cache, options));
-                    self.line.should_start_newline = true;
-                    self.line.should_end_newline = true;
-                }
+            let aligns = std::mem::take(&mut self.table_alignments)
+                .into_iter()
+                .map(|alignment| match alignment {
+                    pulldown_cmark::Alignment::None | pulldown_cmark::Alignment::Left => {
+                        quote!(egui::Align::Min)
+                    }
+                    pulldown_cmark::Alignment::Center => quote!(egui::Align::Center),
+                    pulldown_cmark::Alignment::Right => quote!(egui::Align::Max),
+                });
 
-                header_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
+            let header_style = Style {
+                strong: true,
+                ..self.text_style.clone()
+            };
+            let header_widths: Vec<TokenStream> = header
+                .iter()
+                .map(|cell| self.cell_width_tokenstream(&header_style, cell))
+                .collect();
+            let row_widths: Vec<Vec<TokenStream>> = rows
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|cell| self.cell_width_tokenstream(&self.text_style.clone(), cell))
+                        .collect()
+                })
+                .collect();
+
+            let mut header_stream = TokenStream::new();
+            for (col, cell) in header.into_iter().enumerate() {
+                let was_strong = self.text_style.strong;
+                self.text_style.strong = true;
+                let inner = self.table_cell_tokenstream(cell, cache, options, true);
+                self.text_style.strong = was_strong;
+                header_stream.extend(quote!(
+                    table.cell(ui, header_widths[#col], |ui| {#inner});
+                ));
             }
 
             let mut content_stream = TokenStream::new();
-            for row in rows {
+            for (row_index, row) in rows.into_iter().enumerate() {
                 let mut row_stream = TokenStream::new();
-                for col in row {
-                    let mut inner = TokenStream::new();
-                    for (e, _) in col {
-                        self.line.should_start_newline = false;
-                        self.line.should_end_newline = false;
-                        inner.extend(self.event(e, cache, options));
-                        self.line.should_start_newline = true;
-                        self.line.should_end_newline = true;
-                    }
-
-                    row_stream.extend(quote!(ui.horizontal(|ui| {#inner});));
+                for (col, cell) in row.into_iter().enumerate() {
+                    let inner = self.table_cell_tokenstream(cell, cache, options, false);
+                    row_stream.extend(quote!(
+                        table.cell(ui, row_widths[#row_index][#col], |ui| {#inner});
+                    ));
                 }
 
-                if !row_stream.is_empty() {
-                    content_stream.extend(quote!(#row_stream ui.end_row();))
-                }
+                content_stream.extend(quote!(
+                    table.row(ui, false, |table, ui| {#row_stream});
+                ));
             }
 
+            let num_columns = header_widths.len();
             let curr_table = self.curr_table;
-            stream.extend(quote!(
-                egui::Frame::group(ui.style()).show(ui, |ui| {
-                    let id = ui.id().with("_table").with(#curr_table);
-                    egui::Grid::new(id).striped(true).show(ui, |ui| {
+            stream.extend(quote!({
+                let header_widths: Vec<Option<f32>> = vec![#(#header_widths),*];
+                let row_widths: Vec<Vec<Option<f32>>> = vec![#(vec![#(#row_widths),*]),*];
+                let mut natural_widths = vec![0.0_f32; #num_columns];
+                for widths in std::iter::once(&header_widths).chain(&row_widths) {
+                    for (natural, width) in std::iter::zip(&mut natural_widths, widths) {
+                        *natural = natural.max(width.unwrap_or(0.0));
+                    }
+                }
 
-                    #header_stream
-
-                    ui.end_row();
-
+                let mut table = egui_commonmark_backend::table::TableLayout::new(
+                    ui,
+                    &natural_widths,
+                    vec![#(#aligns),*],
+                    ui.available_width(),
+                );
+                let id = ui.id().with("_table").with(#curr_table);
+                table.show(ui, id, |table, ui| {
+                    table.row(ui, true, |table, ui| {#header_stream});
                     #content_stream
-                    });
                 });
-            ));
+            }));
 
             self.curr_table += 1;
 
@@ -508,6 +539,43 @@ impl CommonMarkViewerInternal {
         }
 
         stream
+    }
+
+    /// Code that measures the natural width of a table cell at runtime.
+    fn cell_width_tokenstream(&mut self, style: &Style, cell: &Column<'_>) -> TokenStream {
+        match cell_text_pieces(style, cell) {
+            Some(pieces) => {
+                let texts = pieces
+                    .iter()
+                    .map(|(style, text)| self.richtext_tokenstream(style, text));
+                quote!(Some(egui_commonmark_backend::table::measure_texts(ui, &[#(#texts),*])))
+            }
+            None => quote!(None),
+        }
+    }
+
+    /// Code for the contents of one table cell, without the newlines that would
+    /// normally surround block elements.
+    fn table_cell_tokenstream(
+        &mut self,
+        cell: Column<'_>,
+        cache: &Expr,
+        options: &CommonMarkOptions,
+        is_header: bool,
+    ) -> TokenStream {
+        let mut inner = TokenStream::new();
+        for (e, _) in cell {
+            self.line.should_start_newline = false;
+            self.line.should_end_newline = false;
+            inner.extend(self.event(e, cache, options));
+            self.line.should_start_newline = true;
+            self.line.should_end_newline = true;
+            if is_header {
+                // Header cells stay strong even after inline `**bold**` ends.
+                self.text_style.strong = true;
+            }
+        }
+        inner
     }
 
     fn event(
@@ -651,8 +719,9 @@ impl CommonMarkViewerInternal {
                 stream.extend(quote!(egui_commonmark_backend::footnote(ui, #note);));
                 stream
             }
-            pulldown_cmark::Tag::Table(_) => {
+            pulldown_cmark::Tag::Table(alignments) => {
                 self.is_table = true;
+                self.table_alignments = alignments;
                 TokenStream::new()
             }
             pulldown_cmark::Tag::TableHead
@@ -747,11 +816,8 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::TagEnd::Item
             | pulldown_cmark::TagEnd::Table
             | pulldown_cmark::TagEnd::TableHead
-            | pulldown_cmark::TagEnd::TableRow => TokenStream::new(),
-            pulldown_cmark::TagEnd::TableCell => {
-                // Ensure space between cells
-                quote!(ui.label("  ");)
-            }
+            | pulldown_cmark::TagEnd::TableRow
+            | pulldown_cmark::TagEnd::TableCell => TokenStream::new(),
             pulldown_cmark::TagEnd::Emphasis => {
                 self.text_style.emphasis = false;
                 TokenStream::new()
