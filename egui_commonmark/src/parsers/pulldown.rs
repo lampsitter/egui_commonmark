@@ -678,16 +678,8 @@ impl CommonMarkViewerInternal {
             .map(|row| measure_row(ui, row, &self.text_style))
             .collect();
 
-        let num_columns = header.len();
-        let mut natural_widths = vec![0.0_f32; num_columns];
-        for widths in std::iter::once(&header_widths).chain(&row_widths) {
-            for (natural, width) in std::iter::zip(&mut natural_widths, widths) {
-                *natural = natural.max(width.unwrap_or(0.0));
-            }
-        }
-
         let available_width = ui.available_width();
-        let mut layout = TableLayout::new(ui, &natural_widths, aligns, available_width);
+        let mut layout = TableLayout::new(ui, &header_widths, &row_widths, aligns, available_width);
         layout.show(ui, id, |layout, ui| {
             layout.row(ui, true, |layout, ui| {
                 for (cell, width) in std::iter::zip(header, header_widths) {

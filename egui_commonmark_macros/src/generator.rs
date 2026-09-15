@@ -502,21 +502,14 @@ impl CommonMarkViewerInternal {
                 ));
             }
 
-            let num_columns = header_widths.len();
             let curr_table = self.curr_table;
             stream.extend(quote!({
                 let header_widths: Vec<Option<f32>> = vec![#(#header_widths),*];
                 let row_widths: Vec<Vec<Option<f32>>> = vec![#(vec![#(#row_widths),*]),*];
-                let mut natural_widths = vec![0.0_f32; #num_columns];
-                for widths in std::iter::once(&header_widths).chain(&row_widths) {
-                    for (natural, width) in std::iter::zip(&mut natural_widths, widths) {
-                        *natural = natural.max(width.unwrap_or(0.0));
-                    }
-                }
-
                 let mut table = egui_commonmark_backend::table::TableLayout::new(
                     ui,
-                    &natural_widths,
+                    &header_widths,
+                    &row_widths,
                     vec![#(#aligns),*],
                     ui.available_width(),
                 );

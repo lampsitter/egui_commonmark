@@ -205,9 +205,31 @@ pub struct TableLayout {
     header_bottom: Option<f32>,
 }
 
+/// The widest natural cell width per column, excluding padding.
+///
+/// Cells that could not be measured count as zero width.
+fn natural_widths(header_widths: &[Option<f32>], row_widths: &[Vec<Option<f32>>]) -> Vec<f32> {
+    let mut natural = vec![0.0_f32; header_widths.len()];
+    for widths in std::iter::once(header_widths).chain(row_widths.iter().map(Vec::as_slice)) {
+        for (natural, width) in std::iter::zip(&mut natural, widths) {
+            *natural = natural.max(width.unwrap_or(0.0));
+        }
+    }
+    natural
+}
+
 impl TableLayout {
-    /// `natural_widths` is the widest natural cell width per column, excluding padding.
-    pub fn new(ui: &Ui, natural_widths: &[f32], aligns: Vec<Align>, available_width: f32) -> Self {
+    /// The cell widths are the natural cell widths, excluding padding,
+    /// as measured by [`measure_cell`]. The number of columns is taken
+    /// from `header_widths`.
+    pub fn new(
+        ui: &Ui,
+        header_widths: &[Option<f32>],
+        row_widths: &[Vec<Option<f32>>],
+        aligns: Vec<Align>,
+        available_width: f32,
+    ) -> Self {
+        let natural_widths = natural_widths(header_widths, row_widths);
         let cell_padding = vec2(
             2.0 * ui.spacing().button_padding.x,
             ui.spacing().item_spacing.y,
@@ -349,7 +371,7 @@ impl TableLayout {
 
 #[cfg(test)]
 mod tests {
-    use super::column_widths;
+    use super::{column_widths, natural_widths};
 
     fn assert_widths(actual: &[f32], expected: &[f32]) {
         assert_eq!(actual.len(), expected.len(), "{actual:?} vs {expected:?}");
@@ -361,6 +383,16 @@ mod tests {
     #[test]
     fn empty() {
         assert!(column_widths(&[], 100.0, 10.0).is_empty());
+    }
+
+    #[test]
+    fn natural_widths_ignores_unmeasured_and_ragged_cells() {
+        let header = [Some(10.0), None];
+        let rows = vec![
+            vec![None, Some(50.0), Some(999.0)], // Extra cells are ignored
+            vec![Some(20.0)],                    // Missing cells are ignored
+        ];
+        assert_widths(&natural_widths(&header, &rows), &[20.0, 50.0]);
     }
 
     #[test]
