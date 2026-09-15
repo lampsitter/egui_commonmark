@@ -57,26 +57,28 @@ pub fn cell_text_pieces<'e>(
             pulldown_cmark::Event::SoftBreak => {
                 pieces.push((style.clone(), " ".into()));
             }
-            pulldown_cmark::Event::Start(tag) => match tag {
-                pulldown_cmark::Tag::Emphasis => style.emphasis = true,
-                pulldown_cmark::Tag::Strong => style.strong = true,
-                pulldown_cmark::Tag::Strikethrough => style.strikethrough = true,
-                pulldown_cmark::Tag::Link { .. }
-                | pulldown_cmark::Tag::TableHead
-                | pulldown_cmark::Tag::TableRow
-                | pulldown_cmark::Tag::TableCell => {}
-                _ => return None,
-            },
-            pulldown_cmark::Event::End(tag) => match tag {
-                pulldown_cmark::TagEnd::Emphasis => style.emphasis = false,
-                pulldown_cmark::TagEnd::Strong => style.strong = false,
-                pulldown_cmark::TagEnd::Strikethrough => style.strikethrough = false,
-                pulldown_cmark::TagEnd::Link
-                | pulldown_cmark::TagEnd::TableHead
-                | pulldown_cmark::TagEnd::TableRow
-                | pulldown_cmark::TagEnd::TableCell => {}
-                _ => return None,
-            },
+            pulldown_cmark::Event::Start(tag) => {
+                if !style.start_inline_tag(tag) {
+                    match tag {
+                        pulldown_cmark::Tag::Link { .. }
+                        | pulldown_cmark::Tag::TableHead
+                        | pulldown_cmark::Tag::TableRow
+                        | pulldown_cmark::Tag::TableCell => {}
+                        _ => return None,
+                    }
+                }
+            }
+            pulldown_cmark::Event::End(tag) => {
+                if !style.end_inline_tag(tag) {
+                    match tag {
+                        pulldown_cmark::TagEnd::Link
+                        | pulldown_cmark::TagEnd::TableHead
+                        | pulldown_cmark::TagEnd::TableRow
+                        | pulldown_cmark::TagEnd::TableCell => {}
+                        _ => return None,
+                    }
+                }
+            }
             _ => return None,
         }
     }

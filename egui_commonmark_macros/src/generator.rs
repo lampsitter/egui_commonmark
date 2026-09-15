@@ -727,16 +727,10 @@ impl CommonMarkViewerInternal {
             pulldown_cmark::Tag::TableHead
             | pulldown_cmark::Tag::TableRow
             | pulldown_cmark::Tag::TableCell => TokenStream::new(),
-            pulldown_cmark::Tag::Emphasis => {
-                self.text_style.emphasis = true;
-                TokenStream::new()
-            }
-            pulldown_cmark::Tag::Strong => {
-                self.text_style.strong = true;
-                TokenStream::new()
-            }
-            pulldown_cmark::Tag::Strikethrough => {
-                self.text_style.strikethrough = true;
+            tag @ (pulldown_cmark::Tag::Emphasis
+            | pulldown_cmark::Tag::Strong
+            | pulldown_cmark::Tag::Strikethrough) => {
+                self.text_style.start_inline_tag(&tag);
                 TokenStream::new()
             }
             pulldown_cmark::Tag::Link { dest_url, .. } => {
@@ -818,16 +812,10 @@ impl CommonMarkViewerInternal {
             | pulldown_cmark::TagEnd::TableHead
             | pulldown_cmark::TagEnd::TableRow
             | pulldown_cmark::TagEnd::TableCell => TokenStream::new(),
-            pulldown_cmark::TagEnd::Emphasis => {
-                self.text_style.emphasis = false;
-                TokenStream::new()
-            }
-            pulldown_cmark::TagEnd::Strong => {
-                self.text_style.strong = false;
-                TokenStream::new()
-            }
-            pulldown_cmark::TagEnd::Strikethrough => {
-                self.text_style.strikethrough = false;
+            tag @ (pulldown_cmark::TagEnd::Emphasis
+            | pulldown_cmark::TagEnd::Strong
+            | pulldown_cmark::TagEnd::Strikethrough) => {
+                self.text_style.end_inline_tag(&tag);
                 TokenStream::new()
             }
             pulldown_cmark::TagEnd::Link => {

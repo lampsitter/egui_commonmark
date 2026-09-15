@@ -127,6 +127,34 @@ pub struct Style {
 }
 
 impl Style {
+    /// Apply the start of an inline formatting tag.
+    ///
+    /// Returns `false` if the tag is not inline formatting, in which case
+    /// the style is left untouched.
+    pub fn start_inline_tag(&mut self, tag: &pulldown_cmark::Tag<'_>) -> bool {
+        match tag {
+            pulldown_cmark::Tag::Emphasis => self.emphasis = true,
+            pulldown_cmark::Tag::Strong => self.strong = true,
+            pulldown_cmark::Tag::Strikethrough => self.strikethrough = true,
+            _ => return false,
+        }
+        true
+    }
+
+    /// Apply the end of an inline formatting tag.
+    ///
+    /// Returns `false` if the tag is not inline formatting, in which case
+    /// the style is left untouched.
+    pub fn end_inline_tag(&mut self, tag: &pulldown_cmark::TagEnd) -> bool {
+        match tag {
+            pulldown_cmark::TagEnd::Emphasis => self.emphasis = false,
+            pulldown_cmark::TagEnd::Strong => self.strong = false,
+            pulldown_cmark::TagEnd::Strikethrough => self.strikethrough = false,
+            _ => return false,
+        }
+        true
+    }
+
     pub fn to_richtext(&self, ui: &Ui, text: &str) -> RichText {
         let mut text = RichText::new(text);
 
