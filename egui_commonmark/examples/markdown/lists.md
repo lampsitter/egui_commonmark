@@ -26,3 +26,11 @@
         eiusmod tempor incididunt _ut_ labore ~~et~~ dolore magna aliqua. Ut enim
         ad minim veniam, quis nostrud exercitation
 
+
+-------------------
+
+1. A code block inside a list item gets a line of its own, at full width:
+   ```rust
+   let a_rather_long_line = "otherwise this is squeezed into the width left over";
+   ```
+2. Text after the block starts on a new line again.

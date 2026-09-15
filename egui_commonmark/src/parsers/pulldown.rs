@@ -850,7 +850,13 @@ impl CommonMarkViewerInternal {
                         });
                     }
                 }
-                self.line.try_insert_start(ui);
+                // A code block always needs a line of its own. Inside a list
+                // `should_start_newline` is off, so `try_insert_start` would do
+                // nothing and the block would be laid out after the item's text,
+                // leaving it only the width remaining on that line.
+                if !self.line.should_not_start_newline_forced {
+                    newline(ui);
+                }
             }
 
             pulldown_cmark::Tag::List(point) => {
@@ -1022,7 +1028,10 @@ impl CommonMarkViewerInternal {
     ) {
         if let Some(block) = self.code_block.take() {
             block.end(ui, cache, options, max_width);
-            self.line.try_insert_end(ui);
+            // Ditto: whatever follows the block must not share its line.
+            if self.line.should_end_newline_forced {
+                newline(ui);
+            }
         }
     }
 }
