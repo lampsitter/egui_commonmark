@@ -12,7 +12,7 @@
 ### Fixed
 
 - Code blocks inside list items are no longer squeezed into the width left over
-  after the item's text ([#104](https://github.com/lampsitter/egui_commonmark/pull/104) by
+  after the item's text ([#105](https://github.com/lampsitter/egui_commonmark/pull/105) by
   [@emilk](https://github.com/emilk))
 - Fix `show_scrollable` to support seamless scrolling of large documents
   ([#98](https://github.com/lampsitter/egui_commonmark/pull/98) by [@durbanlegend](https://github.com/durbanlegend))
