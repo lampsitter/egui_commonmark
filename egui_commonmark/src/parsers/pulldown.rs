@@ -1028,7 +1028,6 @@ impl CommonMarkViewerInternal {
     ) {
         if let Some(block) = self.code_block.take() {
             block.end(ui, cache, options, max_width);
-            // Ditto: whatever follows the block must not share its line.
             if self.line.should_end_newline_forced {
                 newline(ui);
             }
