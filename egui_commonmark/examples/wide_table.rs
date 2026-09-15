@@ -4,8 +4,9 @@
 //! Add `light` or `dark` to the end of the command to specify theme. Default
 //! is system theme. `cargo r --features better_syntax_highlighting,svg,fetch -- dark`
 //!
-//! Demonstrates that wide tables scroll horizontally without affecting text
-//! wrapping in the surrounding document.
+//! Demonstrates that long table cells wrap so that the table fits the
+//! document width, and that tables with too many columns to fit scroll
+//! horizontally without affecting text wrapping in the surrounding document.
 
 use eframe::egui;
 use egui_commonmark::*;

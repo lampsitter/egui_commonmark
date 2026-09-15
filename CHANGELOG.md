@@ -9,6 +9,13 @@
 - `viewport_cache` to disable or enable viewport cache for `show_scrollable`
   ([#101](https://github.com/lampsitter/egui_commonmark/pull/101) by [@durbanlegend](https://github.com/durbanlegend))
 
+### Changed
+
+- Tables now fit the available width by wrapping long cells. The header row is bold with a
+  rule under it, column alignment (`:---`, `:---:`, `---:`) is respected, and the group frame
+  around tables is gone. Tables that cannot fit even with wrapped cells still scroll horizontally.
+  ([#104](https://github.com/lampsitter/egui_commonmark/pull/104) by [@emilk](https://github.com/emilk))
+
 ### Fixed
 
 - Fix `show_scrollable` to support seamless scrolling of large documents
