@@ -14,64 +14,30 @@ const INTRO: &str = r#"# Search Highlighting
 Type text in the search bar above to highlight every occurrence in this document.
 Use **Prev** and **Next** to step through matches.
 
-## Suggestions
-
->    - Try searching for "crate" to see image matches on image Alt text as well as search scrolling behavior.
->
+> [!TIP]
+> 3 suggestions:
+>    - Try searching for "crate" to see image matches on image Alt text as well as search scrolling behavior>
 >    - Try searching text in different text types in the various sections from the included example markdown files below.
->
 >    - Try the case-sensitive, whold-word and regex searches using their respective icons.
 
 "#;
 
-const README: &str = r#"# A commonmark viewer for [egui](https://github.com/emilk/egui)
+const SCROLL_TO_HEADING: &str = r#"# Contents {#contents}
 
-[![Crate](https://img.shields.io/crates/v/egui_commonmark_macros.svg)](https://crates.io/crates/egui_commonmark_macros)
-[![Documentation](https://docs.rs/egui_commonmark_macros/badge.svg)](https://docs.rs/egui_commonmark_macros)
+- [Heading 1](#heading1)
+- [Heading 2](#heading2)
 
-[![Showcase](https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png)](https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png)
+# Heading 1 {#heading1}
 
-While this crate's main focus is commonmark, it also supports a subset of
-Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
+[back to contents](#contents)
 
-## Features
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-* `macros`: macros for compile time parsing of markdown
-* `better_syntax_highlighting`: Syntax highlighting inside code blocks with
-  [`syntect`](https://crates.io/crates/syntect)
-* `svg`: Support for viewing svg images
-* `fetch`: Images with urls will be downloaded and displayed
-* `embedded_image`: Load base64 image data urls from within markdown files
+## Heading 2 {#heading2}
 
+[back to contents](#contents)
 
-## Examples
-
-For an easy intro check out the `hello_world` example. To see all the different
-features egui_commonmark has to offer check out the `book` example.
-
-## FAQ
-
-### URL is not displayed when hovering over a link
-
-By default egui does not show urls when you hover hyperlinks. To enable it,
-you can do the following before calling any ui related functions:
-
-```rust
-ui.style_mut().url_in_tooltip = true;
-```
-
-## MSRV Policy
-
-This crate uses the same MSRV as the latest released egui version.
-
-## License
-
-Licensed under either of
-
- * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 "#;
 
 struct App {
@@ -225,13 +191,19 @@ fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
-    let scroll_to_heading = include_str!("markdown/scroll_to_heading.md");
+    let readme = include_str!("../README.md").lines().map(|l|
+        {
+            if l.starts_with(r#"<img src="https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png""#) {
+                "[![Showcase](https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png)](https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png)
+"
+            } else {l}
+        }).collect::<Vec<_>>().join("\n");
+
     let lists = include_str!("markdown/lists.md");
     let definition_list = include_str!("markdown/definition_list.md");
     let blockquotes = include_str!("markdown/blockquotes.md");
     let tables = include_str!("markdown/tables.md");
     let wide_table = include_str!("markdown/wide_table.md");
-    let embedded_image = include_str!("markdown/embedded_image.md");
 
     let content = format!(
         r#"{INTRO}
@@ -240,13 +212,13 @@ fn main() -> eframe::Result {
 
 ## README
 
-{README}
+{readme}
 
 ---
 
 ## Scroll to heading
 
-{scroll_to_heading}
+{SCROLL_TO_HEADING}
 
 ---
 
@@ -269,10 +241,6 @@ fn main() -> eframe::Result {
 ---
 
 {wide_table}
-
----
-
-{embedded_image}
 
         "#
     );
