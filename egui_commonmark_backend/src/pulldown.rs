@@ -178,7 +178,7 @@ pub fn parse_table<'e>(events: &mut impl Iterator<Item = EventIteratorItem<'e>>)
     Table { header, rows }
 }
 
-/// try to parse events as an alert quote block. This ill modify the events
+/// try to parse events as an alert quote block. This will modify the events
 /// to remove the parsed text that should not be rendered.
 /// Assumes that the first element is a Paragraph
 pub fn parse_alerts<'a>(

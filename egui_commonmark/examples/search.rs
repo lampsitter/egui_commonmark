@@ -14,10 +14,13 @@ const INTRO: &str = r#"# Search Highlighting
 Type text in the search bar above to highlight every occurrence in this document.
 Use **Prev** and **Next** to step through matches.
 
-## Suggestion
+## Suggestions
 
-Try searching for "crate" to see image matches on image Alt text as well as search scrolling behavior.
-Also try searching text in different text types in the various sections from the included example markdown files below.
+>    - Try searching for "crate" to see image matches on image Alt text as well as search scrolling behavior.
+>
+>    - Try searching text in different text types in the various sections from the included example markdown files below.
+>
+>    - Try the case-sensitive, whold-word and regex searches using their respective icons.
 
 "#;
 
@@ -227,6 +230,7 @@ fn main() -> eframe::Result {
     let definition_list = include_str!("markdown/definition_list.md");
     let blockquotes = include_str!("markdown/blockquotes.md");
     let tables = include_str!("markdown/tables.md");
+    let wide_table = include_str!("markdown/wide_table.md");
     let embedded_image = include_str!("markdown/embedded_image.md");
 
     let content = format!(
@@ -261,6 +265,10 @@ fn main() -> eframe::Result {
 ---
 
 {tables}
+
+---
+
+{wide_table}
 
 ---
 

@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use crate::{CommonMarkCache, CommonMarkOptions};
 
-use egui::{self, Id, Pos2, TextStyle, Ui};
+use egui::{self, Id, Pos2, RichText, TextStyle, Ui};
 
 use crate::List;
 use egui_commonmark_backend::elements::*;
@@ -855,12 +855,83 @@ impl CommonMarkViewerInternal {
             // and the start so when this is the first element in the markdown the newline must be
             // manually enabled
             self.line.should_not_start_newline_forced = false;
+
+            // Capture the source byte range of the first Text event *before*
+            // parse_alerts deletes it.  This is the position of the alert keyword
+            // (e.g. "[!NOTE]") in the source; update_search_matches uses the same
+            // range as the anchor for title matches, so the renderer can identify
+            // them here and apply `label_with_search_highlight` to the title label.
+            let identifier_src_range: Range<usize> = collected_events
+                .iter()
+                .find(|(e, _)| matches!(e, pulldown_cmark::Event::Text(_)))
+                .map(|(_, r)| r.clone())
+                .unwrap_or(0..0);
+
             if let Some(alert) = parse_alerts(&options.alerts, &mut collected_events) {
-                egui_commonmark_backend::alert_ui(alert, ui, |ui| {
+                let ident_src = identifier_src_range;
+
+                blockquote(ui, alert.accent_color, |ui| {
+                    newline(ui);
+                    ui.colored_label(alert.accent_color, alert.icon.to_string());
+                    ui.add_space(3.0);
+
+                    // Render the alert title with search highlighting when the active
+                    // query matched `identifier_rendered` (e.g. "Note" for [!NOTE]).
+                    // update_search_matches stored the keyword's source bytes as the
+                    // match range, so we check overlap with `ident_src` to decide.
+                    let (has_title_match, is_title_active, title_global_idx) = {
+                        let ranges = cache.search_ranges();
+                        let has_match = !ranges.is_empty()
+                            && ranges
+                                .iter()
+                                .any(|r| r.start < ident_src.end && r.end > ident_src.start);
+                        let is_active = has_match
+                            && cache.active_search_range().is_some_and(|a| {
+                                a.start < ident_src.end && a.end > ident_src.start
+                            });
+                        let global_idx = if has_match {
+                            ranges
+                                .iter()
+                                .enumerate()
+                                .find(|(_, r)| r.start < ident_src.end && r.end > ident_src.start)
+                                .map(|(i, _)| i)
+                        } else {
+                            None
+                        };
+                        (has_match, is_active, global_idx)
+                    }; // all immutable borrows of cache released here
+
+                    if has_title_match {
+                        let title_len = alert.identifier_rendered.len();
+                        let intervals = vec![(0..title_len, is_title_active)];
+                        let (_, active_rect, all_rects) = label_with_search_highlight(
+                            ui,
+                            RichText::new(&alert.identifier_rendered).color(alert.accent_color),
+                            &intervals,
+                            options.search_match_bg(ui),
+                            options.search_active_match_bg(ui),
+                        );
+                        if let Some(idx) = title_global_idx
+                            && let Some(Some(rect)) = all_rects.first()
+                        {
+                            self.search_match_ys_scratch
+                                .push((idx, rect.min.y - self.content_origin_y));
+                        }
+                        if self.want_scroll_to_active_match
+                            && let Some(rect) = active_rect
+                        {
+                            ui.scroll_to_rect(rect, Some(egui::Align::Center));
+                            self.want_scroll_to_active_match = false;
+                        }
+                    } else {
+                        ui.colored_label(alert.accent_color, &alert.identifier_rendered);
+                    }
+
+                    newline(ui);
                     for (event, src_span) in collected_events {
                         self.event(ui, event, src_span, cache, options, max_width);
                     }
-                })
+                });
             } else {
                 blockquote(ui, ui.visuals().weak_text_color(), |ui| {
                     self.text_style.quote = true;
@@ -893,6 +964,17 @@ impl CommonMarkViewerInternal {
 
             let id = ui.id().with("_table").with(self.curr_table);
             self.curr_table += 1;
+
+            // egui's ScrollArea intercepts scroll_to_rect calls for ALL dimensions,
+            // even those it doesn't scroll (see egui source: "We always take both
+            // scroll targets regardless of which scroll axes are enabled").  This
+            // means scroll_to_rect called from event_text() inside the table's
+            // horizontal scroll area silently discards the vertical component,
+            // preventing the outer vertical scroll area from bringing the row into
+            // view.  Snapshot the scroll-request state before the table renders;
+            // if the table consumed it we re-issue on the outer `ui` afterwards.
+            let want_scroll_before = self.want_scroll_to_active_match;
+            let scratch_start = self.search_match_ys_scratch.len();
 
             egui::Frame::group(ui.style()).show(ui, |ui| {
                 let Table { header, rows } = parse_table(events);
@@ -946,6 +1028,30 @@ impl CommonMarkViewerInternal {
                         });
                     });
             });
+
+            // If the active-match scroll was satisfied inside the table, the
+            // scroll_to_rect call from event_text() was intercepted by the
+            // horizontal scroll area (see comment above).  Re-issue it on the
+            // outer `ui` using the virtual Y we recorded during the table render
+            // so the outer vertical scroll area can bring the row into view.
+            if want_scroll_before
+                && !self.want_scroll_to_active_match
+                && let Some(active_idx) = cache.active_match()
+            {
+                let match_virtual_y = self.search_match_ys_scratch[scratch_start..]
+                    .iter()
+                    .find(|(gi, _)| *gi == active_idx)
+                    .map(|(_, y)| *y);
+                if let Some(vy) = match_virtual_y {
+                    let screen_y = self.content_origin_y + vy;
+                    let line_height = ui.text_style_height(&TextStyle::Body);
+                    let target_rect = egui::Rect::from_min_size(
+                        egui::pos2(0.0, screen_y),
+                        egui::vec2(1.0, line_height),
+                    );
+                    ui.scroll_to_rect(target_rect, Some(egui::Align::Center));
+                }
+            }
 
             self.is_table = false;
             if events.peek().is_none() {

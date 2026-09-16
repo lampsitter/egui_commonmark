@@ -1,4 +1,4 @@
-use crate::alerts::AlertBundle;
+use crate::alerts::{AlertBundle, try_get_alert};
 use bitflags::bitflags;
 use egui::{RichText, TextBuffer, TextStyle, Ui, text::LayoutJob};
 use std::collections::HashMap;
@@ -786,6 +786,12 @@ pub struct CommonMarkCache {
     /// `show_scrollable` call and then cleared.
     pub pending_scroll_delta: egui::Vec2,
 
+    /// The alert bundle used to detect alert markers in blockquotes so that
+    /// [`update_search_matches`](Self::update_search_matches) can skip them.
+    /// Should match the bundle passed to
+    /// [`CommonMarkViewer::alerts`](crate::misc::CommonMarkOptions). Defaults
+    /// to [`AlertBundle::gfm`], the same default as the viewer.
+    pub alerts: AlertBundle,
     /// The search query text
     pub search_query: String,
     /// The search options
@@ -847,6 +853,7 @@ impl Default for CommonMarkCache {
             scroll_to_id_target: None,
             has_installed_loaders: false,
             pending_scroll_delta: egui::Vec2::ZERO,
+            alerts: AlertBundle::gfm(),
             search_query: String::new(),
             search_options: SearchOptions::empty(),
             search_regex_error: None,
@@ -1141,7 +1148,7 @@ impl CommonMarkCache {
         let mut pattern = if options.contains(SearchOptions::REGEX) {
             query.clone()
         } else {
-            regex::escape(&query)
+            regex::escape(query)
         };
 
         if options.contains(SearchOptions::WHOLE_WORD) {
@@ -1174,19 +1181,138 @@ impl CommonMarkCache {
 
         let parser = pulldown_cmark::Parser::new_ext(content, options).into_offset_iter();
 
+        // Alert-keyword skip state.
+        //
+        // parse_alerts() strips known leading alert markers, (e.g. "[!NOTE]")
+        // from blockquotes so that those bytes are never rendered and must be
+        // excluded from the search.
+        //
+        // We buffer the leading text event of each blockquote paragraph and
+        // after the first break discard it if the concatenated text is a
+        // known alert keyword, otherwise we retroactively add its matches
+        // to search_ranges.
+        //
+        // bq_stack: one bool per nested blockquote level; `true` means the
+        // first-paragraph "header" decision has already been made at that level
+        // so subsequent paragraphs are matched normally.
+        let mut bq_stack: Vec<bool> = Vec::new();
+        let mut in_bq_first_run = false;
+        let mut pending_buf: Vec<(String, Range<usize>)> = Vec::new();
+
+        // Helper: flush pending_buf as normal matches (not an alert).
+        // Defined as a macro so it can borrow self.search_ranges mutably while
+        // also being called in multiple places without capturing self.
+        macro_rules! flush_pending {
+            () => {
+                for (text, r) in pending_buf.drain(..) {
+                    for m in regex.find_iter(&text) {
+                        self.search_ranges
+                            .push(r.start + m.start()..r.start + m.end());
+                    }
+                }
+            };
+        }
+
+        // Helper: decide what to add to search_ranges for the pending possible
+        // alert marker of a blockquote paragraph.
+        //
+        // If the buffered text is a known alert keyword (e.g. "[!NOTE]"), the
+        // source text is never rendered; instead the viewer shows the
+        // `identifier_rendered` string (e.g. "Note").  We match the regex
+        // against `identifier_rendered` and, for each occurrence found, push
+        // the *source* byte range of the keyword events as the search range.
+        // The blockquote renderer checks for overlap with this range and calls
+        // `label_with_search_highlight` on the title label.
+        //
+        // If it is not a known alert keyword, fall back to normal matching.
+        macro_rules! decide_alert_matches {
+            () => {{
+                let ident: String = pending_buf.iter().map(|(t, _)| t.as_str()).collect();
+                // Clone `identifier_rendered` so the immutable borrow of
+                // self.alerts is released before we mutate self.search_ranges.
+                let alert_title: Option<String> =
+                    try_get_alert(&self.alerts, &ident).map(|a| a.identifier_rendered.clone());
+                if let Some(rendered) = alert_title {
+                    // The source text is an alert keyword — match against the
+                    // rendered title instead.
+                    let src_start = pending_buf.iter().map(|(_, r)| r.start).min().unwrap_or(0);
+                    let src_end = pending_buf.iter().map(|(_, r)| r.end).max().unwrap_or(0);
+                    let alert_src_range = src_start..src_end;
+                    for _ in regex.find_iter(&rendered) {
+                        self.search_ranges.push(alert_src_range.clone());
+                    }
+                    pending_buf.clear();
+                } else {
+                    flush_pending!();
+                }
+            }};
+        }
+
         for (event, range) in parser {
+            // Update blockquote alert state for every event before filtering.
+            match &event {
+                pulldown_cmark::Event::Start(pulldown_cmark::Tag::BlockQuote(_)) => {
+                    // Flush any buffer from a previous context (safety: normally
+                    // empty because Start(Para) → SoftBreak/End(Para) would have
+                    // already flushed, but guard against edge-cases).
+                    flush_pending!();
+                    bq_stack.push(false); // header not yet seen at this level
+                    in_bq_first_run = false;
+                }
+                pulldown_cmark::Event::End(pulldown_cmark::TagEnd::BlockQuote(_)) => {
+                    flush_pending!(); // safety flush
+                    in_bq_first_run = false;
+                    bq_stack.pop();
+                }
+                pulldown_cmark::Event::Start(pulldown_cmark::Tag::Paragraph)
+                    if bq_stack.last() == Some(&false) =>
+                {
+                    // First paragraph of this blockquote level; start buffering.
+                    in_bq_first_run = true;
+                    pending_buf.clear();
+                }
+                pulldown_cmark::Event::End(pulldown_cmark::TagEnd::Paragraph)
+                    if in_bq_first_run =>
+                {
+                    // End of first para (has_extra_line case in parse_alerts).
+                    decide_alert_matches!();
+                    in_bq_first_run = false;
+                    if let Some(seen) = bq_stack.last_mut() {
+                        *seen = true;
+                    }
+                }
+                pulldown_cmark::Event::SoftBreak | pulldown_cmark::Event::HardBreak
+                    if in_bq_first_run =>
+                {
+                    // First break in first para (SoftBreak case in parse_alerts).
+                    decide_alert_matches!();
+                    in_bq_first_run = false;
+                    if let Some(seen) = bq_stack.last_mut() {
+                        *seen = true;
+                    }
+                }
+                _ => {}
+            }
+
             let (pulldown_cmark::Event::Text(text) | pulldown_cmark::Event::Code(text)) = event
             else {
                 continue;
             };
 
-            for matched in regex.find_iter(&text) {
-                let match_start = range.start + matched.start();
-                let match_end = range.start + matched.end();
-
-                self.search_ranges.push(match_start..match_end);
+            if in_bq_first_run {
+                // Buffer; decision deferred until we see a break or end-of-para.
+                pending_buf.push((text.to_string(), range));
+            } else {
+                for m in regex.find_iter(&text) {
+                    self.search_ranges
+                        .push(range.start + m.start()..range.start + m.end());
+                }
             }
         }
+
+        // Flush any text that was buffered but never followed by a break
+        // (e.g. a blockquote paragraph that is the very last thing in the doc).
+        decide_alert_matches!();
 
         if self.search_ranges.is_empty() {
             self.active_match = None;
