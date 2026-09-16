@@ -4,21 +4,29 @@
 //! matches and scroll the document to centre each one in the viewport.
 //!
 //! Run with:
-//! `cargo r --example search [light|dark]`
+//! `cargo r --example search --features better_syntax_highlighting,svg,fetch,embedded_image,egui_extras/svg_text -- [light|dark]`
 
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer, SearchOptions};
 
-const MARKDOWN: &str = r#"# Search Highlighting
+const INTRO: &str = r#"# Search Highlighting
 
 Type text in the search bar above to highlight every occurrence in this document.
 Use **Prev** and **Next** to step through matches.
 
-Suggestion: try searching for "MIT" to see scrolling to a match near the bottom.
+## Suggestion
 
----
+Try searching for "crate" to see image matches on image Alt text as well as search scrolling behavior.
+Also try searching text in different text types in the various sections from the included example markdown files below.
 
-# A commonmark viewer for [egui](https://github.com/emilk/egui)
+"#;
+
+const README: &str = r#"# A commonmark viewer for [egui](https://github.com/emilk/egui)
+
+[![Crate](https://img.shields.io/crates/v/egui_commonmark_macros.svg)](https://crates.io/crates/egui_commonmark_macros)
+[![Documentation](https://docs.rs/egui_commonmark_macros/badge.svg)](https://docs.rs/egui_commonmark_macros)
+
+[![Showcase](https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png)](https://raw.githubusercontent.com/lampsitter/egui_commonmark/master/assets/example-v4.png)
 
 While this crate's main focus is commonmark, it also supports a subset of
 Github's markdown syntax: tables, strikethrough, tasklists and footnotes.
@@ -66,6 +74,7 @@ at your option.
 struct App {
     cache: CommonMarkCache,
     egui_source_id: String,
+    content: String,
 }
 
 impl eframe::App for App {
@@ -93,7 +102,7 @@ impl eframe::App for App {
 
                 if search_options_changed || response.changed() {
                     self.cache
-                        .update_search_matches(&self.egui_source_id, MARKDOWN);
+                        .update_search_matches(&self.egui_source_id, &self.content);
                 }
 
                 // Checked unconditionally (not gated on the text edit still
@@ -129,6 +138,8 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.style_mut().spacing.scroll = egui::style::ScrollStyle::thin();
 
+            ui.style_mut().url_in_tooltip = true;
+
             // Handle any keyboard scrolling requests
             let user_scrolled = self.cache.handle_keyboard_scrolling(ui);
 
@@ -149,7 +160,8 @@ impl eframe::App for App {
                     // Optionally override default search match colors
                     .search_active_match_color(active_bg)
                     .search_match_color(match_bg)
-                    .show_with_id(&self.egui_source_id, ui, &mut self.cache, MARKDOWN);
+                    .enable_scroll_to_heading(true)
+                    .show_with_id(&self.egui_source_id, ui, &mut self.cache, &self.content);
             });
 
             // Optionally anchor any current or new search to the current viewport so that
@@ -210,6 +222,55 @@ fn main() -> eframe::Result {
     let mut args = std::env::args();
     args.next();
 
+    let scroll_to_heading = include_str!("markdown/scroll_to_heading.md");
+    let lists = include_str!("markdown/lists.md");
+    let definition_list = include_str!("markdown/definition_list.md");
+    let blockquotes = include_str!("markdown/blockquotes.md");
+    let tables = include_str!("markdown/tables.md");
+    let embedded_image = include_str!("markdown/embedded_image.md");
+
+    let content = format!(
+        r#"{INTRO}
+
+---
+
+## README
+
+{README}
+
+---
+
+## Scroll to heading
+
+{scroll_to_heading}
+
+---
+
+## Lists
+
+{lists}
+
+---
+
+{definition_list}
+
+---
+
+{blockquotes}
+
+---
+
+{tables}
+
+---
+
+{embedded_image}
+
+        "#
+    );
+
+    // eprintln!("Content={content}");
+
     eframe::run_native(
         "Markdown search example",
         eframe::NativeOptions::default(),
@@ -224,6 +285,7 @@ fn main() -> eframe::Result {
             Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
                 egui_source_id: String::from("search_example"),
+                content,
             }))
         }),
     )
