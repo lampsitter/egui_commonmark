@@ -7,22 +7,23 @@
 //! `cargo r --example search --features better_syntax_highlighting,svg,fetch,embedded_image,egui_extras/svg_text -- [light|dark]`
 
 use eframe::egui;
+use egui::Color32;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer, SearchOptions};
 
 const INTRO: &str = r#"# Search Highlighting
 
 Type text in the search bar above to highlight every occurrence in this document.
-Use **Prev** and **Next** to step through matches.
+
+Use **Prev (Shift-Enter)** and **Next (Enter)** to step through matches.
 
 > [!TIP]
-> 3 suggestions:
->    - Try searching for "crate" to see image matches on image Alt text as well as search scrolling behavior>
->    - Try searching text in different text types in the various sections from the included example markdown files below.
->    - Try the case-sensitive, whold-word and regex searches using their respective icons.
+>    1. Try searching for "crate" or "as" to see image matches on image Alt text as well as search scrolling behavior.
+>    2. Try searching text in different text types in the various sections from the included example markdown files below.
+>    3. Try the case-sensitive, whole-word and regex searches by toggling their respective icons.
 
 "#;
 
-const SCROLL_TO_HEADING: &str = r#"# Contents {#contents}
+const SCROLL_TO_HEADING: &str = r"# Contents {#contents}
 
 - [Heading 1](#heading1)
 - [Heading 2](#heading2)
@@ -38,10 +39,11 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 [back to contents](#contents)
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-"#;
+";
 
 struct App {
     cache: CommonMarkCache,
+    search_focus: bool,
     egui_source_id: String,
     content: String,
 }
@@ -49,6 +51,14 @@ struct App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         ui.set_min_height(512.0);
+
+        let (cmd_f, search_escape) = ui.ctx().input(|i| {
+            use egui::Key;
+            (
+                i.modifiers.command && i.key_pressed(Key::F),
+                i.key_pressed(Key::Escape),
+            )
+        });
 
         egui::Panel::top("search_bar").show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -82,7 +92,16 @@ impl eframe::App for App {
                 // click back into the box each time.
                 let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
                 if enter_pressed {
+                    self.search_focus = true;
+                } else if cmd_f {
+                    self.search_focus = !self.search_focus;
+                } else if search_escape {
+                    self.search_focus = false;
+                }
+                if self.search_focus {
                     response.request_focus();
+                } else {
+                    response.surrender_focus();
                 }
 
                 let match_count = self.cache.search_ranges().len();
@@ -114,11 +133,14 @@ impl eframe::App for App {
 
             ui.separator();
 
-            // Optional custom search match highlight colors.
-            // Using `egui` themed colors saves us interrogating `ui.visuals()` to see
-            // if we're in light or dark mode and choosing suitable colors accordingly.
-            let active_bg = ui.visuals().selection.bg_fill;
-            let match_bg = active_bg.gamma_multiply(0.6);
+            // Demonstrating optional custom search match highlight colors.
+            // They need to be visible on light and dark backgrounds and not
+            // clash with existing backgrounds or highlighted text. You may
+            // need to use different shades for light vs dark, and you may
+            // need to adjust the opacity for visibility of text and existing
+            // background.
+            let active_bg = Color32::ORANGE;
+            let match_bg = Color32::GOLD;
 
             // To anchor searches to the scroll position, optionally replace `show` by `show_with_id`
             // and then call `self.cache.sync_active_match`.
@@ -206,7 +228,7 @@ fn main() -> eframe::Result {
     let wide_table = include_str!("markdown/wide_table.md");
 
     let content = format!(
-        r#"{INTRO}
+        r"{INTRO}
 
 ---
 
@@ -242,7 +264,7 @@ fn main() -> eframe::Result {
 
 {wide_table}
 
-        "#
+        "
     );
 
     // eprintln!("Content={content}");
@@ -262,6 +284,7 @@ fn main() -> eframe::Result {
                 cache: CommonMarkCache::default(),
                 egui_source_id: String::from("search_example"),
                 content,
+                search_focus: true,
             }))
         }),
     )
