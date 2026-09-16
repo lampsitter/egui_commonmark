@@ -18,6 +18,9 @@
 
 ### Fixed
 
+- Code blocks inside list items are no longer squeezed into the width left over
+  after the item's text ([#105](https://github.com/lampsitter/egui_commonmark/pull/105) by
+  [@emilk](https://github.com/emilk))
 - Fix `show_scrollable` to support seamless scrolling of large documents
   ([#98](https://github.com/lampsitter/egui_commonmark/pull/98) by [@durbanlegend](https://github.com/durbanlegend))
 
@@ -125,7 +128,7 @@
 
 - `CommonMarkViewer::new` no longer takes in an id.
 - `commonmark!` and `commonmark_str!` no longer takes in an id.
-- `CommonMarkViewer::show_scrollable` takes in an id explicity.
+- `CommonMarkViewer::show_scrollable` takes in an id explicitly.
 
 - Updated pulldown-cmark to 0.12
 - Newlines are no longer inserted before/after markdown ([#56](https://github.com/lampsitter/egui_commonmark/pull/56))

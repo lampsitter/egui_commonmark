@@ -137,7 +137,7 @@ impl List {
     }
 }
 
-/// To prevent depending on ui during macro evalation we must store the current
+/// To prevent depending on ui during macro evaluation we must store the current
 /// style and text temporarily
 pub(crate) struct StyledText {
     style: Style,
@@ -301,7 +301,7 @@ impl CommonMarkViewerInternal {
 
             stream.extend(self.line.try_insert_start());
 
-            // Proccess a single event separately so that we do not insert spaces where we do not
+            // Process a single event separately so that we do not insert spaces where we do not
             // want them
             self.line.should_start_newline = false;
             if let Some((_, (e, _))) = events_iter.next() {
@@ -318,7 +318,7 @@ impl CommonMarkViewerInternal {
             let spaces = " ".repeat(options.indentation_spaces);
             stream.extend(quote!(ui.label(#spaces);));
 
-            // Required to ensure that the content is aligned with the identation
+            // Required to ensure that the content is aligned with the indentation
             stream.extend(quote!(ui.horizontal_wrapped(|ui| {
                     #inner
             });));

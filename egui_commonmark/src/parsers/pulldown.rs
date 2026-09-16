@@ -763,7 +763,7 @@ impl CommonMarkViewerInternal {
 
             self.line.try_insert_start(ui);
 
-            // Proccess a single event separately so that we do not insert spaces where we do not
+            // Process a single event separately so that we do not insert spaces where we do not
             // want them
             self.line.should_start_newline = false;
             if let Some((_, (e, src_span))) = events_iter.next() {
@@ -773,7 +773,7 @@ impl CommonMarkViewerInternal {
             ui.label(" ".repeat(options.indentation_spaces));
             self.line.should_start_newline = true;
             self.line.should_end_newline = false;
-            // Required to ensure that the content is aligned with the identation
+            // Required to ensure that the content is aligned with the indentation
             ui.horizontal_wrapped(|ui| {
                 while let Some((_, (e, src_span))) = events_iter.next() {
                     self.process_event(
@@ -1250,7 +1250,13 @@ impl CommonMarkViewerInternal {
                         });
                     }
                 }
-                self.line.try_insert_start(ui);
+                // A code block always needs a line of its own. Inside a list
+                // `should_start_newline` is off, so `try_insert_start` would do
+                // nothing and the block would be laid out after the item's text,
+                // leaving it only the width remaining on that line.
+                if !self.line.should_not_start_newline_forced {
+                    newline(ui);
+                }
             }
 
             pulldown_cmark::Tag::List(point) => {
@@ -1455,7 +1461,9 @@ impl CommonMarkViewerInternal {
                 self.want_scroll_to_active_match = false;
             }
             self.search_match_ys_scratch.extend(match_ys);
-            self.line.try_insert_end(ui);
+            if self.line.should_end_newline_forced {
+                newline(ui);
+            }
         }
     }
 }

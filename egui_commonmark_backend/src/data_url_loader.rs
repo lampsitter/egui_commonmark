@@ -60,7 +60,7 @@ impl BytesLoader for DataUrlLoader {
             std::thread::Builder::new()
                 .name("DataUrlLoader".to_owned())
                 .spawn(move || {
-                    // Must unfortuntely do the process step again
+                    // Must unfortunately do the process step again
                     let url = data_url::DataUrl::process(&uri);
                     match url {
                         Ok(url) => {

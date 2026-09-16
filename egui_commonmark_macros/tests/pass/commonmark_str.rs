@@ -1,10 +1,10 @@
 use egui::__run_test_ui;
 use egui_commonmark_macros::commonmark_str;
 
-// Check a simple case and ensure that it returns a reponse
+// Check a simple case and ensure that it returns a response
 fn main() {
     __run_test_ui(|ui| {
-    let mut cache = egui_commonmark_backend::CommonMarkCache::default();
+        let mut cache = egui_commonmark_backend::CommonMarkCache::default();
         let _response: egui::InnerResponse<()> = commonmark_str!(
             ui,
             &mut cache,
