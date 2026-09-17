@@ -649,7 +649,7 @@ impl CommonMarkViewerInternal {
         if self.is_table {
             self.line.try_insert_start(ui);
 
-            let id = ui.id().with("_table").with(self.curr_table);
+            let id = ui.scope_id().with("_table").with(self.curr_table);
             self.curr_table += 1;
 
             egui::Frame::group(ui.style()).show(ui, |ui| {
