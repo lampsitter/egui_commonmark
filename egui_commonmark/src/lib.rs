@@ -72,8 +72,6 @@
 #![cfg_attr(feature = "document-features", doc = "# Features")]
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 
-use egui::{self, Id};
-
 mod parsers;
 
 pub use egui_commonmark_backend::RenderHtmlFn;
@@ -203,7 +201,7 @@ impl<'f> CommonMarkViewer<'f> {
     ///                 }
     ///             });
     ///
-    ///     let uri = format!("{}.svg", egui::Id::from(math.to_string()).value());
+    ///     let uri = format!("{}.svg", egui::Id::unique(math).value());
     ///     ui.add(
     ///          egui::Image::new(egui::ImageSource::Bytes {
     ///             uri: uri.into(),
@@ -309,19 +307,24 @@ impl<'f> CommonMarkViewer<'f> {
     /// [`clear_scrollable`](CommonMarkCache::clear_scrollable). If the content changes every frame,
     /// it's faster to call [`show`] directly.
     ///
+    /// The `id_salt` only has to be unique within `ui`. To clear the cache of this viewer,
+    /// pass `ui.make_persistent_id(id_salt)` to
+    /// [`clear_scrollable_with_id`](CommonMarkCache::clear_scrollable_with_id).
+    ///
     /// [`ScrollArea`]: egui::ScrollArea
     /// [`show`]: crate::CommonMarkViewer::show
     #[cfg(feature = "pulldown_cmark")]
     pub fn show_scrollable(
         self,
-        source_id: impl egui::AsId,
+        id_salt: impl egui::AsIdSalt,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         text: &str,
     ) {
         egui_commonmark_backend::prepare_show(cache, ui.ctx());
+        let id = ui.make_persistent_id(id_salt);
         parsers::pulldown::CommonMarkViewerInternal::new().show_scrollable(
-            Id::new(source_id),
+            id,
             ui,
             cache,
             &self.options,

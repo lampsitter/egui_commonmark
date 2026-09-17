@@ -484,7 +484,7 @@ impl CommonMarkViewerInternal {
             let curr_table = self.curr_table;
             stream.extend(quote!(
                 egui::Frame::group(ui.style()).show(ui, |ui| {
-                    let id = ui.id().with("_table").with(#curr_table);
+                    let id = ui.make_persistent_id(("_table", #curr_table));
                     egui::Grid::new(id).striped(true).show(ui, |ui| {
 
                     #header_stream

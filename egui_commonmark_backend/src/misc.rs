@@ -562,8 +562,11 @@ impl CommonMarkCache {
 
     /// Clear the cache for a specific scrollable viewer. Returns false if the
     /// id was not in the cache.
-    pub fn clear_scrollable_with_id(&mut self, source_id: impl egui::AsId) -> bool {
-        self.scroll.remove(&egui::Id::new(source_id)).is_some()
+    ///
+    /// The id must be the same one that was given to
+    /// [`CommonMarkViewer::show_scrollable`](crate::CommonMarkViewer::show_scrollable).
+    pub fn clear_scrollable_with_id(&mut self, id: egui::Id) -> bool {
+        self.scroll.remove(&id).is_some()
     }
 
     /// If the user clicks on a link in the markdown render that has `name` as a link. The hook
