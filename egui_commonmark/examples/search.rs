@@ -1,7 +1,7 @@
 //! Demonstrates search-match highlighting with default colors.
 //!
-//! Typing in the search bar highlights every match. Prev/Next step through
-//! matches and scroll the document to centre each one in the viewport.
+//! Typing in the search bar highlights every match. Prev and Next step through
+//! matches and scroll the document to centre the active match in the viewport.
 //!
 //! Run with:
 //! `cargo r --example search --features better_syntax_highlighting,svg,fetch,embedded_image,egui_extras/svg_text -- [light|dark]`

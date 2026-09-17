@@ -187,10 +187,9 @@ pub fn highlight_rect_for_byte_range(
     Some(Rect::from_two_pos(start_rect.min, end_rect.max).translate(pos.to_vec2()))
 }
 
-/// Enhanced/specialized version of egui's code blocks. This one features copy button and borders
-/// Returns `(galley_pos, galley)` so the caller can compute per-match
-/// virtual-Y positions via [`highlight_rect_for_byte_range`] without a
-/// second layout pass.
+/// Enhanced/specialized version of egui's code blocks. This one features copy button and borders.
+/// Returns `(galley_pos, galley)` so the caller can compute per-match virtual-Y positions via
+/// [`highlight_rect_for_byte_range`] without a second layout pass.
 pub fn code_block<'t>(
     ui: &mut Ui,
     max_width: f32,

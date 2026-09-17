@@ -294,8 +294,8 @@ impl<'f> CommonMarkViewer<'f> {
     /// instance. Pass the same string to `update_search_matches` and
     /// [`sync_active_match`](CommonMarkCache::sync_active_match).
     ///
-    /// Split-point positions are rebuilt when the available width changes and
-    /// cached otherwise, so the overhead is paid only on the first frame and
+    /// Split-point positions are cached and are only rebuilt when the available
+    /// width changes, so the overhead is paid only on the first frame and
     /// after window resizes.
     ///
     /// For large documents where rendering the full content every frame is too

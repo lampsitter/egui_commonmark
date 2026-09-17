@@ -15,24 +15,24 @@ pub struct ScrollableCache {
     /// position of arbitrary byte offsets (e.g. search matches) without
     /// needing a fresh full render.
     pub split_points: Vec<(usize, Pos2, Pos2, Range<usize>)>,
-    /// Heading slug → virtual y (content-relative; 0 = document top).
+    /// Heading slug → virtual Y (content-relative; 0 = document top).
     /// Populated during the full render; used by the viewport path to
     /// scroll to headings outside the currently rendered slice.
     pub heading_y_positions: HashMap<String, f32>,
-    /// The most recent viewport top y (virtual, content-relative), recorded
+    /// The most recent viewport top Y (virtual, content-relative), recorded
     /// every frame the cheap viewport-only path renders. Lets callers
     /// approximate "what's currently visible" (e.g. to implement search
     /// that starts from the current scroll position) via
     /// [`Self::byte_offset_for_virtual_y`].
     pub last_viewport_top_y: f32,
     /// Height of the viewport on the most recent frame, in the same virtual
-    /// coordinate space as `last_viewport_top_y`. Together they define the
-    /// visible interval `[last_viewport_top_y, last_viewport_top_y + last_viewport_height)`.
+    /// coordinate space as `last_viewport_top_y`. Together they define the visible
+    /// interval `[last_viewport_top_y, last_viewport_top_y + last_viewport_height)`.
     pub last_viewport_height: f32,
 }
 
 impl ScrollableCache {
-    /// Approximate the virtual y (content-relative; 0 = document top) of a
+    /// Approximate the virtual Y (content-relative; 0 = document top) of a
     /// byte offset in the source text, using the split points collected
     /// during the last full render. This never requires a fresh render: at
     /// worst (e.g. a byte offset inside a large, untracked container like a
@@ -52,8 +52,8 @@ impl ScrollableCache {
             return Some(vstart.y);
         }
 
-        // Not inside any tracked block (e.g. it's inside a list/table/
-        // blockquote, which aren't tracked individually) -- use the nearest
+        // Not inside any tracked block, e.g. it's inside a list/table/
+        // blockquote, which aren't tracked individually. Use the nearest
         // preceding tracked block as a reasonable approximation, same as
         // `show_scrollable`'s own slice calculation does.
         self.split_points
@@ -66,7 +66,7 @@ impl ScrollableCache {
 
     /// The inverse of [`Self::virtual_y_for_byte_offset`]: approximate the
     /// source byte offset of whatever is at (or just before) the given
-    /// virtual y, using the same split points. Returns `None` only if there
+    /// virtual Y, using the same split points. Returns `None` only if there
     /// are no split points at all yet.
     pub fn byte_offset_for_virtual_y(&self, y: f32) -> Option<usize> {
         self.split_points

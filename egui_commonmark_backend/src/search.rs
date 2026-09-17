@@ -10,8 +10,8 @@
 //! Instead, matches are painted as backgrounds baked directly into the
 //! [`egui::text::LayoutJob`] that is already being built for a run of text
 //! (be that a body-text label or a syntax-highlighted code block). This is a
-//! purely visual change: the same widgets are created regardless of whether
-//! there are zero or a hundred matches.
+//! purely visual change: the same widgets are created regardless of how many
+//! matches they contain.
 
 use egui::Color32;
 use egui::epaint::text::ByteRangeExt;
@@ -75,7 +75,7 @@ pub fn search_intervals(
 }
 
 /// Rewrite `job`'s sections so that any byte range covered by `intervals`
-/// gets its [`egui::TextFormat::background`] set to `match_bg` (or
+/// gets its `egui::TextFormat::background` set to `match_bg` (or
 /// `active_bg` for the active match), splitting existing sections at the
 /// interval boundaries as needed. All other formatting (font, color,
 /// italics, etc.) is preserved unchanged.

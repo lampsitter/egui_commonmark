@@ -182,8 +182,9 @@ impl CommonMarkViewerInternal {
         let max_width = options.max_width(ui);
 
         // Determine the effective id for split-point recording this frame.
-        // show_scrollable's full render passes its source_id as split_points_id and
-        // always records. show_with_id stores its source_id in options and rebuilds
+        // `show_scrollable`'s full render passes its `source_id` as `split_points_id`
+        // and always records.
+        // `show_with_id` stores its `source_id` in `CommonMarkOptions` and rebuilds
         // only when the available width changes; stable frames reuse cached split points.
         let record_id: Option<Id> = split_points_id.or_else(|| {
             options.source_id.and_then(|id| {
@@ -228,8 +229,8 @@ impl CommonMarkViewerInternal {
                         Some(egui::vec2(max_width, final_y - content_origin_y));
                 }
             } else {
-                // Non-scrollable show() path: flush per-match virtual-y positions
-                // and the current viewport top so callers can sync the active
+                // Non-scrollable show() path: flush the per-match virtual-y positions
+                // and the current viewport top so that callers can sync the active
                 // match after the user scrolls.
                 let viewport_top_y = ui.clip_rect().min.y - content_origin_y;
                 let viewport_height = ui.clip_rect().height();
@@ -238,9 +239,9 @@ impl CommonMarkViewerInternal {
                     viewport_top_y,
                     viewport_height,
                 );
-                // For show_with_id: keep the ScrollableCache's viewport position in sync so
-                // that viewport_start_byte_offset returns the current scroll location.
-                // options.source_id is Some on every frame (including no-rebuild frames).
+                // For show_with_id: keep the `ScrollableCache`'s viewport position in sync
+                // so that `viewport_start_byte_offset` returns the current scroll location.
+                // `options.source_id` is `Some` on every frame (including no-rebuild frames).
                 if let Some(id) = options.source_id {
                     scroll_cache(cache, &id).last_viewport_top_y = viewport_top_y;
                 }
@@ -268,14 +269,14 @@ impl CommonMarkViewerInternal {
         .enumerate()
         .peekable();
 
-        // Screen-space y of the content origin. Subtracting this from any
-        // cursor position gives virtual (content-relative) y comparable to
-        // viewport.min/max.y from show_viewport.
+        // Screen-space Y of the content origin. Subtracting this from any
+        // cursor position gives virtual (content-relative) Y comparable to
+        // `viewport.min/max.y` from `show_viewport`.
         let content_origin_y = ui.next_widget_position().y;
         self.content_origin_y = content_origin_y;
 
         // Cursor at the visual top of the current block, captured at
-        // Start(Block) so that vstart reflects the block top, not its bottom.
+        // `Start(Block)` so that `vstart` reflects the block top, not its bottom.
         let mut block_start_position: Option<Pos2> = None;
         // Source byte offset paired with block_start_position, so split
         // points can also record each block's source span (used to
@@ -299,7 +300,7 @@ impl CommonMarkViewerInternal {
                 block_start_src = Some(src_span.start);
             }
 
-            // Record virtual y for each named heading so the viewport path
+            // Record virtual Y for each named heading so the viewport path
             // can jump to headings that are outside the rendered slice.
             if let (
                 Some(sid),
@@ -342,8 +343,8 @@ impl CommonMarkViewerInternal {
                     .any(|(i, _, _, _)| *i == index);
 
                 if !split_point_exists {
-                    // Use block_start_position (Start event) not start_position
-                    // (cursor just before End) so that vstart is the block top.
+                    // Use `block_start_position` (`Start` event) not `start_position`
+                    // (cursor just before `End`) so that `vstart` is the block top.
                     let raw_vstart = block_start_position.take().unwrap_or(start_position);
                     let vstart = egui::pos2(raw_vstart.x, raw_vstart.y - content_origin_y);
                     let vend = egui::pos2(end_position.x, end_position.y - content_origin_y);
@@ -375,9 +376,9 @@ impl CommonMarkViewerInternal {
 
         if !options.use_viewport_cache {
             // Full-document render every frame; egui clips what is off-screen.
-            // Split points are maintained for viewport_start_byte_offset (search
+            // Split points are maintained for `viewport_start_byte_offset` (search
             // anchoring), rebuilt only on width change — matching egui's own
-            // galley-cache invalidation and the show_with_id path.
+            // galley-cache invalidation and the `show_with_id` path.
             let needs_rebuild = {
                 let sc = scroll_cache(cache, &source_id);
                 sc.page_size = None;
@@ -394,7 +395,7 @@ impl CommonMarkViewerInternal {
                 .id_salt(scroll_id)
                 .auto_shrink([false, true])
                 .show(ui, |ui| {
-                    // Capture viewport top before content is placed; clip_rect
+                    // Capture viewport top before content is placed; `clip_rect`
                     // already reflects the current scroll position.
                     let viewport_top_y = ui.clip_rect().min.y - ui.next_widget_position().y;
                     apply_pending_scroll_delta(cache, ui);
@@ -402,8 +403,8 @@ impl CommonMarkViewerInternal {
                     self.show(ui, cache, options, text, sid);
                     let sc = scroll_cache(cache, &source_id);
                     if needs_rebuild {
-                        // show() sets page_size as a side-effect of receiving
-                        // Some(source_id); clear it so the next frame still
+                        // `show()` sets page_size as a side-effect of receiving
+                        // `Some(source_id)`; clear it so the next frame still
                         // takes this full-render path, not the viewport-slice one.
                         sc.page_size = None;
                     }
@@ -461,17 +462,16 @@ impl CommonMarkViewerInternal {
         };
         let pending_delta = std::mem::replace(&mut cache.pending_scroll_delta, egui::Vec2::ZERO);
 
-        // Virtual y of the active match used to decide whether a blind
-        // scroll is needed before the slice renders.
+        // Virtual Y of the active match used to decide whether a blind scroll is needed
+        // before the slice renders.
         //
-        // Prefer the precise per-match Y recorded during the *previous*
-        // frame's render (search_match_virtual_ys). That value is exact for
-        // any match that was on screen last frame — including matches deep
-        // inside tall code blocks, where virtual_y_for_byte_offset only
-        // returns the block-top Y. Using the block-top Y for such a match
-        // triggers a spurious blind scroll to the top of the block followed
-        // by a second scroll to the match, producing the "scrolls to the
-        // previous page then back" animation the user sees.
+        // Prefer the precise per-match Y recorded during the *previous* frame's render
+        // (`search_match_virtual_ys`). That value is exact for any match that was on
+        // screen last frame — including matches deep inside tall code blocks, where
+        // `virtual_y_for_byte_offset` only returns the block-top Y. We avoid using
+        // the block-top Y because it triggers a spurious blind scroll to the top of
+        // the block followed by a second scroll to the match, producing a distracting
+        // animation of scrolling to the previous page then back.
         //
         // Fall back to the block-level split-point approximation only when
         // the match was not rendered last frame (Y stored as 0.0).
@@ -589,12 +589,12 @@ impl CommonMarkViewerInternal {
                         (skip_height, skip_count, take_count)
                     }; // scroll_cache borrow released here
 
-                    // Set content_origin_y to the screen Y of virtual-Y=0 (the
+                    // Set `content_origin_y` to the screen Y of virtual-Y = 0 (the
                     // document top) for this frame. This makes match Ys recorded
-                    // by `event_text` comparable with viewport.min.y (the virtual
+                    // by `event_text` comparable with `viewport.min.y` (the virtual
                     // scroll offset). Matches in the rendered slice get their
                     // exact pixel Y; those outside get the default 0.0 and are
-                    // treated as not-in-viewport by sync_scrollable_active_match.
+                    // treated as not-in-viewport by `sync_scrollable_active_match`.
                     self.content_origin_y = ui.clip_rect().min.y - viewport.min.y;
                     self.search_match_ys_scratch.clear();
 
@@ -665,15 +665,15 @@ impl CommonMarkViewerInternal {
                                 }
                             }
 
-                            // Mirror show()'s deferred flush so that clicking a #fragment
+                            // Mirror `show()`'s deferred flush so that clicking a #fragment
                             // link while in the viewport path triggers a scroll next frame.
                             *cache.scroll_to_id_target_mut() =
                                 self.deferred_scroll_to_heading.take();
 
                             // Flush the per-match virtual-Y positions collected by
                             // `event_text` into the cache, exactly as the non-scrollable
-                            // show() path does. Skipped on discard frames (blind scroll
-                            // toward an off-screen match) because no widgets rendered.
+                            // show() path does. Skipped on discarded frames (blind scroll
+                            // toward an off-screen match) since no widgets rendered.
                             cache.update_show_viewport(
                                 self.search_match_ys_scratch.drain(..),
                                 viewport.min.y,
@@ -712,7 +712,7 @@ impl CommonMarkViewerInternal {
 
         // Invalidate the cache when the available *width* changes (e.g. window resize).
         // Height changes — such as the search bar or TOC panel opening/closing —
-        // do not affect split points or page_size: text wrapping only depends on
+        // do not affect split points or `page_size`: text wrapping only depends on
         // width, so a height-only change must never force a full render, especially on
         // a large document.
         let scroll_cache = scroll_cache(cache, &source_id);
@@ -857,8 +857,8 @@ impl CommonMarkViewerInternal {
             self.line.should_not_start_newline_forced = false;
 
             // Capture the source byte range of the first Text event *before*
-            // parse_alerts deletes it.  This is the position of the alert keyword
-            // (e.g. "[!NOTE]") in the source; update_search_matches uses the same
+            // `parse_alerts` deletes it.  This is the position of the alert keyword
+            // (e.g. `[!NOTE]`) in the source; `update_search_matches` uses the same
             // range as the anchor for title matches, so the renderer can identify
             // them here and apply `label_with_search_highlight` to the title label.
             let identifier_src_range: Range<usize> = collected_events
@@ -876,8 +876,8 @@ impl CommonMarkViewerInternal {
                     ui.add_space(3.0);
 
                     // Render the alert title with search highlighting when the active
-                    // query matched `identifier_rendered` (e.g. "Note" for [!NOTE]).
-                    // update_search_matches stored the keyword's source bytes as the
+                    // query matched `identifier_rendered` (e.g. "Note" for `[!NOTE]`).
+                    // `update_search_matches` stored the keyword's source bytes as the
                     // match range, so we check overlap with `ident_src` to decide.
                     let (has_title_match, is_title_active, title_global_idx) = {
                         let ranges = cache.search_ranges();
@@ -965,10 +965,10 @@ impl CommonMarkViewerInternal {
             let id = ui.id().with("_table").with(self.curr_table);
             self.curr_table += 1;
 
-            // egui's ScrollArea intercepts scroll_to_rect calls for ALL dimensions,
+            // egui's `ScrollArea` intercepts `scroll_to_rect` calls for ALL dimensions,
             // even those it doesn't scroll (see egui source: "We always take both
             // scroll targets regardless of which scroll axes are enabled").  This
-            // means scroll_to_rect called from event_text() inside the table's
+            // means `scroll_to_rect` called from `event_text()` inside the table's
             // horizontal scroll area silently discards the vertical component,
             // preventing the outer vertical scroll area from bringing the row into
             // view.  Snapshot the scroll-request state before the table renders;
@@ -1030,7 +1030,7 @@ impl CommonMarkViewerInternal {
             });
 
             // If the active-match scroll was satisfied inside the table, the
-            // scroll_to_rect call from event_text() was intercepted by the
+            // `scroll_to_rect` call from `event_text()` was intercepted by the
             // horizontal scroll area (see comment above).  Re-issue it on the
             // outer `ui` using the virtual Y we recorded during the table render
             // so the outer vertical scroll area can bring the row into view.
@@ -1165,8 +1165,8 @@ impl CommonMarkViewerInternal {
             );
 
             // Record the virtual-y (scroll-independent) position for each
-            // global match that falls in this text run. global_match_indices[j]
-            // corresponds to intervals[j] and all_rects[j]: both iterate
+            // global match that falls in this text run. `global_match_indices[j]`
+            // corresponds to `intervals[j]` and `all_rects[j]`: both iterate
             // search_ranges in document order with the same filter, so the
             // j-th surviving entry is the same match in both.
             let content_origin_y = self.content_origin_y;
@@ -1482,7 +1482,7 @@ mod perf_tests {
 
     /// Returns the number of full-document renders recorded for `source_id`
     /// since the process started (or since the entry was first created). Each
-    /// source_id has its own counter, so parallel tests do not interfere.
+    /// `source_id` has its own counter, so parallel tests do not interfere.
     fn full_render_count_for(source_id: &str) -> usize {
         let id = egui::Id::new(source_id);
         *FULL_RENDER_COUNTS.lock().unwrap().get(&id).unwrap_or(&0)
@@ -1508,7 +1508,7 @@ mod perf_tests {
         }
     }
 
-    /// Reproduces the reported bug: clicking Next/Previous was pathologically
+    /// Reproduces a bug where clicking "Next/Previous" was pathologically
     /// slow even when the target match was already on the currently visible
     /// page, because every call to `scroll_to_active_search_match` forced a
     /// full document re-render regardless of visibility.
@@ -1648,14 +1648,14 @@ mod perf_tests {
         let mut cache = CommonMarkCache::default();
         cache.set_search_ranges(ranges.clone());
         cache.set_active_search_range(ranges.first().cloned());
-        // Note: scroll_to_active_search_match() is deliberately NOT called here;
+        // Note: `scroll_to_active_search_match()` is deliberately NOT called here;
         // we're testing the steady state where matches exist but no scroll/jump
         // has been requested (e.g. the user has merely typed a query).
 
         let ctx = egui::Context::default();
         ctx.set_fonts(egui::FontDefinitions::empty());
 
-        // Each test uses its own source_id, so full_render_count_for() is
+        // Each test uses its own `source_id`, so `full_render_count_for()` is
         // keyed per source and cannot be polluted by other tests running in
         // parallel.
         let before = full_render_count_for("perf_test_doc");
