@@ -9,6 +9,14 @@
 - `viewport_cache` to disable or enable viewport cache for `show_scrollable`
   ([#101](https://github.com/lampsitter/egui_commonmark/pull/101) by [@durbanlegend](https://github.com/durbanlegend))
 
+### Changed
+
+- Follow egui `main`: `CommonMarkViewer::show_scrollable` now takes an `id_salt`
+  that only has to be unique within the parent `Ui`, and
+  `CommonMarkCache::clear_scrollable_with_id` takes the resulting `egui::Id`
+  ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by
+  [@emilk](https://github.com/emilk))
+
 ### Fixed
 
 - Code blocks inside list items are no longer squeezed into the width left over
