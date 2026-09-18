@@ -340,7 +340,7 @@ impl CommonMarkViewerInternal {
                 let split_point_exists = scroll_cache
                     .split_points
                     .iter()
-                    .any(|(i, _, _, _)| *i == index);
+                    .any(|sp| sp.event_index == index);
 
                 if !split_point_exists {
                     // Use `block_start_position` (`Start` event) not `start_position`
@@ -348,11 +348,13 @@ impl CommonMarkViewerInternal {
                     let raw_vstart = block_start_position.take().unwrap_or(start_position);
                     let vstart = egui::pos2(raw_vstart.x, raw_vstart.y - content_origin_y);
                     let vend = egui::pos2(end_position.x, end_position.y - content_origin_y);
-                    let block_src_span =
-                        block_start_src.take().unwrap_or(block_end_src)..block_end_src;
-                    scroll_cache
-                        .split_points
-                        .push((index, vstart, vend, block_src_span));
+                    let src_span = block_start_src.take().unwrap_or(block_end_src)..block_end_src;
+                    scroll_cache.split_points.push(SplitPoint {
+                        event_index: index,
+                        vstart,
+                        vend,
+                        src_span,
+                    });
                 }
             }
 
@@ -561,28 +563,25 @@ impl CommonMarkViewerInternal {
                         let preceding_split = scroll_cache
                             .split_points
                             .iter()
-                            .rfind(|(_, _, vend, _)| vend.y < viewport.min.y)
+                            .rfind(|sp| sp.vend.y < viewport.min.y)
                             .cloned();
-                        let (_first_event_index, _, first_end_position, _) = preceding_split
-                            .clone()
-                            .unwrap_or((0, Pos2::ZERO, Pos2::ZERO, 0..0));
+                        let first_vend = preceding_split.as_ref().map_or(Pos2::ZERO, |sp| sp.vend);
                         let last_event_index = scroll_cache
                             .split_points
                             .iter()
-                            .find(|(_, vstart, _, _)| vstart.y > render_below)
-                            .map_or(num_rows, |(index, _, _, _)| *index);
-                        let skip_height = first_end_position.y.max(0.0);
+                            .find(|sp| sp.vstart.y > render_below)
+                            .map_or(num_rows, |sp| sp.event_index);
+                        let skip_height = first_vend.y.max(0.0);
                         // When a preceding split was found, its End(Block) is already
                         // accounted for in skip_height — re-processing it would add a
                         // duplicate newline. Start from the next event instead.
-                        let (skip_count, take_count) = if let Some((idx, _, _, _)) = preceding_split
-                        {
+                        let (skip_count, take_count) = if let Some(sp) = preceding_split {
                             self.line.should_not_start_newline_forced = false;
-                            // last_event_index should always be >= idx because
+                            // last_event_index should always be >= event_index because
                             // split-points are ordered, but guard against stale
                             // cache or tiny documents producing an underflow.
-                            let take = last_event_index.saturating_sub(idx);
-                            (idx + 1, take)
+                            let take = last_event_index.saturating_sub(sp.event_index);
+                            (sp.event_index + 1, take)
                         } else {
                             (0, last_event_index)
                         };

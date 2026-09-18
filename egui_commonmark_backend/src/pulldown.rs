@@ -4,17 +4,34 @@ use pulldown_cmark::Options;
 use std::collections::HashMap;
 use std::ops::Range;
 
+/// One recorded block boundary used by the viewport-culling and search
+/// machinery. Every top-level block (paragraph, heading, code block) that
+/// sits at a safe renderer restart point gets one entry.
+#[derive(Debug, Clone)]
+pub struct SplitPoint {
+    /// Index of this block's end-event in the flat event stream. Used to
+    /// skip past already-rendered blocks when starting a viewport slice.
+    pub event_index: usize,
+    /// Virtual start position of this block (content-relative; Y = 0 is the
+    /// document top). Captured at the `Start` event so it reflects the block
+    /// top rather than the cursor position just before the `End` event.
+    pub vstart: Pos2,
+    /// Virtual end position of this block.
+    pub vend: Pos2,
+    /// Source byte range of this block in the original document text. Lets
+    /// [`ScrollableCache::virtual_y_for_byte_offset`] approximate on-screen
+    /// positions of arbitrary offsets (e.g. search matches) without a fresh
+    /// full render.
+    pub src_span: Range<usize>,
+}
+
 #[derive(Default, Debug)]
 pub struct ScrollableCache {
     pub available_size: Vec2,
     pub page_size: Option<Vec2>,
-    /// `(event_index, vstart, vend, src_span)` for each top-level block
-    /// (paragraph/heading/code block) at a "safe" restart boundary.
-    /// `src_span` is that block's byte range in the source text, which lets
-    /// [`Self::virtual_y_for_byte_offset`] approximate the on-screen
-    /// position of arbitrary byte offsets (e.g. search matches) without
-    /// needing a fresh full render.
-    pub split_points: Vec<(usize, Pos2, Pos2, Range<usize>)>,
+    /// One [`SplitPoint`] per top-level block at a safe renderer restart
+    /// boundary, in document order.
+    pub split_points: Vec<SplitPoint>,
     /// Heading slug → virtual Y (content-relative; 0 = document top).
     /// Populated during the full render; used by the viewport path to
     /// scroll to headings outside the currently rendered slice.
@@ -44,12 +61,12 @@ impl ScrollableCache {
     /// full render has happened), in which case the caller has no choice
     /// but to wait for one.
     pub fn virtual_y_for_byte_offset(&self, offset: usize) -> Option<f32> {
-        if let Some((_, vstart, _, _)) = self
+        if let Some(sp) = self
             .split_points
             .iter()
-            .find(|(_, _, _, span)| span.contains(&offset))
+            .find(|sp| sp.src_span.contains(&offset))
         {
-            return Some(vstart.y);
+            return Some(sp.vstart.y);
         }
 
         // Not inside any tracked block, e.g. it's inside a list/table/
@@ -59,9 +76,9 @@ impl ScrollableCache {
         self.split_points
             .iter()
             .rev()
-            .find(|(_, _, _, span)| span.start <= offset)
-            .map(|(_, vstart, _, _)| vstart.y)
-            .or_else(|| self.split_points.first().map(|(_, vstart, _, _)| vstart.y))
+            .find(|sp| sp.src_span.start <= offset)
+            .map(|sp| sp.vstart.y)
+            .or_else(|| self.split_points.first().map(|sp| sp.vstart.y))
     }
 
     /// The inverse of [`Self::virtual_y_for_byte_offset`]: approximate the
@@ -72,9 +89,9 @@ impl ScrollableCache {
         self.split_points
             .iter()
             .rev()
-            .find(|(_, vstart, _, _)| vstart.y <= y)
-            .map(|(_, _, _, span)| span.start)
-            .or_else(|| self.split_points.first().map(|(_, _, _, span)| span.start))
+            .find(|sp| sp.vstart.y <= y)
+            .map(|sp| sp.src_span.start)
+            .or_else(|| self.split_points.first().map(|sp| sp.src_span.start))
     }
 }
 
