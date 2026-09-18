@@ -1382,12 +1382,6 @@ impl CommonMarkCache {
             return;
         }
 
-        // Removed to allow active search to resume from first visible match
-        // (which becomes the active match) after a jump to a heading.
-        // if !user_scrolled {
-        //     return;
-        // }
-
         let vt = self.last_viewport_virtual_top_y;
         let len = self.search_match_virtual_ys.len();
         let nearest = self

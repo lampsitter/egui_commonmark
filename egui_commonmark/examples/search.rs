@@ -84,18 +84,15 @@ impl eframe::App for App {
                         .update_search_matches(&self.egui_source_id, &self.content);
                 }
 
-                // Checked unconditionally (not gated on the text edit still
-                // having focus): a single-line TextEdit surrenders focus the
-                // moment Enter is pressed, so `response.has_focus()` would
-                // already be false here. We re-request focus below so that
-                // repeated Enter presses keep working without having to
-                // click back into the box each time.
                 let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
-                if enter_pressed {
-                    self.search_focus = true;
-                } else if cmd_f {
+                if cmd_f {
                     self.search_focus = !self.search_focus;
                 } else if search_escape {
+                    self.search_focus = false;
+                } else if response.lost_focus() {
+                    // The user clicked away or Enter caused the single-line
+                    // TextEdit to surrender focus naturally — honour that
+                    // instead of fighting to keep the box focused.
                     self.search_focus = false;
                 }
                 if self.search_focus {
@@ -266,8 +263,6 @@ fn main() -> eframe::Result {
 
         "
     );
-
-    // eprintln!("Content={content}");
 
     eframe::run_native(
         "Markdown search example",
