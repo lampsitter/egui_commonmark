@@ -1181,27 +1181,76 @@ impl CommonMarkCache {
 
         let parser = pulldown_cmark::Parser::new_ext(content, options).into_offset_iter();
 
-        // Alert-keyword skip state.
+        // ── Cross-style inline run ────────────────────────────────────────────
         //
-        // parse_alerts() strips known leading alert markers, (e.g. "[!NOTE]")
-        // from blockquotes so that those bytes are never rendered and must be
-        // excluded from the search.
+        // Consecutive Text and Code events within the same inline context are
+        // concatenated into a single "run" string and searched as a unit. This
+        // lets a query like "book example" match across a style boundary such as
+        // "`book` example" (inline code followed by normal text).
         //
-        // We buffer the leading text event of each blockquote paragraph and
-        // after the first break discard it if the concatenated text is a
-        // known alert keyword, otherwise we retroactively add its matches
-        // to search_ranges.
+        // SoftBreaks are folded in as a space so that "foo bar" also matches
+        // across a soft line-wrap. Any other event (paragraph break, heading,
+        // hard break, …) ends the run.
         //
-        // bq_stack: one bool per nested blockquote level; `true` means the
-        // first-paragraph "header" decision has already been made at that level
-        // so subsequent paragraphs are matched normally.
+        // For each regex match in the combined string we reconstruct a source
+        // byte range using the segment list. Each segment records the start of
+        // its text in `run_text` (combined_offset) and the pulldown event's
+        // source span. The range formula is the same as for single events:
+        //
+        //   src_start = seg_at_cstart.src_span.start + (cstart - seg_at_cstart.combined_offset)
+        //   src_end   = seg_at_cend  .src_span.start + (cend   - seg_at_cend  .combined_offset)
+        //
+        // Because the renderer's search_intervals() clips any range to the
+        // current event's src_span, a single cross-event range is all that is
+        // needed: each label highlights only the portion of the match that falls
+        // within it, with no renderer changes required.
+        let mut run_text = String::new();
+        // (combined_offset, src_span) for each Text/Code event in the run.
+        let mut run_segs: Vec<(usize, Range<usize>)> = Vec::new();
+
+        // ── Alert-keyword state ───────────────────────────────────────────────
+        //
+        // parse_alerts() strips known leading alert markers (e.g. "[!NOTE]")
+        // from blockquotes so those bytes are never rendered. We buffer the
+        // leading text event of each blockquote first paragraph and, after the
+        // first break, either discard it (confirmed alert keyword — see
+        // decide_alert_matches!) or retroactively add its matches.
+        //
+        // bq_stack: one bool per nested blockquote level; `true` once the
+        // first-paragraph header decision has been made at that level.
         let mut bq_stack: Vec<bool> = Vec::new();
         let mut in_bq_first_run = false;
         let mut pending_buf: Vec<(String, Range<usize>)> = Vec::new();
 
-        // Helper: flush pending_buf as normal matches (not an alert).
-        // Defined as a macro so it can borrow self.search_ranges mutably while
-        // also being called in multiple places without capturing self.
+        // ── Macros ───────────────────────────────────────────────────────────
+
+        // Flush the current inline run: search the combined text and emit one
+        // source range per match, potentially spanning multiple events.
+        macro_rules! flush_run {
+            () => {
+                if !run_segs.is_empty() {
+                    for m in regex.find_iter(&run_text) {
+                        let cstart = m.start();
+                        let cend = m.end();
+                        // Segment containing the first byte of the match.
+                        let si = run_segs
+                            .partition_point(|(off, _)| *off <= cstart)
+                            .saturating_sub(1);
+                        let src_start = run_segs[si].1.start + (cstart - run_segs[si].0);
+                        // Segment containing the last byte of the match (cend-1).
+                        let ei = run_segs
+                            .partition_point(|(off, _)| *off < cend)
+                            .saturating_sub(1);
+                        let src_end = run_segs[ei].1.start + (cend - run_segs[ei].0);
+                        self.search_ranges.push(src_start..src_end);
+                    }
+                    run_text.clear();
+                    run_segs.clear();
+                }
+            };
+        }
+
+        // Flush pending_buf as plain single-event matches (not an alert keyword).
         macro_rules! flush_pending {
             () => {
                 for (text, r) in pending_buf.drain(..) {
@@ -1213,28 +1262,18 @@ impl CommonMarkCache {
             };
         }
 
-        // Helper: decide what to add to search_ranges for the pending possible
-        // alert marker of a blockquote paragraph.
-        //
-        // If the buffered text is a known alert keyword (e.g. "[!NOTE]"), the
-        // source text is never rendered; instead the viewer shows the
-        // `identifier_rendered` string (e.g. "Note").  We match the regex
-        // against `identifier_rendered` and, for each occurrence found, push
-        // the *source* byte range of the keyword events as the search range.
-        // The blockquote renderer checks for overlap with this range and calls
-        // `label_with_search_highlight` on the title label.
-        //
-        // If it is not a known alert keyword, fall back to normal matching.
+        // Decide what to emit for the buffered blockquote first-paragraph text.
+        // If it is a known alert keyword the viewer renders `identifier_rendered`
+        // (e.g. "Note") rather than the raw source text, so we match the regex
+        // against the rendered form and store the keyword's source span as the
+        // range anchor (the blockquote renderer checks for overlap and highlights
+        // the title label). Otherwise fall back to normal single-event matching.
         macro_rules! decide_alert_matches {
             () => {{
                 let ident: String = pending_buf.iter().map(|(t, _)| t.as_str()).collect();
-                // Clone `identifier_rendered` so the immutable borrow of
-                // self.alerts is released before we mutate self.search_ranges.
                 let alert_title: Option<String> =
                     try_get_alert(&self.alerts, &ident).map(|a| a.identifier_rendered.clone());
                 if let Some(rendered) = alert_title {
-                    // The source text is an alert keyword — match against the
-                    // rendered title instead.
                     let src_start = pending_buf.iter().map(|(_, r)| r.start).min().unwrap_or(0);
                     let src_end = pending_buf.iter().map(|(_, r)| r.end).max().unwrap_or(0);
                     let alert_src_range = src_start..src_end;
@@ -1248,33 +1287,32 @@ impl CommonMarkCache {
             }};
         }
 
+        // ── Main loop ────────────────────────────────────────────────────────
+
         for (event, range) in parser {
-            // Update blockquote alert state for every event before filtering.
+            // Blockquote alert state machine (borrows event, does not consume).
             match &event {
                 pulldown_cmark::Event::Start(pulldown_cmark::Tag::BlockQuote(_)) => {
-                    // Flush any buffer from a previous context (safety: normally
-                    // empty because Start(Para) → SoftBreak/End(Para) would have
-                    // already flushed, but guard against edge-cases).
+                    flush_run!();
                     flush_pending!();
-                    bq_stack.push(false); // header not yet seen at this level
+                    bq_stack.push(false);
                     in_bq_first_run = false;
                 }
                 pulldown_cmark::Event::End(pulldown_cmark::TagEnd::BlockQuote(_)) => {
-                    flush_pending!(); // safety flush
+                    flush_run!();
+                    flush_pending!();
                     in_bq_first_run = false;
                     bq_stack.pop();
                 }
                 pulldown_cmark::Event::Start(pulldown_cmark::Tag::Paragraph)
                     if bq_stack.last() == Some(&false) =>
                 {
-                    // First paragraph of this blockquote level; start buffering.
                     in_bq_first_run = true;
                     pending_buf.clear();
                 }
                 pulldown_cmark::Event::End(pulldown_cmark::TagEnd::Paragraph)
                     if in_bq_first_run =>
                 {
-                    // End of first para (has_extra_line case in parse_alerts).
                     decide_alert_matches!();
                     in_bq_first_run = false;
                     if let Some(seen) = bq_stack.last_mut() {
@@ -1284,34 +1322,61 @@ impl CommonMarkCache {
                 pulldown_cmark::Event::SoftBreak | pulldown_cmark::Event::HardBreak
                     if in_bq_first_run =>
                 {
-                    // First break in first para (SoftBreak case in parse_alerts).
                     decide_alert_matches!();
                     in_bq_first_run = false;
                     if let Some(seen) = bq_stack.last_mut() {
                         *seen = true;
                     }
+                    // The break itself is not rendered content; skip event processing.
+                    continue;
                 }
                 _ => {}
             }
 
-            let (pulldown_cmark::Event::Text(text) | pulldown_cmark::Event::Code(text)) = event
-            else {
-                continue;
-            };
-
-            if in_bq_first_run {
-                // Buffer; decision deferred until we see a break or end-of-para.
-                pending_buf.push((text.to_string(), range));
-            } else {
-                for m in regex.find_iter(&text) {
-                    self.search_ranges
-                        .push(range.start + m.start()..range.start + m.end());
+            // Inline-run management (consumes event).
+            match event {
+                pulldown_cmark::Event::Text(text) | pulldown_cmark::Event::Code(text) => {
+                    if in_bq_first_run {
+                        // Buffer until we know whether this is an alert keyword.
+                        pending_buf.push((text.to_string(), range));
+                    } else {
+                        let off = run_text.len();
+                        run_text.push_str(&text);
+                        run_segs.push((off, range));
+                    }
+                }
+                pulldown_cmark::Event::SoftBreak => {
+                    // A soft break renders as a space; fold it into the run so
+                    // that "foo bar" matches across a soft line-wrap.
+                    if !in_bq_first_run {
+                        run_text.push(' ');
+                    }
+                }
+                // Inline formatting markers carry no text of their own but do
+                // not break the visual line. Treat them as transparent so that
+                // a query like "with syntect" matches across a link boundary
+                // (e.g. "with [`syntect`](url)") or emphasis markers.
+                pulldown_cmark::Event::Start(
+                    pulldown_cmark::Tag::Emphasis
+                    | pulldown_cmark::Tag::Strong
+                    | pulldown_cmark::Tag::Strikethrough
+                    | pulldown_cmark::Tag::Link { .. },
+                )
+                | pulldown_cmark::Event::End(
+                    pulldown_cmark::TagEnd::Emphasis
+                    | pulldown_cmark::TagEnd::Strong
+                    | pulldown_cmark::TagEnd::Strikethrough
+                    | pulldown_cmark::TagEnd::Link,
+                ) => {}
+                _ => {
+                    // Any other event ends the current inline run.
+                    flush_run!();
                 }
             }
         }
 
-        // Flush any text that was buffered but never followed by a break
-        // (e.g. a blockquote paragraph that is the very last thing in the doc).
+        // End of document: flush whatever is still open.
+        flush_run!();
         decide_alert_matches!();
 
         if self.search_ranges.is_empty() {

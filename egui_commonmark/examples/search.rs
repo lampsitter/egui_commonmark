@@ -20,6 +20,10 @@ Use **Prev (Shift-Enter)** and **Next (Enter)** to step through matches.
 >    1. Try searching for "crate" or "as" to see image matches on image Alt text as well as search scrolling behavior.
 >    2. Try searching text in different text types in the various sections from the included example markdown files below.
 >    3. Try the case-sensitive, whole-word and regex searches by toggling their respective icons.
+>    4. Try searching "book example" and "with syntect syntax" to check matching across embedded code and link anchors.
+
+> [!CAUTION]
+>    With the exceptions in 4. above, matching across style categories is not supported.
 
 "#;
 
@@ -89,10 +93,11 @@ impl eframe::App for App {
                     self.search_focus = !self.search_focus;
                 } else if search_escape {
                     self.search_focus = false;
+                } else if response.gained_focus() {
+                    // User clicked or tabbed into the box.
+                    self.search_focus = true;
                 } else if response.lost_focus() {
-                    // The user clicked away or Enter caused the single-line
-                    // TextEdit to surrender focus naturally — honour that
-                    // instead of fighting to keep the box focused.
+                    // Clicked away or Enter surrendered focus naturally.
                     self.search_focus = false;
                 }
                 if self.search_focus {
@@ -261,7 +266,11 @@ fn main() -> eframe::Result {
 
 {wide_table}
 
-        "
+---
+
+## Embedded link
+
+Syntax highlighting inside code blocks with [`syntect`](https://crates.io/crates/syntect) syntax highlighting library."
     );
 
     eframe::run_native(
