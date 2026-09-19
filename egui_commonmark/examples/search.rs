@@ -47,7 +47,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 
 struct App {
     cache: CommonMarkCache,
-    search_focus: bool,
     egui_source_id: String,
     content: String,
 }
@@ -90,20 +89,17 @@ impl eframe::App for App {
 
                 let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
                 if cmd_f {
-                    self.search_focus = !self.search_focus;
+                    // Toggle: release if focused, grab if not.
+                    if response.has_focus() {
+                        response.surrender_focus();
+                    } else {
+                        response.request_focus();
+                    }
                 } else if search_escape {
-                    self.search_focus = false;
-                } else if response.gained_focus() {
-                    // User clicked or tabbed into the box.
-                    self.search_focus = true;
-                } else if response.lost_focus() {
-                    // Clicked away or Enter surrendered focus naturally.
-                    self.search_focus = false;
-                }
-                if self.search_focus {
-                    response.request_focus();
-                } else {
                     response.surrender_focus();
+                } else if enter_pressed {
+                    // Re-grab focus after Enter so repeated presses keep working.
+                    response.request_focus();
                 }
 
                 let match_count = self.cache.search_ranges().len();
@@ -288,7 +284,6 @@ Syntax highlighting inside code blocks with [`syntect`](https://crates.io/crates
                 cache: CommonMarkCache::default(),
                 egui_source_id: String::from("search_example"),
                 content,
-                search_focus: true,
             }))
         }),
     )
