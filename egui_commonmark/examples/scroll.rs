@@ -13,63 +13,75 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 
 struct App {
     cache: CommonMarkCache,
-    content: String,
+    egui_source_id: String,
     viewport_cache: bool,
+    content: String,
 }
+
+impl App {}
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         ui.set_min_height(512.0);
 
+        egui::Panel::top("search_bar").show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Search:");
+                let response = ui.text_edit_singleline(&mut self.cache.search_query);
+                if response.changed() {
+                    self.cache
+                        .update_search_matches(&self.egui_source_id, &self.content);
+                }
+                // Re-request focus so that repeated Enter presses keep working without having to
+                // click back into the box each time.
+                let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
+                if enter_pressed {
+                    response.request_focus();
+                }
+
+                let match_count = self.cache.search_ranges().len();
+                ui.label(match self.cache.active_match() {
+                    Some(i) if match_count > 0 => format!("{}/{match_count}", i + 1),
+                    _ => format!("0/{match_count}"),
+                });
+
+                if ui.button("Previous").clicked()
+                    || (enter_pressed && ui.input(|i| i.modifiers.shift))
+                {
+                    self.cache.go_to_match(-1);
+                }
+                if ui.button("Next").clicked()
+                    || (enter_pressed && !ui.input(|i| i.modifiers.shift))
+                {
+                    self.cache.go_to_match(1);
+                }
+            });
+        });
+
         egui::CentralPanel::default().show(ui, |ui| {
             ui.style_mut().spacing.scroll = egui::style::ScrollStyle::thin();
 
-            let (
-                scroll_line_up,
-                scroll_line_down,
-                scroll_page_up,
-                scroll_page_down,
-                scroll_doc_top,
-                scroll_doc_bottom,
-            ) = ui.ctx().input(|i| {
-                use egui::Key;
-                (
-                    !i.modifiers.command && i.key_pressed(Key::ArrowUp),
-                    !i.modifiers.command && i.key_pressed(Key::ArrowDown),
-                    i.key_pressed(Key::PageUp),
-                    i.key_pressed(Key::PageDown),
-                    i.key_pressed(Key::Home)
-                        || (i.modifiers.command && i.key_pressed(Key::ArrowUp)),
-                    i.key_pressed(Key::End)
-                        || (i.modifiers.command && i.key_pressed(Key::ArrowDown)),
-                )
-            });
+            // Handle any keyboard scrolling requests.
+            let user_scrolled = self.cache.handle_keyboard_scrolling(ui);
 
-            // Only act on scroll keys when no text field has focus.
-            if !ui.ctx().egui_wants_keyboard_input() {
-                let line_h = ui.text_style_height(&egui::TextStyle::Body);
-                let page_h = ui.available_height();
-                if scroll_line_up {
-                    self.cache.set_scroll_delta(egui::vec2(0.0, line_h));
-                } else if scroll_line_down {
-                    self.cache.set_scroll_delta(egui::vec2(0.0, -line_h));
-                } else if scroll_page_up {
-                    self.cache.set_scroll_delta(egui::vec2(0.0, page_h));
-                } else if scroll_page_down {
-                    self.cache.set_scroll_delta(egui::vec2(0.0, -page_h));
-                } else if scroll_doc_top {
-                    self.cache.set_scroll_delta(egui::vec2(0.0, f32::MAX / 2.0));
-                } else if scroll_doc_bottom {
-                    self.cache
-                        .set_scroll_delta(egui::vec2(0.0, -f32::MAX / 2.0));
-                }
-            }
-
+            // `show_scrollable` will automatically scroll by any accumulated scroll amount
+            // before rendering
             CommonMarkViewer::new()
                 .max_image_width(Some(512))
                 .enable_scroll_to_heading(true)
                 .viewport_cache(self.viewport_cache)
-                .show_scrollable("scroll_example", ui, &mut self.cache, &self.content);
+                .show_scrollable(&self.egui_source_id, ui, &mut self.cache, &self.content);
+
+            // Optionally anchor any current search to the current viewport so that Next/Previous will
+            // continue from there instead of from its previous location.
+            // This call does not affect new searches. In `show-scrollable` mode these will always be
+            // anchored to the current viewport because the `egui_source_id` is passed in, whether or not
+            // the relevant sync active match method is called or `viewport_cache` is enabled.
+            self.cache.sync_scrollable_active_match(
+                &self.egui_source_id,
+                self.viewport_cache,
+                user_scrolled,
+            );
         });
     }
 }
@@ -98,8 +110,9 @@ fn main() -> eframe::Result {
             }
             Ok(Box::new(App {
                 cache: CommonMarkCache::default(),
-                content,
+                egui_source_id: String::from("scroll_example"),
                 viewport_cache,
+                content,
             }))
         }),
     )

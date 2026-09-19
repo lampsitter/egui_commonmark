@@ -1,4 +1,6 @@
 use egui::{self, NumExt, RichText, Sense, TextBuffer, TextStyle, Ui, Vec2, epaint};
+use egui::{Color32, Pos2, Rect, WidgetText, text::CCursor};
+use std::ops::Range;
 
 #[inline]
 pub fn rule(ui: &mut Ui, end_line: bool) {
@@ -86,13 +88,115 @@ fn width_body_space(ui: &Ui) -> f32 {
     ui.fonts_mut(|f| f.glyph_width(&id, ' '))
 }
 
-/// Enhanced/specialized version of egui's code blocks. This one features copy button and borders
+/// Render a run of text as a single label, optionally painting search-match
+/// backgrounds behind some of its characters.
+///
+/// This always creates exactly one widget, regardless of how many (if any)
+/// `intervals` are supplied, so that toggling or changing search matches
+/// never shifts egui's auto-generated widget IDs for subsequent widgets.
+///
+/// Returns the widget's response, the on-screen rect of the active match
+/// (if `intervals` contains one), and a `Vec` with one `Option<Rect>` per
+/// interval (in the same order as `intervals`): `Some(rect)` for each
+/// match whose byte range is non-empty, `None` otherwise. All rects are
+/// computed unconditionally even when the label is outside the clip rect,
+/// so callers can use them to track match positions during scrolling.
+pub fn label_with_search_highlight(
+    ui: &mut Ui,
+    text: RichText,
+    intervals: &[(Range<usize>, bool)],
+    match_bg: Color32,
+    active_bg: Color32,
+) -> (egui::Response, Option<Rect>, Vec<Option<Rect>>) {
+    let widget_text: WidgetText = if intervals.is_empty() {
+        text.into()
+    } else {
+        let valign = ui.text_valign();
+        let job_arc: std::sync::Arc<egui::text::LayoutJob> = WidgetText::from(text)
+            .into_layout_job(ui.style(), egui::FontSelection::Default, valign);
+        let mut job = std::sync::Arc::unwrap_or_clone(job_arc);
+        crate::search::apply_search_highlights(&mut job, intervals, match_bg, active_bg);
+        job.into()
+    };
+
+    let (pos, galley, response) = egui::Label::new(widget_text).layout_in_ui(ui);
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Label, ui.is_enabled(), galley.text())
+    });
+
+    // Compute rects for all intervals unconditionally: `pos` and `galley` hold
+    // valid screen-coordinate data even when the label is outside the clip
+    // rect. The active-match rect is used to scroll it into view; the full
+    // set is returned so callers can track every match's position during
+    // scrolling. Only the *painting* step below stays inside `is_rect_visible`.
+    let all_rects: Vec<Option<Rect>> = intervals
+        .iter()
+        .map(|(range, _)| highlight_rect_for_byte_range(&galley, pos, range.clone()))
+        .collect();
+    let active_rect = intervals
+        .iter()
+        .enumerate()
+        .find(|(_, (_, active))| *active)
+        .and_then(|(i, _)| all_rects[i]);
+
+    if ui.is_rect_visible(response.rect) {
+        let response_color = ui.style().visuals.text_color();
+        let selectable = ui.style().interaction.selectable_labels;
+        if selectable {
+            egui::text_selection::LabelSelectionState::label_text_selection(
+                ui,
+                &response,
+                pos,
+                galley,
+                response_color,
+                egui::Stroke::NONE,
+            );
+        } else {
+            ui.painter()
+                .add(epaint::TextShape::new(pos, galley, response_color));
+        }
+    }
+
+    (response, active_rect, all_rects)
+}
+
+/// The rect (in screen coordinates) spanned by the given byte range within
+/// `galley`'s text, or `None` if the range is empty. Used to scroll the
+/// active search match into view and to record per-match virtual-Y positions.
+pub fn highlight_rect_for_byte_range(
+    galley: &std::sync::Arc<egui::Galley>,
+    pos: Pos2,
+    local_byte_range: Range<usize>,
+) -> Option<Rect> {
+    let text = &galley.job.text;
+    if local_byte_range.start >= local_byte_range.end {
+        return None;
+    }
+
+    let char_count_up_to = |byte_idx: usize| -> usize {
+        text.get(..byte_idx.min(text.len()))
+            .map_or_else(|| text.chars().count(), |s| s.chars().count())
+    };
+
+    let start_char = char_count_up_to(local_byte_range.start);
+    let end_char = char_count_up_to(local_byte_range.end);
+
+    let start_rect = galley.pos_from_cursor(CCursor::new(start_char));
+    let end_rect = galley.pos_from_cursor(CCursor::new(end_char));
+
+    Some(Rect::from_two_pos(start_rect.min, end_rect.max).translate(pos.to_vec2()))
+}
+
+/// Enhanced/specialized version of egui's code blocks. This one features copy button and borders.
+/// Returns `(galley_pos, galley)` so the caller can compute per-match virtual-Y positions via
+/// [`highlight_rect_for_byte_range`] without a second layout pass.
 pub fn code_block<'t>(
     ui: &mut Ui,
     max_width: f32,
     text: &str,
     layouter: &'t mut dyn FnMut(&Ui, &dyn TextBuffer, f32) -> std::sync::Arc<egui::Galley>,
-) {
+    scroll_to_active_match: Option<Range<usize>>,
+) -> (egui::Pos2, std::sync::Arc<egui::Galley>) {
     let mut text = text.strip_suffix('\n').unwrap_or(text);
 
     // To manually add background color to the code block, we imitate what
@@ -108,6 +212,12 @@ pub fn code_block<'t>(
         // prevent trailing lines
         .desired_rows(1)
         .show(ui);
+
+    if let Some(range) = scroll_to_active_match
+        && let Some(rect) = highlight_rect_for_byte_range(&output.galley, output.galley_pos, range)
+    {
+        ui.scroll_to_rect(rect, Some(egui::Align::Center));
+    }
 
     // Background color + frame (This is lost when TextEdit it not editable)
     let frame_rect = output.response.rect;
@@ -176,6 +286,8 @@ pub fn code_block<'t>(
         };
         ui.copy_text(copy_text);
     }
+
+    (output.galley_pos, output.galley)
 }
 
 // Stripped down version of egui's Checkbox. The only difference is that this

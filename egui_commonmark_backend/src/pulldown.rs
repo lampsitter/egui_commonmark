@@ -4,15 +4,95 @@ use pulldown_cmark::Options;
 use std::collections::HashMap;
 use std::ops::Range;
 
+/// One recorded block boundary used by the viewport-culling and search
+/// machinery. Every top-level block (paragraph, heading, code block) that
+/// sits at a safe renderer restart point gets one entry.
+#[derive(Debug, Clone)]
+pub struct SplitPoint {
+    /// Index of this block's end-event in the flat event stream. Used to
+    /// skip past already-rendered blocks when starting a viewport slice.
+    pub event_index: usize,
+    /// Virtual start position of this block (content-relative; Y = 0 is the
+    /// document top). Captured at the `Start` event so it reflects the block
+    /// top rather than the cursor position just before the `End` event.
+    pub vstart: Pos2,
+    /// Virtual end position of this block.
+    pub vend: Pos2,
+    /// Source byte range of this block in the original document text. Lets
+    /// [`ScrollableCache::virtual_y_for_byte_offset`] approximate on-screen
+    /// positions of arbitrary offsets (e.g. search matches) without a fresh
+    /// full render.
+    pub src_span: Range<usize>,
+}
+
 #[derive(Default, Debug)]
 pub struct ScrollableCache {
     pub available_size: Vec2,
     pub page_size: Option<Vec2>,
-    pub split_points: Vec<(usize, Pos2, Pos2)>,
-    /// Heading slug → virtual y (content-relative; 0 = document top).
+    /// One [`SplitPoint`] per top-level block at a safe renderer restart
+    /// boundary, in document order.
+    pub split_points: Vec<SplitPoint>,
+    /// Heading slug → virtual Y (content-relative; 0 = document top).
     /// Populated during the full render; used by the viewport path to
     /// scroll to headings outside the currently rendered slice.
     pub heading_y_positions: HashMap<String, f32>,
+    /// The most recent viewport top Y (virtual, content-relative), recorded
+    /// every frame the cheap viewport-only path renders. Lets callers
+    /// approximate "what's currently visible" (e.g. to implement search
+    /// that starts from the current scroll position) via
+    /// [`Self::byte_offset_for_virtual_y`].
+    pub last_viewport_top_y: f32,
+    /// Height of the viewport on the most recent frame, in the same virtual
+    /// coordinate space as `last_viewport_top_y`. Together they define the visible
+    /// interval `[last_viewport_top_y, last_viewport_top_y + last_viewport_height)`.
+    pub last_viewport_height: f32,
+}
+
+impl ScrollableCache {
+    /// Approximate the virtual Y (content-relative; 0 = document top) of a
+    /// byte offset in the source text, using the split points collected
+    /// during the last full render. This never requires a fresh render: at
+    /// worst (e.g. a byte offset inside a large, untracked container like a
+    /// list or table) it falls back to the nearest preceding tracked block,
+    /// which is the same granularity the viewport-slice calculation itself
+    /// already uses.
+    ///
+    /// Returns `None` only if there are no split points at all yet (i.e. no
+    /// full render has happened), in which case the caller has no choice
+    /// but to wait for one.
+    pub fn virtual_y_for_byte_offset(&self, offset: usize) -> Option<f32> {
+        if let Some(sp) = self
+            .split_points
+            .iter()
+            .find(|sp| sp.src_span.contains(&offset))
+        {
+            return Some(sp.vstart.y);
+        }
+
+        // Not inside any tracked block, e.g. it's inside a list/table/
+        // blockquote, which aren't tracked individually. Use the nearest
+        // preceding tracked block as a reasonable approximation, same as
+        // `show_scrollable`'s own slice calculation does.
+        self.split_points
+            .iter()
+            .rev()
+            .find(|sp| sp.src_span.start <= offset)
+            .map(|sp| sp.vstart.y)
+            .or_else(|| self.split_points.first().map(|sp| sp.vstart.y))
+    }
+
+    /// The inverse of [`Self::virtual_y_for_byte_offset`]: approximate the
+    /// source byte offset of whatever is at (or just before) the given
+    /// virtual Y, using the same split points. Returns `None` only if there
+    /// are no split points at all yet.
+    pub fn byte_offset_for_virtual_y(&self, y: f32) -> Option<usize> {
+        self.split_points
+            .iter()
+            .rev()
+            .find(|sp| sp.vstart.y <= y)
+            .map(|sp| sp.src_span.start)
+            .or_else(|| self.split_points.first().map(|sp| sp.src_span.start))
+    }
 }
 
 pub type EventIteratorItem<'e> = (usize, (pulldown_cmark::Event<'e>, Range<usize>));
@@ -115,7 +195,7 @@ pub fn parse_table<'e>(events: &mut impl Iterator<Item = EventIteratorItem<'e>>)
     Table { header, rows }
 }
 
-/// try to parse events as an alert quote block. This ill modify the events
+/// try to parse events as an alert quote block. This will modify the events
 /// to remove the parsed text that should not be rendered.
 /// Assumes that the first element is a Paragraph
 pub fn parse_alerts<'a>(

@@ -10,6 +10,8 @@ pub mod elements;
 pub mod misc;
 #[doc(hidden)]
 pub mod pulldown;
+#[doc(hidden)]
+pub mod search;
 
 #[cfg(feature = "embedded_image")]
 mod data_url_loader;
@@ -23,8 +25,8 @@ pub use {
     misc::{CodeBlock, CommonMarkOptions, Image, Link, prepare_show},
 };
 
-// The only struct that is allowed to use directly. (If one does not need egui_commonmark)
-pub use misc::CommonMarkCache;
+// The only structs that may be used directly. (If one does not need egui_commonmark)
+pub use misc::{CommonMarkCache, SearchOptions};
 
 #[cfg(feature = "better_syntax_highlighting")]
 pub use syntect;

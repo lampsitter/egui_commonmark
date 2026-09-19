@@ -79,7 +79,7 @@ mod parsers;
 pub use egui_commonmark_backend::RenderHtmlFn;
 pub use egui_commonmark_backend::RenderMathFn;
 pub use egui_commonmark_backend::alerts::{Alert, AlertBundle};
-pub use egui_commonmark_backend::misc::CommonMarkCache;
+pub use egui_commonmark_backend::misc::{CommonMarkCache, SearchOptions};
 
 #[cfg(feature = "better_syntax_highlighting")]
 pub use egui_commonmark_backend::syntect;
@@ -243,7 +243,29 @@ impl<'f> CommonMarkViewer<'f> {
         self
     }
 
-    /// Shows rendered markdown
+    /// Override the background colour used to highlight passive (non-active)
+    /// search matches (see [`CommonMarkCache::set_search_ranges`]). By
+    /// default a theme-derived colour is used, so this is only needed if you
+    /// want something else.
+    pub fn search_match_color(mut self, color: egui::Color32) -> Self {
+        self.options.search_match_bg = Some(color);
+        self
+    }
+
+    /// Override the background colour used to highlight the active (focused)
+    /// search match (see [`CommonMarkCache::set_active_search_range`]). By
+    /// default a theme-derived colour is used, so this is only needed if you
+    /// want something else.
+    pub fn search_active_match_color(mut self, color: egui::Color32) -> Self {
+        self.options.search_active_match_bg = Some(color);
+        self
+    }
+
+    /// Shows rendered markdown.
+    ///
+    /// For viewport-aware search (anchoring new searches to the current scroll
+    /// position rather than the document top), use
+    /// [`show_with_id`](Self::show_with_id) instead.
     pub fn show(
         self,
         ui: &mut egui::Ui,
@@ -261,6 +283,34 @@ impl<'f> CommonMarkViewer<'f> {
         );
 
         response
+    }
+
+    /// Like [`show`](Self::show), but tracks the viewport position so that
+    /// [`update_search_matches`](CommonMarkCache::update_search_matches) anchors
+    /// new searches to the current scroll location instead of always starting
+    /// from the document top.
+    ///
+    /// `source_id` must be stable across frames and unique to this viewer
+    /// instance. Pass the same string to `update_search_matches` and
+    /// [`sync_active_match`](CommonMarkCache::sync_active_match).
+    ///
+    /// Split-point positions are cached and are only rebuilt when the available
+    /// width changes, so the overhead is paid only on the first frame and
+    /// after window resizes.
+    ///
+    /// For large documents where rendering the full content every frame is too
+    /// slow, prefer [`show_scrollable`](Self::show_scrollable), which shares
+    /// the same viewport-tracking capability but additionally renders only the
+    /// visible slice each frame.
+    pub fn show_with_id(
+        mut self,
+        source_id: impl egui::AsId,
+        ui: &mut egui::Ui,
+        cache: &mut CommonMarkCache,
+        text: &str,
+    ) -> egui::InnerResponse<()> {
+        self.options.source_id = Some(egui::Id::new(source_id));
+        self.show(ui, cache, text)
     }
 
     /// Shows rendered markdown, and allows the rendered ui to mutate the source text.
@@ -301,13 +351,6 @@ impl<'f> CommonMarkViewer<'f> {
     /// Shows markdown inside a [`ScrollArea`].
     /// This function is much more performant than just calling [`show`] inside a [`ScrollArea`],
     /// because it only renders elements that are visible.
-    ///
-    /// # Caveat
-    ///
-    /// This assumes that the markdown is static. If it does change, you have to clear the cache
-    /// by using [`clear_scrollable_with_id`](CommonMarkCache::clear_scrollable_with_id) or
-    /// [`clear_scrollable`](CommonMarkCache::clear_scrollable). If the content changes every frame,
-    /// it's faster to call [`show`] directly.
     ///
     /// [`ScrollArea`]: egui::ScrollArea
     /// [`show`]: crate::CommonMarkViewer::show
