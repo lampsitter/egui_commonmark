@@ -352,7 +352,6 @@ impl<'f> CommonMarkViewer<'f> {
     ///
     /// [`ScrollArea`]: egui::ScrollArea
     /// [`show`]: crate::CommonMarkViewer::show
-    #[cfg(feature = "pulldown_cmark")]
     pub fn show_scrollable(
         mut self,
         id: egui::Id,
