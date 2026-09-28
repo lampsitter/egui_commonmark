@@ -21,9 +21,9 @@ egui_extras = { workspace = true }
 egui = { workspace = true }
 
 data-url = {  version = "0.3.1", optional = true }
-syntect = { version = "=5.3.0", optional = true, default-features = false, features = [
+syntect = { version = "5.0.0", optional = true, default-features = false, features = [
     "default-fancy",
-] } # Pinned to ensure it won't pull a newer fancy-regex without us changing ours below.
+] }
 fancy-regex = { version = "0.16", optional = true }   # NB: Keep this dep aligned with syntect
 
 bitflags = "2"
