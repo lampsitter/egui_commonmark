@@ -20,7 +20,7 @@
   - `search_regex_error(&Id) -> Option<String>` — surface regex parse errors.
   - `sync_active_match(&Id, bool)` / `sync_scrollable_active_match(&Id, bool, bool)`
     — re-anchor the active match to the viewport after manual scrolling.
-  
+
     ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
 - `SearchOptions` bitflags (`CASE_SENSITIVE`, `WHOLE_WORD`, `REGEX`) to
   configure the search mode. ([#106](https://github.com/lampsitter/egui_commonmark/pull/106)
@@ -41,12 +41,17 @@
   trigger a scroll-to-heading, e.g. when a separate TOC widget is clicked.
     ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
 
+- Added `CommonMarkScrollOptions`.
+
+
 ### Changed
 
 - `show_scrollable` now takes `egui::Id` directly (breaking)
     ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
 - `clear_scrollable_with_id` / `clear_scrollable` are renamed to `clear_viewer` / `clear_viewers` (breaking)
     ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+- `show_scrollable` now takes a `CommonMarkScrollOptions` for allowing control of a subset
+    `ScrollArea` options.
 
 ### Fixed
 

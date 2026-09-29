@@ -383,18 +383,39 @@ impl CommonMarkViewerInternal {
         content_origin_y
     }
 
+    fn create_scroll_area(
+        scroll_id: Id,
+        scroll_options: &crate::CommonMarkScrollOptions,
+    ) -> egui::ScrollArea {
+        let mut scroll_area = egui::ScrollArea::new([scroll_options.horizontal_scrolling, true])
+            .id_salt(scroll_id)
+            // Elements have different widths, so the scroll area cannot try to shrink to the
+            // content, as that will mean that the scroll bar will move when loading elements
+            // with different widths.
+            .auto_shrink([false, true])
+            .scroll_source(scroll_options.scroll_source)
+            .wheel_scroll_multiplier(scroll_options.wheel_scroll_multiplier);
+
+        if let Some(margin) = scroll_options.content_margin {
+            scroll_area = scroll_area.content_margin(margin);
+        }
+
+        scroll_area
+    }
+
     pub(crate) fn show_scrollable(
         &mut self,
         source_id: Id,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
         options: &CommonMarkOptions,
+        scroll_options: &crate::CommonMarkScrollOptions,
         text: &str,
     ) {
         let available_size = ui.available_size();
         let scroll_id = source_id.with("_scroll_area");
 
-        if !options.use_viewport_cache {
+        if !scroll_options.use_viewport_cache {
             // Full-document render every frame; egui clips what is off-screen.
             // Split points are maintained for `viewport_start_byte_offset` (search
             // anchoring), rebuilt only on width change — matching egui's own
@@ -411,35 +432,33 @@ impl CommonMarkViewerInternal {
                 }
                 rebuild
             };
-            egui::ScrollArea::vertical()
-                .id_salt(scroll_id)
-                .auto_shrink([false, true])
-                .show(ui, |ui| {
-                    // Capture viewport top before content is placed; `clip_rect`
-                    // already reflects the current scroll position.
-                    #[cfg(feature = "regex")]
-                    let viewport_top_y = ui.clip_rect().min.y - ui.next_widget_position().y;
-                    let vc = viewer_cache(cache, &source_id);
-                    apply_pending_scroll_delta(vc, ui);
-                    let sid = if needs_rebuild { Some(source_id) } else { None };
 
-                    self.show(ui, cache, options, text, sid);
+            Self::create_scroll_area(scroll_id, scroll_options).show(ui, |ui| {
+                // Capture viewport top before content is placed; `clip_rect`
+                // already reflects the current scroll position.
+                #[cfg(feature = "regex")]
+                let viewport_top_y = ui.clip_rect().min.y - ui.next_widget_position().y;
+                let vc = viewer_cache(cache, &source_id);
+                apply_pending_scroll_delta(vc, ui);
+                let sid = if needs_rebuild { Some(source_id) } else { None };
 
-                    if needs_rebuild {
-                        // `show()` sets page_size as a side-effect of receiving
-                        // `Some(source_id)`; clear it so the next frame still
-                        // takes this full-render path, not the viewport-slice one.
-                        viewer_cache(cache, &source_id).page_size = None;
-                    }
+                self.show(ui, cache, options, text, sid);
 
-                    // Keep last_viewport_top_y in sync for viewport_start_byte_offset.
-                    #[cfg(feature = "regex")]
-                    {
-                        viewer_cache(cache, &source_id)
-                            .search_cache
-                            .last_viewport_top_y = viewport_top_y;
-                    }
-                });
+                if needs_rebuild {
+                    // `show()` sets page_size as a side-effect of receiving
+                    // `Some(source_id)`; clear it so the next frame still
+                    // takes this full-render path, not the viewport-slice one.
+                    viewer_cache(cache, &source_id).page_size = None;
+                }
+
+                // Keep last_viewport_top_y in sync for viewport_start_byte_offset.
+                #[cfg(feature = "regex")]
+                {
+                    viewer_cache(cache, &source_id)
+                        .search_cache
+                        .last_viewport_top_y = viewport_top_y;
+                }
+            });
             return;
         }
 
@@ -447,13 +466,11 @@ impl CommonMarkViewerInternal {
         // Extract page_size in a short scope so `cache` is free for the else closure.
         let page_size = viewer_cache(cache, &source_id).page_size;
         let Some(page_size) = page_size else {
-            egui::ScrollArea::vertical()
-                .id_salt(scroll_id)
-                .auto_shrink([false, true])
-                .show(ui, |ui| {
-                    apply_pending_scroll_delta(viewer_cache(cache, &source_id), ui);
-                    self.show(ui, cache, options, text, Some(source_id));
-                });
+            Self::create_scroll_area(scroll_id, scroll_options).show(ui, |ui| {
+                apply_pending_scroll_delta(viewer_cache(cache, &source_id), ui);
+                self.show(ui, cache, options, text, Some(source_id));
+            });
+
             viewer_cache(cache, &source_id).available_size = available_size;
             return;
         };
@@ -1602,7 +1619,7 @@ mod perf_tests {
     use egui::Id;
 
     use super::*;
-    use crate::{CommonMarkCache, CommonMarkViewer};
+    use crate::{CommonMarkCache, CommonMarkScrollOptions, CommonMarkViewer};
 
     /// Returns the number of full-document renders recorded for `id`
     /// since the process started (or since the entry was first created). Each
@@ -1661,9 +1678,13 @@ mod perf_tests {
         // Frame 0: cold render, populates page_size/split_points. Not timed.
         let output = ctx.run_ui(windowed_input(), |ui| {
             ui.set_min_height(600.0);
-            CommonMarkViewer::new()
-                .viewport_cache(true)
-                .show_scrollable(source_id, ui, &mut cache, &doc);
+            CommonMarkViewer::new().show_scrollable(
+                source_id,
+                ui,
+                &mut cache,
+                &CommonMarkScrollOptions::default().viewport_cache(true),
+                &doc,
+            );
         });
         output.drop_without_applying_deltas();
 
@@ -1680,10 +1701,15 @@ mod perf_tests {
             let click_start = std::time::Instant::now();
             let output = ctx.run_ui(windowed_input(), |ui| {
                 ui.set_min_height(600.0);
-                CommonMarkViewer::new()
-                    .viewport_cache(true)
-                    .show_scrollable(source_id, ui, &mut cache, &doc);
+                CommonMarkViewer::new().show_scrollable(
+                    source_id,
+                    ui,
+                    &mut cache,
+                    &CommonMarkScrollOptions::default().viewport_cache(true),
+                    &doc,
+                );
             });
+
             output.drop_without_applying_deltas();
             worst = worst.max(click_start.elapsed());
         }
@@ -1727,9 +1753,13 @@ mod perf_tests {
         // page_size/split_points.
         let output = ctx.run_ui(windowed_input(), |ui| {
             ui.set_min_height(600.0);
-            CommonMarkViewer::new()
-                .viewport_cache(true)
-                .show_scrollable(viewer_id, ui, &mut cache, &doc);
+            CommonMarkViewer::new().show_scrollable(
+                viewer_id,
+                ui,
+                &mut cache,
+                &CommonMarkScrollOptions::default().viewport_cache(true),
+                &doc,
+            );
         });
         output.drop_without_applying_deltas();
 
@@ -1743,10 +1773,15 @@ mod perf_tests {
             let frame_start = std::time::Instant::now();
             let output = ctx.run_ui(windowed_input(), |ui| {
                 ui.set_min_height(600.0);
-                CommonMarkViewer::new()
-                    .viewport_cache(true)
-                    .show_scrollable(viewer_id, ui, &mut cache, &doc);
+                CommonMarkViewer::new().show_scrollable(
+                    viewer_id,
+                    ui,
+                    &mut cache,
+                    &CommonMarkScrollOptions::default().viewport_cache(true),
+                    &doc,
+                );
             });
+
             output.drop_without_applying_deltas();
             worst = worst.max(frame_start.elapsed());
         }
@@ -1802,9 +1837,13 @@ mod perf_tests {
         for _ in 0..FRAMES {
             let output = ctx.run_ui(windowed_input(), |ui| {
                 ui.set_min_height(600.0);
-                CommonMarkViewer::new()
-                    .viewport_cache(true)
-                    .show_scrollable(viewer_id, ui, &mut cache, &doc);
+                CommonMarkViewer::new().show_scrollable(
+                    viewer_id,
+                    ui,
+                    &mut cache,
+                    &CommonMarkScrollOptions::default().viewport_cache(true),
+                    &doc,
+                );
             });
             output.drop_without_applying_deltas();
         }

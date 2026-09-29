@@ -94,6 +94,73 @@ pub use egui_commonmark_backend;
 
 use egui_commonmark_backend::*;
 
+#[derive(Debug, PartialEq)]
+pub struct CommonMarkScrollOptions {
+    scroll_source: egui::scroll_area::ScrollSource,
+    wheel_scroll_multiplier: egui::Vec2,
+    /// egui defaults to styling.scroll.scroll_margin when content margin is not set, so we have
+    /// to use an option to not override that behaviour.
+    content_margin: Option<egui::Margin>,
+    horizontal_scrolling: bool,
+
+    /// When `true`, `show_scrollable` only renders the visible slice of the
+    /// document each frame. When `false` (the default) the full document is
+    /// rendered every frame and egui clips what is off-screen.
+    pub use_viewport_cache: bool,
+}
+
+impl Default for CommonMarkScrollOptions {
+    fn default() -> Self {
+        Self {
+            scroll_source: egui::scroll_area::ScrollSource::default(),
+            wheel_scroll_multiplier: egui::Vec2::splat(1.0),
+            content_margin: None,
+            horizontal_scrolling: false,
+            use_viewport_cache: false,
+        }
+    }
+}
+
+impl CommonMarkScrollOptions {
+    /// When `true`, [`show_scrollable`] only renders the visible slice of the
+    /// document each frame, keeping large documents fast. When `false` (the
+    /// default) the full document is rendered every frame and egui clips what
+    /// is off-screen, which is simpler and sufficient for most documents.
+    ///
+    /// [`show_scrollable`]: CommonMarkViewer::show_scrollable
+    pub fn viewport_cache(mut self, enable: bool) -> Self {
+        self.use_viewport_cache = enable;
+        self
+    }
+
+    /// Enable horizontal scroll bar. By default only vertical scroll bar is enabled
+    pub fn horizontal_scrolling(mut self, enable: bool) -> Self {
+        self.horizontal_scrolling = enable;
+        self
+    }
+
+    /// See [`egui::ScrollArea::content_margin`]
+    #[inline]
+    pub fn content_margin(mut self, margin: impl Into<egui::Margin>) -> Self {
+        self.content_margin = Some(margin.into());
+        self
+    }
+
+    /// See [`egui::ScrollArea::wheel_scroll_multiplier`]
+    #[inline]
+    pub fn wheel_scroll_multiplier(mut self, multiplier: egui::Vec2) -> Self {
+        self.wheel_scroll_multiplier = multiplier;
+        self
+    }
+
+    /// See [`egui::ScrollArea::scroll_source`]
+    #[inline]
+    pub fn scroll_source(mut self, scroll_source: egui::scroll_area::ScrollSource) -> Self {
+        self.scroll_source = scroll_source;
+        self
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct CommonMarkViewer<'f> {
     options: CommonMarkOptions<'f>,
@@ -232,17 +299,6 @@ impl<'f> CommonMarkViewer<'f> {
         self
     }
 
-    /// When `true`, [`show_scrollable`] only renders the visible slice of the
-    /// document each frame, keeping large documents fast. When `false` (the
-    /// default) the full document is rendered every frame and egui clips what
-    /// is off-screen, which is simpler and sufficient for most documents.
-    ///
-    /// [`show_scrollable`]: Self::show_scrollable
-    pub fn viewport_cache(mut self, enable: bool) -> Self {
-        self.options.use_viewport_cache = enable;
-        self
-    }
-
     /// Override the background colour used to highlight passive (non-active)
     /// search matches. By default a theme-derived colour is used.
     #[cfg(feature = "regex")]
@@ -357,6 +413,7 @@ impl<'f> CommonMarkViewer<'f> {
         id: egui::Id,
         ui: &mut egui::Ui,
         cache: &mut CommonMarkCache,
+        scroll_options: &CommonMarkScrollOptions,
         text: &str,
     ) {
         // Propagate id into options so that event_text, blockquote, and
@@ -368,6 +425,7 @@ impl<'f> CommonMarkViewer<'f> {
             ui,
             cache,
             &self.options,
+            scroll_options,
             text,
         );
     }

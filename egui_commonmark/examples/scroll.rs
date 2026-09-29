@@ -9,7 +9,7 @@
 use std::env;
 
 use eframe::egui;
-use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
+use egui_commonmark::{CommonMarkCache, CommonMarkScrollOptions, CommonMarkViewer};
 
 /// Salt used to derive a stable, context-scoped [`egui::Id`] for this viewer
 /// via [`egui::Ui::make_persistent_id`]. Defined here so it is named in one
@@ -77,8 +77,13 @@ impl eframe::App for App {
             CommonMarkViewer::new()
                 .max_image_width(Some(512))
                 .enable_scroll_to_heading(true)
-                .viewport_cache(self.viewport_cache)
-                .show_scrollable(id, ui, &mut self.cache, &self.content);
+                .show_scrollable(
+                    id,
+                    ui,
+                    &mut self.cache,
+                    &CommonMarkScrollOptions::default().viewport_cache(self.viewport_cache),
+                    &self.content,
+                );
 
             // Optionally anchor any current search to the current viewport so that Next/Previous will
             // continue from there instead of from its previous location.
