@@ -60,6 +60,8 @@
   [@emilk](https://github.com/emilk))
 - Fix `show_scrollable` to support seamless scrolling of large documents
   ([#98](https://github.com/lampsitter/egui_commonmark/pull/98) by [@durbanlegend](https://github.com/durbanlegend))
+- Language in code blocks with `better_syntax_highlighting` is detected also by
+  name instead of just by file extension.
 
 ## 0.25.0 - 2026-08-05
 
