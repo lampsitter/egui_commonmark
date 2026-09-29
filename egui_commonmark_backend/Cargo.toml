@@ -26,9 +26,9 @@ syntect = { version = "5.0.0", optional = true, default-features = false, featur
 ] }
 fancy-regex = { version = "0.16", optional = true }   # NB: Keep this dep aligned with syntect
 
-bitflags = "2"
+bitflags = { version = "2", optional = true }
 
 [features]
-regex = ["dep:fancy-regex"]
+regex = ["dep:fancy-regex", "dep:bitflags"]
 better_syntax_highlighting = ["dep:syntect"]
 embedded_image = ["dep:data-url"]
