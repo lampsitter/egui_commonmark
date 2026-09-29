@@ -1087,7 +1087,6 @@ impl CommonMarkCache {
     /// [`show`](crate::CommonMarkViewer::show), the search always starts from
     /// the document top.
     #[cfg(feature = "regex")]
-    #[allow(clippy::too_many_lines)]
     pub fn update_search_matches(&mut self, id: &Id, content: &str) {
         let vc = viewer_cache(self, id);
         let search_cache = &mut vc.search_cache;
@@ -1164,86 +1163,19 @@ impl CommonMarkCache {
         let mut in_bq_first_run = false;
         let mut pending_buf: Vec<(String, Range<usize>)> = Vec::new();
 
-        // ── Macros ───────────────────────────────────────────────────────────
-
-        // Flush the current inline run: search the combined text and emit one
-        // source range per match, potentially spanning multiple events.
-        macro_rules! flush_run {
-            () => {
-                if !run_segs.is_empty() {
-                    for m in regex.find_iter(&run_text).flatten() {
-                        let cstart = m.start();
-                        let cend = m.end();
-                        // Segment containing the first byte of the match.
-                        let si = run_segs
-                            .partition_point(|(off, _)| *off <= cstart)
-                            .saturating_sub(1);
-                        let src_start = run_segs[si].1.start + (cstart - run_segs[si].0);
-                        // Segment containing the last byte of the match (cend-1).
-                        let ei = run_segs
-                            .partition_point(|(off, _)| *off < cend)
-                            .saturating_sub(1);
-                        let src_end = run_segs[ei].1.start + (cend - run_segs[ei].0);
-                        search_cache.search_ranges.push(src_start..src_end);
-                    }
-                    run_text.clear();
-                    run_segs.clear();
-                }
-            };
-        }
-
-        // Flush pending_buf as plain single-event matches (not an alert keyword).
-        macro_rules! flush_pending {
-            () => {
-                for (text, r) in pending_buf.drain(..) {
-                    for m in regex.find_iter(&text).flatten() {
-                        search_cache
-                            .search_ranges
-                            .push(r.start + m.start()..r.start + m.end());
-                    }
-                }
-            };
-        }
-
-        // Decide what to emit for the buffered blockquote first-paragraph text.
-        // If it is a known alert keyword the viewer renders `identifier_rendered`
-        // (e.g. "Note") rather than the raw source text, so we match the regex
-        // against the rendered form and store the keyword's source span as the
-        // range anchor (the blockquote renderer checks for overlap and highlights
-        // the title label). Otherwise fall back to normal single-event matching.
-        macro_rules! decide_alert_matches {
-            () => {{
-                let ident: String = pending_buf.iter().map(|(t, _)| t.as_str()).collect();
-                let alert_title: Option<String> = try_get_alert(&search_cache.alerts, &ident)
-                    .map(|a| a.identifier_rendered.clone());
-                if let Some(rendered) = alert_title {
-                    let src_start = pending_buf.iter().map(|(_, r)| r.start).min().unwrap_or(0);
-                    let src_end = pending_buf.iter().map(|(_, r)| r.end).max().unwrap_or(0);
-                    let alert_src_range = src_start..src_end;
-                    for _ in regex.find_iter(&rendered) {
-                        search_cache.search_ranges.push(alert_src_range.clone());
-                    }
-                    pending_buf.clear();
-                } else {
-                    flush_pending!();
-                }
-            }};
-        }
-
         // ── Main loop ────────────────────────────────────────────────────────
-
         for (event, range) in parser {
             // Blockquote alert state machine (borrows event, does not consume).
             match &event {
                 pulldown_cmark::Event::Start(pulldown_cmark::Tag::BlockQuote(_)) => {
-                    flush_run!();
-                    flush_pending!();
+                    flush_run(search_cache, &regex, &mut run_text, &mut run_segs);
+                    flush_pending(search_cache, &regex, &mut pending_buf);
                     bq_stack.push(false);
                     in_bq_first_run = false;
                 }
                 pulldown_cmark::Event::End(pulldown_cmark::TagEnd::BlockQuote(_)) => {
-                    flush_run!();
-                    flush_pending!();
+                    flush_run(search_cache, &regex, &mut run_text, &mut run_segs);
+                    flush_pending(search_cache, &regex, &mut pending_buf);
                     in_bq_first_run = false;
                     bq_stack.pop();
                 }
@@ -1256,7 +1188,7 @@ impl CommonMarkCache {
                 pulldown_cmark::Event::End(pulldown_cmark::TagEnd::Paragraph)
                     if in_bq_first_run =>
                 {
-                    decide_alert_matches!();
+                    decide_alert_matches(search_cache, &regex, &mut pending_buf);
                     in_bq_first_run = false;
                     if let Some(seen) = bq_stack.last_mut() {
                         *seen = true;
@@ -1265,7 +1197,7 @@ impl CommonMarkCache {
                 pulldown_cmark::Event::SoftBreak | pulldown_cmark::Event::HardBreak
                     if in_bq_first_run =>
                 {
-                    decide_alert_matches!();
+                    decide_alert_matches(search_cache, &regex, &mut pending_buf);
                     in_bq_first_run = false;
                     if let Some(seen) = bq_stack.last_mut() {
                         *seen = true;
@@ -1277,51 +1209,22 @@ impl CommonMarkCache {
             }
 
             // Inline-run management (consumes event).
-            match event {
-                pulldown_cmark::Event::Text(text) | pulldown_cmark::Event::Code(text) => {
-                    if in_bq_first_run {
-                        // Buffer until we know whether this is an alert keyword.
-                        pending_buf.push((text.to_string(), range));
-                    } else {
-                        let off = run_text.len();
-                        run_text.push_str(&text);
-                        run_segs.push((off, range));
-                    }
-                }
-                pulldown_cmark::Event::SoftBreak => {
-                    // A soft break renders as a space; fold it into the run so
-                    // that "foo bar" matches across a soft line-wrap.
-                    if !in_bq_first_run {
-                        run_text.push(' ');
-                    }
-                }
-                // Inline formatting markers carry no text of their own but do
-                // not break the visual line. Treat them as transparent so that
-                // a query like "with syntect" matches across a link boundary
-                // (e.g. "with [`syntect`](url)") or emphasis markers.
-                pulldown_cmark::Event::Start(
-                    pulldown_cmark::Tag::Emphasis
-                    | pulldown_cmark::Tag::Strong
-                    | pulldown_cmark::Tag::Strikethrough
-                    | pulldown_cmark::Tag::Link { .. },
-                )
-                | pulldown_cmark::Event::End(
-                    pulldown_cmark::TagEnd::Emphasis
-                    | pulldown_cmark::TagEnd::Strong
-                    | pulldown_cmark::TagEnd::Strikethrough
-                    | pulldown_cmark::TagEnd::Link,
-                ) => {}
-                _ => {
-                    // Any other event ends the current inline run.
-                    flush_run!();
-                }
-            }
+            decide_search_match_continuity(
+                search_cache,
+                &regex,
+                &mut run_text,
+                &mut run_segs,
+                in_bq_first_run,
+                &mut pending_buf,
+                event,
+                range,
+            );
         }
 
         // End of document: flush whatever is still open.
-        flush_run!();
-        decide_alert_matches!();
 
+        flush_run(search_cache, &regex, &mut run_text, &mut run_segs);
+        decide_alert_matches(search_cache, &regex, &mut pending_buf);
         if search_cache.search_ranges.is_empty() {
             search_cache.active_match = None;
             search_cache.sync_active_search_range();
@@ -1535,6 +1438,134 @@ impl CommonMarkCache {
         search_cache.last_viewport_offset = current_offset;
         if search_cache.search_scroll_protection > 0 {
             search_cache.search_scroll_protection -= 1;
+        }
+    }
+}
+
+// Flush the current inline run: search the combined text and emit one
+// source range per match, potentially spanning multiple events.
+#[cfg(feature = "regex")]
+fn flush_run(
+    search_cache: &mut crate::pulldown::SearchCache,
+    regex: &fancy_regex::Regex,
+    run_text: &mut String,
+    run_segs: &mut Vec<(usize, Range<usize>)>,
+) {
+    if !run_segs.is_empty() {
+        for m in regex.find_iter(&*run_text).flatten() {
+            let cstart = m.start();
+            let cend = m.end();
+            let si = run_segs
+                .partition_point(|(off, _)| *off <= cstart)
+                .saturating_sub(1);
+            let src_start = run_segs[si].1.start + (cstart - run_segs[si].0);
+            let ei = run_segs
+                .partition_point(|(off, _)| *off < cend)
+                .saturating_sub(1);
+            let src_end = run_segs[ei].1.start + (cend - run_segs[ei].0);
+            search_cache.search_ranges.push(src_start..src_end);
+        }
+        run_text.clear();
+        run_segs.clear();
+    }
+}
+
+// Flush pending_buf as plain single-event matches (not an alert keyword).
+#[cfg(feature = "regex")]
+fn flush_pending(
+    search_cache: &mut crate::pulldown::SearchCache,
+    regex: &fancy_regex::Regex,
+    pending_buf: &mut Vec<(String, Range<usize>)>,
+) {
+    for (text, r) in pending_buf.drain(..) {
+        for m in regex.find_iter(&text).flatten() {
+            search_cache
+                .search_ranges
+                .push(r.start + m.start()..r.start + m.end());
+        }
+    }
+}
+
+// Decide what to emit for the buffered blockquote first-paragraph text.
+// If it is a known alert keyword the viewer renders `identifier_rendered`
+// (e.g. "Note") rather than the raw source text, so we match the regex
+// against the rendered form and store the keyword's source span as the
+// range anchor (the blockquote renderer checks for overlap and highlights
+// the title label). Otherwise fall back to normal single-event matching.
+#[cfg(feature = "regex")]
+fn decide_alert_matches(
+    search_cache: &mut crate::pulldown::SearchCache,
+    regex: &fancy_regex::Regex,
+    pending_buf: &mut Vec<(String, Range<usize>)>,
+) {
+    {
+        let ident: String = pending_buf.iter().map(|(t, _)| t.as_str()).collect();
+        let alert_title: Option<String> =
+            try_get_alert(&search_cache.alerts, &ident).map(|a| a.identifier_rendered.clone());
+        if let Some(rendered) = alert_title {
+            let src_start = pending_buf.iter().map(|(_, r)| r.start).min().unwrap_or(0);
+            let src_end = pending_buf.iter().map(|(_, r)| r.end).max().unwrap_or(0);
+            let alert_src_range = src_start..src_end;
+            for _ in regex.find_iter(&rendered) {
+                search_cache.search_ranges.push(alert_src_range.clone());
+            }
+            pending_buf.clear();
+        } else {
+            flush_pending(search_cache, regex, pending_buf);
+        }
+    };
+}
+
+// Incorporate the current event text into the current search match or not, as appropriate.
+#[cfg(feature = "regex")]
+#[allow(clippy::too_many_arguments)]
+fn decide_search_match_continuity(
+    search_cache: &mut crate::pulldown::SearchCache,
+    regex: &fancy_regex::Regex,
+    run_text: &mut String,
+    run_segs: &mut Vec<(usize, Range<usize>)>,
+    in_bq_first_run: bool,
+    pending_buf: &mut Vec<(String, Range<usize>)>,
+    event: pulldown_cmark::Event<'_>,
+    range: Range<usize>,
+) {
+    match event {
+        pulldown_cmark::Event::Text(text) | pulldown_cmark::Event::Code(text) => {
+            if in_bq_first_run {
+                // Buffer until we know whether this is an alert keyword.
+                pending_buf.push((text.to_string(), range));
+            } else {
+                let off = run_text.len();
+                run_text.push_str(&text);
+                run_segs.push((off, range));
+            }
+        }
+        pulldown_cmark::Event::SoftBreak => {
+            // A soft break renders as a space; fold it into the run so
+            // that "foo bar" matches across a soft line-wrap.
+            if !in_bq_first_run {
+                run_text.push(' ');
+            }
+        }
+        // Inline formatting markers carry no text of their own but do
+        // not break the visual line. Treat them as transparent so that
+        // a query like "with syntect" matches across a link boundary
+        // (e.g. "with [`syntect`](url)") or emphasis markers.
+        pulldown_cmark::Event::Start(
+            pulldown_cmark::Tag::Emphasis
+            | pulldown_cmark::Tag::Strong
+            | pulldown_cmark::Tag::Strikethrough
+            | pulldown_cmark::Tag::Link { .. },
+        )
+        | pulldown_cmark::Event::End(
+            pulldown_cmark::TagEnd::Emphasis
+            | pulldown_cmark::TagEnd::Strong
+            | pulldown_cmark::TagEnd::Strikethrough
+            | pulldown_cmark::TagEnd::Link,
+        ) => {}
+        _ => {
+            // Any other event ends the current inline run.
+            flush_run(search_cache, regex, run_text, run_segs);
         }
     }
 }
