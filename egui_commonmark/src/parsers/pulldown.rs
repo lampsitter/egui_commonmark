@@ -203,6 +203,7 @@ impl CommonMarkViewerInternal {
         });
 
         self.any_image_loading = false;
+
         // Take the pending scroll-to-active-match every frame, not only on
         // rebuild frames (when record_id is Some). On steady-state frames
         // record_id is None (split points are cached) but the user may have
@@ -217,6 +218,7 @@ impl CommonMarkViewerInternal {
             });
             self.search_match_ys_scratch.clear();
         }
+
         let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
         let re = ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
@@ -420,13 +422,16 @@ impl CommonMarkViewerInternal {
                     let vc = viewer_cache(cache, &source_id);
                     apply_pending_scroll_delta(vc, ui);
                     let sid = if needs_rebuild { Some(source_id) } else { None };
+
                     self.show(ui, cache, options, text, sid);
+
                     if needs_rebuild {
                         // `show()` sets page_size as a side-effect of receiving
                         // `Some(source_id)`; clear it so the next frame still
                         // takes this full-render path, not the viewport-slice one.
                         viewer_cache(cache, &source_id).page_size = None;
                     }
+
                     // Keep last_viewport_top_y in sync for viewport_start_byte_offset.
                     #[cfg(feature = "regex")]
                     {
@@ -552,34 +557,10 @@ impl CommonMarkViewerInternal {
                     );
                     ui.scroll_to_rect(r, Some(egui::Align::TOP));
                 }
+
                 #[cfg(feature = "regex")]
-                if let Some(y) = pending_match_scroll_y
-                    && (y < viewport.min.y || y > viewport.max.y)
-                {
-                    // The match's approximate block isn't in view yet.
-                    // Scroll to its approximate position immediately (no
-                    // animation) and request a discard so this pass is never
-                    // shown to the user. In pass 2 the scroll area begins with
-                    // the offset already committed, so the viewport lands on
-                    // the target; the per-widget code below then finds the
-                    // exact match and refines the scroll precisely.
-                    //
-                    // Using ScrollAnimation::none() is essential: the
-                    // animated default takes 0.1–0.3 s, but consecutive
-                    // passes within the same run_dyn loop share nearly the
-                    // same timestamp, so the animation would not progress and
-                    // pass 2's viewport would still be at the old position.
-                    let r = egui::Rect::from_min_size(
-                        egui::pos2(0.0, ui.next_widget_position().y + y),
-                        egui::Vec2::ZERO,
-                    );
-                    ui.scroll_to_rect_animation(
-                        r,
-                        Some(egui::Align::Center),
-                        egui::style::ScrollAnimation::none(),
-                    );
-                    ui.ctx().request_discard("scroll to active search match");
-                }
+                Self::scroll_with_animation(ui, viewport, pending_match_scroll_y);
+
                 if pending_delta != egui::Vec2::ZERO {
                     ui.scroll_with_delta(pending_delta);
                 }
@@ -774,6 +755,37 @@ impl CommonMarkViewerInternal {
         }
     }
 
+    #[cfg(feature = "regex")]
+    fn scroll_with_animation(ui: &Ui, viewport: egui::Rect, pending_match_scroll_y: Option<f32>) {
+        if let Some(y) = pending_match_scroll_y
+            && (y < viewport.min.y || y > viewport.max.y)
+        {
+            // The match's approximate block isn't in view yet.
+            // Scroll to its approximate position immediately (no
+            // animation) and request a discard so this pass is never
+            // shown to the user. In pass 2 the scroll area begins with
+            // the offset already committed, so the viewport lands on
+            // the target; the per-widget code below then finds the
+            // exact match and refines the scroll precisely.
+            //
+            // Using ScrollAnimation::none() is essential: the
+            // animated default takes 0.1–0.3 s, but consecutive
+            // passes within the same run_dyn loop share nearly the
+            // same timestamp, so the animation would not progress and
+            // pass 2's viewport would still be at the old position.
+            let r = egui::Rect::from_min_size(
+                egui::pos2(0.0, ui.next_widget_position().y + y),
+                egui::Vec2::ZERO,
+            );
+            ui.scroll_to_rect_animation(
+                r,
+                Some(egui::Align::Center),
+                egui::style::ScrollAnimation::none(),
+            );
+            ui.ctx().request_discard("scroll to active search match");
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn process_event<'e>(
         &mut self,
@@ -954,6 +966,7 @@ impl CommonMarkViewerInternal {
                         };
                         (has_match, is_active, global_idx)
                     }; // all immutable borrows of cache released here
+
                     #[cfg(not(feature = "regex"))]
                     let (has_title_match, _is_title_active, _title_global_idx): (
                         bool,
@@ -1219,63 +1232,83 @@ impl CommonMarkViewerInternal {
         } else if let Some(link) = &mut self.link {
             link.push_text(self.text_style.to_richtext(ui, &text), src_span);
         } else {
-            let rich_text = self.text_style.to_richtext(ui, &text);
-            #[cfg(feature = "regex")]
-            {
-                let vc = viewer_cache(cache, &options.source_id.unwrap_or(Id::NULL));
-                let search_cache = &mut vc.search_cache;
-                let ranges = search_cache.search_ranges();
-                if ranges.is_empty() {
-                    ui.label(rich_text);
-                    return;
-                }
+            self.event_label(text, src_span, ui, cache, options);
+        }
+    }
 
-                let intervals = search_intervals(
-                    ranges,
-                    search_cache.active_search_range(),
-                    &src_span,
-                    text.len(),
-                );
-                let (_, active_rect, all_rects) = label_with_search_highlight(
-                    ui,
-                    rich_text,
-                    &intervals,
-                    options.search_match_bg(ui),
-                    options.search_active_match_bg(ui),
-                );
+    #[cfg(not(feature = "regex"))]
+    #[allow(unused_variables)]
+    fn event_label(
+        &self,
+        text: CowStr,
+        src_span: Range<usize>,
+        ui: &mut Ui,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+    ) {
+        let rich_text = self.text_style.to_richtext(ui, &text);
+        ui.label(rich_text);
+    }
 
-                // Record the virtual-y (scroll-independent) position for each
-                // global match that falls in this text run. `global_match_indices[j]`
-                // corresponds to `intervals[j]` and `all_rects[j]`: both iterate
-                // search_ranges in document order with the same filter, so the
-                // j-th surviving entry is the same match in both.
-                let content_origin_y = self.content_origin_y;
-                let global_match_indices: Vec<usize> = search_cache
-                    .search_ranges()
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, r)| {
-                        r.start < r.end && r.start < src_span.end && r.end > src_span.start
-                    })
-                    .map(|(i, _)| i)
-                    .collect();
+    #[cfg(feature = "regex")]
+    fn event_label(
+        &mut self,
+        text: CowStr,
+        src_span: Range<usize>,
+        ui: &mut Ui,
+        cache: &mut CommonMarkCache,
+        options: &CommonMarkOptions,
+    ) {
+        let rich_text = self.text_style.to_richtext(ui, &text);
 
-                for (global_idx, maybe_rect) in global_match_indices.iter().zip(all_rects.iter()) {
-                    if let Some(rect) = maybe_rect {
-                        self.search_match_ys_scratch
-                            .push((*global_idx, rect.min.y - content_origin_y));
-                    }
-                }
-
-                if self.want_scroll_to_active_match
-                    && let Some(rect) = active_rect
-                {
-                    ui.scroll_to_rect(rect, Some(egui::Align::Center));
-                    self.want_scroll_to_active_match = false;
-                }
-            }
-            #[cfg(not(feature = "regex"))]
+        let vc = viewer_cache(cache, &options.source_id.unwrap_or(Id::NULL));
+        let search_cache = &mut vc.search_cache;
+        let ranges = search_cache.search_ranges();
+        if ranges.is_empty() {
             ui.label(rich_text);
+            return;
+        }
+
+        let intervals = search_intervals(
+            ranges,
+            search_cache.active_search_range(),
+            &src_span,
+            text.len(),
+        );
+        let (_, active_rect, all_rects) = label_with_search_highlight(
+            ui,
+            rich_text,
+            &intervals,
+            options.search_match_bg(ui),
+            options.search_active_match_bg(ui),
+        );
+
+        // Record the virtual-y (scroll-independent) position for each
+        // global match that falls in this text run. `global_match_indices[j]`
+        // corresponds to `intervals[j]` and `all_rects[j]`: both iterate
+        // search_ranges in document order with the same filter, so the
+        // j-th surviving entry is the same match in both.
+        let content_origin_y = self.content_origin_y;
+        let global_match_indices: Vec<usize> = search_cache
+            .search_ranges()
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.start < r.end && r.start < src_span.end && r.end > src_span.start)
+            .map(|(i, _)| i)
+            .collect();
+
+        for (global_idx, maybe_rect) in global_match_indices.iter().zip(all_rects.iter()) {
+            if let Some(rect) = maybe_rect {
+                self.search_match_ys_scratch
+                    .push((*global_idx, rect.min.y - content_origin_y));
+            }
+        }
+
+        if self.want_scroll_to_active_match
+            && let Some(rect) = active_rect
+        {
+            ui.scroll_to_rect(rect, Some(egui::Align::Center));
+            self.want_scroll_to_active_match = false;
         }
     }
 
