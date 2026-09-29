@@ -1106,11 +1106,8 @@ impl CommonMarkCache {
         // including heading attributes since `enable_scroll_to_heading`
         // is set below (otherwise `{#section-500}` would remain in the
         // heading's Text event and get matched too).
-        let options = pulldown_cmark::Options::ENABLE_STRIKETHROUGH
-            | pulldown_cmark::Options::ENABLE_TASKLISTS
-            | pulldown_cmark::Options::ENABLE_TABLES
-            | pulldown_cmark::Options::ENABLE_FOOTNOTES
-            | pulldown_cmark::Options::ENABLE_HEADING_ATTRIBUTES;
+        let options =
+            crate::pulldown::parser_options() | pulldown_cmark::Options::ENABLE_HEADING_ATTRIBUTES;
 
         let parser = pulldown_cmark::Parser::new_ext(content, options).into_offset_iter();
 
