@@ -727,10 +727,7 @@ impl CodeBlock {
             .settings
             .background
             .map(syntect_color_to_egui)
-            .unwrap_or_else(|| {
-                eprintln!("Couldn't convert theme background to egui");
-                style.visuals.extreme_bg_color
-            });
+            .unwrap_or_else(|| style.visuals.extreme_bg_color);
 
         if let Some(color) = curr_theme.settings.selection_foreground {
             style.visuals.selection.bg_fill = syntect_color_to_egui(color);
