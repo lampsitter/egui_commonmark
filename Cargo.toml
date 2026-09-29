@@ -36,3 +36,9 @@ pulldown-cmark = { version = "0.13", default-features = false }
 # eframe = { path = "../../egui/crates/eframe" }
 # egui = { path = "../../egui/crates/egui" }
 # egui_extras = { path = "../../egui/crates/egui_extras" }
+
+
+# Allow performance-critical examples to approach real-world responsiveness
+[profile.dev]
+opt-level = 3     # Apply maximum performance optimizations
+debug = true

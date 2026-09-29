@@ -626,9 +626,11 @@ dependencies = [
 name = "egui_commonmark_backend"
 version = "0.25.0"
 dependencies = [
+ "bitflags 2.13.1",
  "data-url",
  "egui",
  "egui_extras",
+ "fancy-regex",
  "pulldown-cmark",
  "syntect",
 ]

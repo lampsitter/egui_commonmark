@@ -27,7 +27,7 @@ document-features = { workspace = true, optional = true }
 pulldown-cmark = { workspace = true }
 
 [features]
-default = ["load-images", "pulldown_cmark"]
+default = ["load-images", "pulldown_cmark", "regex"]
 
 ## Enable proc macros for compile time generation of egui widgets from markdown
 macros = ["dep:egui_commonmark_macros"]
@@ -41,6 +41,10 @@ dump-macro = ["egui_commonmark_macros/dump-macro"]
 
 ## No-op feature
 pulldown_cmark = []
+
+## Enable regex-powered search (case-sensitive, whole-word, and regex modes).
+## Omit this feature for WASM or other size-sensitive targets.
+regex = ["egui_commonmark_backend/regex"]
 
 ## Syntax highlighting for code blocks using syntect
 better_syntax_highlighting = [

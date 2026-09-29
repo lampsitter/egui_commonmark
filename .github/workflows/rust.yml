@@ -15,7 +15,17 @@ jobs:
       run: cargo clippy -- -Dwarnings
 
     - name: Check all features pulldown
-      run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros,embedded_image
+      run: cargo check --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros,embedded_image,regex
+
+    - name: Check for duplicate fancy-regex artifacts
+      run: |
+        if cargo tree --duplicate --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros,embedded_image,regex | grep -q "fancy-regex"; then
+          echo "ERROR: Duplicate versions of 'fancy-regex' detected in the dependency graph!"
+          cargo tree  --duplicate --no-default-features --features pulldown_cmark,better_syntax_highlighting,macros,embedded_image,regex | grep "fancy-regex"
+          exit 1
+        else
+          echo "Success: No duplicate 'fancy-regex' artifacts found."
+        fi
 
     - name: Cargo fmt
       run: cargo fmt --check -q
