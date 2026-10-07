@@ -4,18 +4,54 @@
 
 ### Added
 
-- `pending_scroll_delta` and `set_scroll_delta` for keyboard scrolling with
-  `show_scrollable` ([#101](https://github.com/lampsitter/egui_commonmark/pull/101) by [@durbanlegend](https://github.com/durbanlegend))
-- `viewport_cache` to disable or enable viewport cache for `show_scrollable`
-  ([#101](https://github.com/lampsitter/egui_commonmark/pull/101) by [@durbanlegend](https://github.com/durbanlegend))
+- Full-text search with match highlighting in body text, link text, alert
+  titles, and fenced/indented code blocks (including with `better_syntax_highlighting`
+  enabled). The search API lives on `CommonMarkCache`:
+  - `update_search_matches(&Id, &str)` — recomputes match ranges from rendered
+    text only (link destinations, heading `{#id}` syntax etc. are never
+    matched), anchoring to the current viewport so results start from what is
+    already on screen.
+  - `search_ranges(&Id)`, `active_match(&Id)`, `go_to_match(&Id, isize)` —
+    query and navigate matches; `go_to_match` scrolls the active match into
+    view automatically.
+  - `search_query_mut(&Id) -> &mut String` — bind directly to a `TextEdit`.
+  - `search_options_mut(&Id) -> &mut SearchOptions` — bind to toggle buttons
+    for case-sensitive, whole-word and regex modes.
+  - `search_regex_error(&Id) -> Option<String>` — surface regex parse errors.
+  - `sync_active_match(&Id, bool)` / `sync_scrollable_active_match(&Id, bool, bool)`
+    — re-anchor the active match to the viewport after manual scrolling.
+
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+- `SearchOptions` bitflags (`CASE_SENSITIVE`, `WHOLE_WORD`, `REGEX`) to
+  configure the search mode. ([#106](https://github.com/lampsitter/egui_commonmark/pull/106)
+  by [@durbanlegend](https://github.com/durbanlegend))
+
+- `regex` feature flag (enabled by default; disable for WASM or other
+  size-sensitive targets to drop the `regex` dependency and entire search API).
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+- `CommonMarkViewer::show_with_id` — like `show` but records the viewport
+  position so `update_search_matches` anchors new searches to the current
+  scroll location rather than the document top.
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+- `CommonMarkViewer::search_match_color` and `search_active_match_color` to
+  override the default theme-derived highlight colours.
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+
+- `CommonMarkCache::scroll_to_heading(&Id, Option<String>)` — programmatically
+  trigger a scroll-to-heading, e.g. when a separate TOC widget is clicked.
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+
+- Added `CommonMarkScrollOptions`.
+
 
 ### Changed
 
-- Follow egui `main`: `CommonMarkViewer::show_scrollable` now takes an `id_salt`
-  that only has to be unique within the parent `Ui`, and
-  `CommonMarkCache::clear_scrollable_with_id` takes the resulting `egui::Id`
-  ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by
-  [@emilk](https://github.com/emilk))
+- `show_scrollable` now takes `egui::Id` directly (breaking)
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+- `clear_scrollable_with_id` / `clear_scrollable` are renamed to `clear_viewer` / `clear_viewers` (breaking)
+    ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
+- `show_scrollable` now takes a `CommonMarkScrollOptions` for allowing control of a subset
+    `ScrollArea` options.
 
 ### Fixed
 
@@ -24,6 +60,8 @@
   [@emilk](https://github.com/emilk))
 - Fix `show_scrollable` to support seamless scrolling of large documents
   ([#98](https://github.com/lampsitter/egui_commonmark/pull/98) by [@durbanlegend](https://github.com/durbanlegend))
+- Language in code blocks with `better_syntax_highlighting` is detected also by
+  name instead of just by file extension.
 
 ## 0.25.0 - 2026-08-05
 
@@ -409,4 +447,3 @@ An explicit dependency update might be needed to use egui 0.22: `cargo update -p
 
 - No longer panic upon unknown syntax theme.
 - Fixed incorrect line endings within headings.
-

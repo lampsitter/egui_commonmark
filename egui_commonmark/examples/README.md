@@ -30,3 +30,13 @@ changing a markdown page in a book without displaying the destination link.
 
 Shows commonmark elements mixed with egui widgets. It displays the widgets with
 no spaces in between as if the markdown was egui widgets.
+
+## search.rs
+
+Shows how to perform search in the markdown. It is recommended to turn on
+optimization in Cargo.toml for the best experience.
+
+## scroll.rs
+
+Shows how to have large markdown documents with scrolling while maintaining
+performance. It is recommended to turn on optimization in Cargo.toml for the best experience.

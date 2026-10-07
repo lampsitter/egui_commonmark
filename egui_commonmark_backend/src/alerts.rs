@@ -33,6 +33,12 @@ pub struct AlertBundle {
     alerts: HashMap<String, Alert>,
 }
 
+impl Default for AlertBundle {
+    fn default() -> Self {
+        Self::gfm()
+    }
+}
+
 impl AlertBundle {
     pub fn from_alerts(alerts: Vec<Alert>) -> Self {
         let mut map = HashMap::with_capacity(alerts.len());
