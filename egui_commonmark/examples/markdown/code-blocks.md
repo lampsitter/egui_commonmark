@@ -14,7 +14,7 @@ CommonMarkViewer::new("viewer").show(ui, &mut cache, markdown);
 ```
 
 The `better_syntax_highlighting` feature does not have toml highlighting by
-default. It will therefore fallback to default highlighting.
+default. It will therefore fall back to `syntect` plain text.
 
 ```toml
 egui_commonmark = "0.10"

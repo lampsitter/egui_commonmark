@@ -737,32 +737,33 @@ impl CodeBlock {
         ui: &Ui,
         text: &str,
     ) -> egui::text::LayoutJob {
-        if let Some(syntax) = cache.ps.find_syntax_by_token(extension) {
-            let mut job = egui::text::LayoutJob::default();
-            let mut h = HighlightLines::new(syntax, cache.curr_theme(ui, options));
+        let syntax = cache
+            .ps
+            .find_syntax_by_token(extension)
+            .unwrap_or_else(|| cache.ps.find_syntax_plain_text());
 
-            for line in LinesWithEndings::from(text) {
-                let ranges = h.highlight_line(line, &cache.ps).unwrap();
-                for v in ranges {
-                    let front = v.0.foreground;
-                    job.append(
-                        v.1,
-                        0.0,
-                        egui::TextFormat::simple(
-                            TextStyle::Monospace.resolve(ui.style()),
-                            syntect_color_to_egui(front),
-                        ),
-                    );
-                }
+        let mut job = egui::text::LayoutJob::default();
+        let mut h = HighlightLines::new(syntax, cache.curr_theme(ui, options));
+
+        for line in LinesWithEndings::from(text) {
+            let ranges = h.highlight_line(line, &cache.ps).unwrap();
+            for v in ranges {
+                let front = v.0.foreground;
+                job.append(
+                    v.1,
+                    0.0,
+                    egui::TextFormat::simple(
+                        TextStyle::Monospace.resolve(ui.style()),
+                        syntect_color_to_egui(front),
+                    ),
+                );
             }
-
-            job
-        } else {
-            simple_highlighting(ui, text, extension)
         }
+        job
     }
 }
 
+#[cfg(not(feature = "better_syntax_highlighting"))]
 fn simple_highlighting(ui: &Ui, text: &str, extension: &str) -> egui::text::LayoutJob {
     egui_extras::syntax_highlighting::highlight(
         ui.ctx(),
