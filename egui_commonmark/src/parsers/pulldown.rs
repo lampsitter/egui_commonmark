@@ -557,176 +557,170 @@ impl CommonMarkViewerInternal {
             None
         };
 
-        egui::ScrollArea::vertical()
-            .id_salt(scroll_id)
-            // Elements have different widths, so the scroll area cannot try to shrink to the
-            // content, as that will mean that the scroll bar will move when loading elements
-            // with different widths.
-            .auto_shrink([false, true])
-            .show_viewport(ui, |ui, viewport| {
-                if let Some(y) = pending_scroll_y {
-                    // heading_y_positions stores virtual y (content-relative, 0 = top).
-                    // Inside show_viewport, next_widget_position().y = screen_top − scroll.
-                    // scroll_to_rect with Align::TOP sets new_scroll = y. ✓
-                    let r = egui::Rect::from_min_size(
-                        egui::pos2(0.0, ui.next_widget_position().y + y),
-                        egui::Vec2::ZERO,
-                    );
-                    ui.scroll_to_rect(r, Some(egui::Align::TOP));
-                }
+        Self::create_scroll_area(scroll_id, scroll_options).show_viewport(ui, |ui, viewport| {
+            if let Some(y) = pending_scroll_y {
+                // heading_y_positions stores virtual y (content-relative, 0 = top).
+                // Inside show_viewport, next_widget_position().y = screen_top − scroll.
+                // scroll_to_rect with Align::TOP sets new_scroll = y. ✓
+                let r = egui::Rect::from_min_size(
+                    egui::pos2(0.0, ui.next_widget_position().y + y),
+                    egui::Vec2::ZERO,
+                );
+                ui.scroll_to_rect(r, Some(egui::Align::TOP));
+            }
 
-                #[cfg(feature = "regex")]
-                Self::scroll_with_animation(ui, viewport, pending_match_scroll_y);
+            #[cfg(feature = "regex")]
+            Self::scroll_with_animation(ui, viewport, pending_match_scroll_y);
 
-                if pending_delta != egui::Vec2::ZERO {
-                    ui.scroll_with_delta(pending_delta);
-                }
+            if pending_delta != egui::Vec2::ZERO {
+                ui.scroll_with_delta(pending_delta);
+            }
 
-                ui.set_height(page_size.y);
-                let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
+            ui.set_height(page_size.y);
+            let layout = egui::Layout::left_to_right(egui::Align::BOTTOM).with_main_wrap(true);
 
-                let max_width = options.max_width(ui);
-                ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
+            let max_width = options.max_width(ui);
+            ui.allocate_ui_with_layout(egui::vec2(max_width, 0.0), layout, |ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
 
-                    // Compute the slice parameters and release the viewer_cache borrow
-                    // before the push_id closure so that `cache` is freely accessible
-                    // inside it.
-                    let viewport_height = viewport.max.y - viewport.min.y;
-                    let render_below = viewport.max.y + viewport_height;
-                    let (skip_height, skip_count, take_count) = {
-                        let vc = viewer_cache(cache, &source_id);
-                        #[cfg(feature = "regex")]
-                        {
-                            let search_cache = &mut vc.search_cache;
-                            search_cache.last_viewport_top_y = viewport.min.y;
-                            search_cache.last_viewport_height = viewport_height;
-                        }
-                        let preceding_split = vc
-                            .split_points
-                            .iter()
-                            .rfind(|sp| sp.vend.y < viewport.min.y)
-                            .cloned();
-                        let first_vend = preceding_split.as_ref().map_or(Pos2::ZERO, |sp| sp.vend);
-                        let last_event_index = vc
-                            .split_points
-                            .iter()
-                            .find(|sp| sp.vstart.y > render_below)
-                            .map_or(num_rows, |sp| sp.event_index);
-                        let skip_height = first_vend.y.max(0.0);
-                        // When a preceding split was found, its End(Block) is already
-                        // accounted for in skip_height — re-processing it would add a
-                        // duplicate newline. Start from the next event instead.
-                        let (skip_count, take_count) = if let Some(sp) = preceding_split {
-                            self.line.should_not_start_newline_forced = false;
-                            // last_event_index should always be >= event_index because
-                            // split-points are ordered, but guard against stale
-                            // cache or tiny documents producing an underflow.
-                            let take = last_event_index.saturating_sub(sp.event_index);
-                            (sp.event_index + 1, take)
-                        } else {
-                            (0, last_event_index)
-                        };
-                        (skip_height, skip_count, take_count)
-                    }; // viewer_cache borrow released here
+                // Compute the slice parameters and release the viewer_cache borrow
+                // before the push_id closure so that `cache` is freely accessible
+                // inside it.
+                let viewport_height = viewport.max.y - viewport.min.y;
+                let render_below = viewport.max.y + viewport_height;
+                let (skip_height, skip_count, take_count) = {
+                    let vc = viewer_cache(cache, &source_id);
+                    #[cfg(feature = "regex")]
+                    {
+                        let search_cache = &mut vc.search_cache;
+                        search_cache.last_viewport_top_y = viewport.min.y;
+                        search_cache.last_viewport_height = viewport_height;
+                    }
+                    let preceding_split = vc
+                        .split_points
+                        .iter()
+                        .rfind(|sp| sp.vend.y < viewport.min.y)
+                        .cloned();
+                    let first_vend = preceding_split.as_ref().map_or(Pos2::ZERO, |sp| sp.vend);
+                    let last_event_index = vc
+                        .split_points
+                        .iter()
+                        .find(|sp| sp.vstart.y > render_below)
+                        .map_or(num_rows, |sp| sp.event_index);
+                    let skip_height = first_vend.y.max(0.0);
+                    // When a preceding split was found, its End(Block) is already
+                    // accounted for in skip_height — re-processing it would add a
+                    // duplicate newline. Start from the next event instead.
+                    let (skip_count, take_count) = if let Some(sp) = preceding_split {
+                        self.line.should_not_start_newline_forced = false;
+                        // last_event_index should always be >= event_index because
+                        // split-points are ordered, but guard against stale
+                        // cache or tiny documents producing an underflow.
+                        let take = last_event_index.saturating_sub(sp.event_index);
+                        (sp.event_index + 1, take)
+                    } else {
+                        (0, last_event_index)
+                    };
+                    (skip_height, skip_count, take_count)
+                }; // viewer_cache borrow released here
 
-                    // Set `content_origin_y` to the screen Y of virtual-Y = 0 (the
-                    // document top) for this frame. This makes match Ys recorded
-                    // by `event_text` comparable with `viewport.min.y` (the virtual
-                    // scroll offset). Matches in the rendered slice get their
-                    // exact pixel Y; those outside get the default 0.0 and are
-                    // treated as not-in-viewport by `sync_scrollable_active_match`.
-                    self.content_origin_y = ui.clip_rect().min.y - viewport.min.y;
-                    self.search_match_ys_scratch.clear();
+                // Set `content_origin_y` to the screen Y of virtual-Y = 0 (the
+                // document top) for this frame. This makes match Ys recorded
+                // by `event_text` comparable with `viewport.min.y` (the virtual
+                // scroll offset). Matches in the rendered slice get their
+                // exact pixel Y; those outside get the default 0.0 and are
+                // treated as not-in-viewport by `sync_scrollable_active_match`.
+                self.content_origin_y = ui.clip_rect().min.y - viewport.min.y;
+                self.search_match_ys_scratch.clear();
 
-                    let mut events = events
-                        .into_iter()
-                        .enumerate()
-                        .skip(skip_count)
-                        .take(take_count)
-                        .peekable();
+                let mut events = events
+                    .into_iter()
+                    .enumerate()
+                    .skip(skip_count)
+                    .take(take_count)
+                    .peekable();
 
-                    // Give the viewport render a distinct widget parent_id namespace
-                    // so that egui's warn_if_rect_changes_id check never fires.
-                    //
-                    // The check fires when the same screen rect has different widget
-                    // IDs *and* at least one widget shares a parent_id between
-                    // consecutive frames.  Widget IDs within this push_id scope are
-                    // counter-based (sequential from 0 each frame).  The counter
-                    // resets at the start of each rendered slice, so when skip_count
-                    // advances by 1 (viewport crosses a split-point boundary), every
-                    // widget in the visible overlap shifts its ID by 1 — same rect,
-                    // same parent_id, different ID → warning fires.
-                    //
-                    // Fix: bake skip_count into the push_id salt.  Consecutive frames
-                    // with different skip_count values get different parent_ids, so the
-                    // parent_id match condition is never met.  When skip_count is
-                    // stable (viewport moves within a split-point interval), the same
-                    // slice renders with identical counter values → same IDs → no
-                    // warning then either.
-                    //
-                    // The salt tuple also differs from the full-render path's implicit
-                    // parent (no push_id), so the transition-frame guard from the
-                    // full→viewport fix remains intact.
-                    //
-                    // IMPORTANT: push_id must be called BEFORE allocate_space so that
-                    // the cursor is still at (0, 0) — the left edge of a full-width
-                    // row.  Calling it after allocate_space leaves the cursor at
-                    // (max_width, …) (right edge), making available_rect_before_wrap()
-                    // return near-zero width and collapsing all content to a thin strip.
-                    ui.push_id(("__cm_viewport", skip_count), |ui| {
-                        // Skip over off-screen content by reserving its vertical space.
-                        // Full width is essential: a narrower allocation would leave
-                        // the cursor mid-row, misaligning the first visible block.
-                        ui.allocate_space(egui::vec2(max_width, skip_height));
+                // Give the viewport render a distinct widget parent_id namespace
+                // so that egui's warn_if_rect_changes_id check never fires.
+                //
+                // The check fires when the same screen rect has different widget
+                // IDs *and* at least one widget shares a parent_id between
+                // consecutive frames.  Widget IDs within this push_id scope are
+                // counter-based (sequential from 0 each frame).  The counter
+                // resets at the start of each rendered slice, so when skip_count
+                // advances by 1 (viewport crosses a split-point boundary), every
+                // widget in the visible overlap shifts its ID by 1 — same rect,
+                // same parent_id, different ID → warning fires.
+                //
+                // Fix: bake skip_count into the push_id salt.  Consecutive frames
+                // with different skip_count values get different parent_ids, so the
+                // parent_id match condition is never met.  When skip_count is
+                // stable (viewport moves within a split-point interval), the same
+                // slice renders with identical counter values → same IDs → no
+                // warning then either.
+                //
+                // The salt tuple also differs from the full-render path's implicit
+                // parent (no push_id), so the transition-frame guard from the
+                // full→viewport fix remains intact.
+                //
+                // IMPORTANT: push_id must be called BEFORE allocate_space so that
+                // the cursor is still at (0, 0) — the left edge of a full-width
+                // row.  Calling it after allocate_space leaves the cursor at
+                // (max_width, …) (right edge), making available_rect_before_wrap()
+                // return near-zero width and collapsing all content to a thin strip.
+                ui.push_id(("__cm_viewport", skip_count), |ui| {
+                    // Skip over off-screen content by reserving its vertical space.
+                    // Full width is essential: a narrower allocation would leave
+                    // the cursor mid-row, misaligning the first visible block.
+                    ui.allocate_space(egui::vec2(max_width, skip_height));
 
-                        // If this pass will be discarded (blind scroll toward an
-                        // off-screen search match), skip expensive widget rendering
-                        // entirely. The space allocation above is still needed so
-                        // that egui has the correct total height for scroll
-                        // calculations. `want_scroll_to_active_match` stays true,
-                        // so `retry_scroll_to_active_match` below re-arms the flag
-                        // for pass 2, which renders normally at the new offset.
-                        if !ui.ctx().will_discard() {
-                            while let Some((i, (e, src_span))) = events.next() {
-                                if events.peek().is_none() {
-                                    self.line.should_end_newline_forced = false;
-                                }
-                                self.process_event(
-                                    ui,
-                                    &mut events,
-                                    e,
-                                    src_span,
-                                    cache,
-                                    options,
-                                    max_width,
-                                );
-                                if i == 0 {
-                                    self.line.should_not_start_newline_forced = false;
-                                }
+                    // If this pass will be discarded (blind scroll toward an
+                    // off-screen search match), skip expensive widget rendering
+                    // entirely. The space allocation above is still needed so
+                    // that egui has the correct total height for scroll
+                    // calculations. `want_scroll_to_active_match` stays true,
+                    // so `retry_scroll_to_active_match` below re-arms the flag
+                    // for pass 2, which renders normally at the new offset.
+                    if !ui.ctx().will_discard() {
+                        while let Some((i, (e, src_span))) = events.next() {
+                            if events.peek().is_none() {
+                                self.line.should_end_newline_forced = false;
                             }
-
-                            // Mirror `show()`'s deferred flush so that clicking a #fragment
-                            // link while in the viewport path triggers a scroll next frame.
-                            // Borrow vc fresh here: `cache` is free now that the
-                            // process_event loop above has finished using it.
-                            let vc = viewer_cache(cache, &source_id);
-                            *vc.scroll_to_id_target_mut() = self.deferred_scroll_to_heading.take();
-
-                            // Flush the per-match virtual-Y positions collected by
-                            // `event_text` into the cache, exactly as the non-scrollable
-                            // show() path does. Skipped on discarded frames (blind scroll
-                            // toward an off-screen match) since no widgets rendered.
-                            #[cfg(feature = "regex")]
-                            vc.search_cache.update_show_viewport(
-                                self.search_match_ys_scratch.drain(..),
-                                viewport.min.y,
-                                viewport_height,
+                            self.process_event(
+                                ui,
+                                &mut events,
+                                e,
+                                src_span,
+                                cache,
+                                options,
+                                max_width,
                             );
+                            if i == 0 {
+                                self.line.should_not_start_newline_forced = false;
+                            }
                         }
-                    });
+
+                        // Mirror `show()`'s deferred flush so that clicking a #fragment
+                        // link while in the viewport path triggers a scroll next frame.
+                        // Borrow vc fresh here: `cache` is free now that the
+                        // process_event loop above has finished using it.
+                        let vc = viewer_cache(cache, &source_id);
+                        *vc.scroll_to_id_target_mut() = self.deferred_scroll_to_heading.take();
+
+                        // Flush the per-match virtual-Y positions collected by
+                        // `event_text` into the cache, exactly as the non-scrollable
+                        // show() path does. Skipped on discarded frames (blind scroll
+                        // toward an off-screen match) since no widgets rendered.
+                        #[cfg(feature = "regex")]
+                        vc.search_cache.update_show_viewport(
+                            self.search_match_ys_scratch.drain(..),
+                            viewport.min.y,
+                            viewport_height,
+                        );
+                    }
                 });
             });
+        });
 
         // If any image in this render reported zero height, split points are stale.
         // Discard them so the next frame falls back to a full render.
