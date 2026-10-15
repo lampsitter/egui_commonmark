@@ -121,7 +121,7 @@ pub fn label_with_search_highlight(
 
     let (pos, galley, response) = egui::Label::new(widget_text).layout_in_ui(ui);
     response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Label, ui.is_enabled(), galley.text())
+        egui::WidgetInfo::labeled(egui::Role::Label, ui.is_enabled(), galley.text())
     });
 
     // Compute rects for all intervals unconditionally: `pos` and `galley` hold

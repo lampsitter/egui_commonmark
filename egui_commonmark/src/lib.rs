@@ -270,7 +270,7 @@ impl<'f> CommonMarkViewer<'f> {
     ///                 }
     ///             });
     ///
-    ///     let uri = format!("{}.svg", egui::Id::from(math.to_string()).value());
+    ///     let uri = format!("{}.svg", egui::Id::unique(math).value());
     ///     ui.add(
     ///          egui::Image::new(egui::ImageSource::Bytes {
     ///             uri: uri.into(),
