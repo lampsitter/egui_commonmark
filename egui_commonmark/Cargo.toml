@@ -75,7 +75,7 @@ embedded_image = ["egui_commonmark_backend/embedded_image"]
 eframe = { version = "0.37.0", default-features = false, features = [
     "default_fonts",
     "glow",
-    "wayland",
+#    "wayland", Pulls in petgraph?
     "x11",
     "links"
 ] }
