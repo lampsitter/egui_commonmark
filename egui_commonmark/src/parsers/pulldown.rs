@@ -1655,7 +1655,7 @@ mod perf_tests {
     #[test]
     fn clicking_next_on_visible_match_is_fast() {
         let source_id_str = "perf_test_next_click";
-        let source_id = Id::new(source_id_str);
+        let source_id = Id::unique(source_id_str);
         let doc = big_document();
         // Three matches, all near the very top of the document (sections
         // 1-3), so they're all visible in the initial (unscrolled) viewport.
@@ -1727,7 +1727,7 @@ mod perf_tests {
     #[test]
     fn jumping_to_offscreen_match_does_not_force_full_render() {
         let source_id_str = "offscreen_match";
-        let source_id = Id::new(source_id_str);
+        let source_id = Id::unique(source_id_str);
         let doc = big_document();
         let query = "This is section 1000.";
         let pos = doc.find(query).expect("expected to find section text");
@@ -1747,7 +1747,7 @@ mod perf_tests {
 
         // The viewer uses its own cache entry (distinct from the search setup
         // above) so this test exercises viewport caching independently.
-        let viewer_id = Id::new("perf_test_offscreen_jump");
+        let viewer_id = Id::unique("perf_test_offscreen_jump");
 
         // Frame 0: cold render at the top of the document, populates
         // page_size/split_points.
@@ -1801,7 +1801,7 @@ mod perf_tests {
     #[test]
     fn steady_state_search_does_not_force_full_render_every_frame() {
         let source_id_str = "steady_state_search";
-        let source_id = Id::new(source_id_str);
+        let source_id = Id::unique(source_id_str);
         let doc = big_document();
         // A handful of matches, similar to a real search with few hits.
         let query = "push(123)";
@@ -1831,7 +1831,7 @@ mod perf_tests {
         // Each test uses its own `source_id`, so `full_render_count_for()` is
         // keyed per source and cannot be polluted by other tests running in
         // parallel.
-        let viewer_id = Id::new("perf_test_doc");
+        let viewer_id = Id::unique("perf_test_doc");
         let before = full_render_count_for(viewer_id);
         const FRAMES: usize = 5;
         for _ in 0..FRAMES {

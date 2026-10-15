@@ -52,6 +52,7 @@
     ([#106](https://github.com/lampsitter/egui_commonmark/pull/106) by [@durbanlegend](https://github.com/durbanlegend))
 - `show_scrollable` now takes a `CommonMarkScrollOptions` for allowing control of a subset
     `ScrollArea` options.
+- Update egui to 0.37
 
 ### Fixed
 
