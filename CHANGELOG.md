@@ -1,6 +1,6 @@
 # egui_commonmark changelog
 
-## Unreleased
+## 0.26.0 - 2026-10-15
 
 ### Added
 
@@ -53,6 +53,7 @@
 - `show_scrollable` now takes a `CommonMarkScrollOptions` for allowing control of a subset
     `ScrollArea` options.
 - Update egui to 0.37
+- Upgrade syn to 3.0 (egui_commonmark_macros)
 
 ### Fixed
 

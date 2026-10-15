@@ -529,7 +529,7 @@ dependencies = [
 
 [[package]]
 name = "egui_commonmark"
-version = "0.25.0"
+version = "0.26.0"
 dependencies = [
  "document-features",
  "eframe",
@@ -543,7 +543,7 @@ dependencies = [
 
 [[package]]
 name = "egui_commonmark_backend"
-version = "0.25.0"
+version = "0.26.0"
 dependencies = [
  "bitflags 2.13.1",
  "data-url",
@@ -556,7 +556,7 @@ dependencies = [
 
 [[package]]
 name = "egui_commonmark_macros"
-version = "0.25.0"
+version = "0.26.0"
 dependencies = [
  "document-features",
  "egui",
