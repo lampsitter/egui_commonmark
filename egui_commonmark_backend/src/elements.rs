@@ -232,23 +232,20 @@ pub fn code_block<'t>(
         ),
     );
 
-    // Copy icon
-    let spacing = &ui.style().spacing;
-    let position = egui::pos2(
-        frame_rect.right_top().x - spacing.icon_width * 0.5 - spacing.button_padding.x,
-        frame_rect.right_top().y + spacing.button_padding.y * 2.0,
-    );
+    // Copy icon area
+    let button_area = frame_rect.shrink2(ui.style().spacing.button_padding);
 
     // Check if we should show ✔ instead of 🗐 if the text was copied and the mouse is hovered
     let persistent_id = ui.make_persistent_id(output.response.id);
     let copied_icon = ui.memory_mut(|m| *m.data.get_temp_mut_or_default::<bool>(persistent_id));
 
     let copy_button = ui
-        .put(
-            egui::Rect {
-                min: position,
-                max: position,
-            },
+        .new_child(
+            egui::UiBuilder::new()
+                .max_rect(button_area)
+                .layout(egui::Layout::right_to_left(egui::Align::Min)),
+        )
+        .add(
             egui::Button::new(if copied_icon { "✔" } else { "🗐" })
                 .small()
                 .frame(false)
