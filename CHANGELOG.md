@@ -1,5 +1,11 @@
 # egui_commonmark changelog
 
+## Unreleased
+
+### Fixed
+
+- Fixed codeblocks expanding past the ui in some cases, causing the parent to grow
+
 ## 0.26.0 - 2026-10-15
 
 ### Added
