@@ -1074,29 +1074,14 @@ impl CommonMarkViewerInternal {
                 egui::ScrollArea::horizontal()
                     .id_salt(id.with("_hscroll"))
                     .show(ui, |ui| {
-                        egui::Grid::new(id).striped(true).show(ui, |ui| {
-                            for col in header {
-                                ui.horizontal(|ui| {
-                                    for (e, src_span) in col {
-                                        let tmp_start = std::mem::replace(
-                                            &mut self.line.should_start_newline,
-                                            false,
-                                        );
-                                        let tmp_end = std::mem::replace(
-                                            &mut self.line.should_end_newline,
-                                            false,
-                                        );
-                                        self.event(ui, e, src_span, cache, options, max_width);
-                                        self.line.should_start_newline = tmp_start;
-                                        self.line.should_end_newline = tmp_end;
-                                    }
-                                });
-                            }
-
-                            ui.end_row();
-
-                            for row in rows {
-                                for col in row {
+                        egui::Grid::new(id)
+                            .spacing(egui::vec2(
+                                options.table_column_spacing,
+                                ui.spacing().item_spacing.y,
+                            ))
+                            .striped(true)
+                            .show(ui, |ui| {
+                                for col in header {
                                     ui.horizontal(|ui| {
                                         for (e, src_span) in col {
                                             let tmp_start = std::mem::replace(
@@ -1115,8 +1100,31 @@ impl CommonMarkViewerInternal {
                                 }
 
                                 ui.end_row();
-                            }
-                        });
+
+                                for row in rows {
+                                    for col in row {
+                                        ui.horizontal(|ui| {
+                                            for (e, src_span) in col {
+                                                let tmp_start = std::mem::replace(
+                                                    &mut self.line.should_start_newline,
+                                                    false,
+                                                );
+                                                let tmp_end = std::mem::replace(
+                                                    &mut self.line.should_end_newline,
+                                                    false,
+                                                );
+                                                self.event(
+                                                    ui, e, src_span, cache, options, max_width,
+                                                );
+                                                self.line.should_start_newline = tmp_start;
+                                                self.line.should_end_newline = tmp_end;
+                                            }
+                                        });
+                                    }
+
+                                    ui.end_row();
+                                }
+                            });
                     });
             });
 

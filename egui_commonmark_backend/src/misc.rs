@@ -26,6 +26,7 @@ const DEFAULT_THEME_DARK: &str = "base16-ocean.dark";
 
 pub struct CommonMarkOptions<'f> {
     pub indentation_spaces: usize,
+    pub table_column_spacing: f32,
     pub max_image_width: Option<usize>,
     pub show_alt_text_on_hover: bool,
     pub default_width: Option<usize>,
@@ -68,6 +69,7 @@ impl std::fmt::Debug for CommonMarkOptions<'_> {
         let mut s = f.debug_struct("CommonMarkOptions");
 
         s.field("indentation_spaces", &self.indentation_spaces)
+            .field("table_column_spacing", &self.table_column_spacing)
             .field("max_image_width", &self.max_image_width)
             .field("show_alt_text_on_hover", &self.show_alt_text_on_hover)
             .field("default_width", &self.default_width);
@@ -97,6 +99,7 @@ impl Default for CommonMarkOptions<'_> {
     fn default() -> Self {
         Self {
             indentation_spaces: 4,
+            table_column_spacing: 0.0,
             max_image_width: None,
             show_alt_text_on_hover: true,
             default_width: None,

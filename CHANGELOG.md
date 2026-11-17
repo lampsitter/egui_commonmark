@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- `CommonMarkViewer::table_column_spacing` to customize the horizontal gap between
+  table columns.
+
 ### Fixed
 
 - Fixed codeblocks expanding past the ui in some cases, causing the parent to grow
