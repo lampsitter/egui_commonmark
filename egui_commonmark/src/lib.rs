@@ -178,6 +178,12 @@ impl<'f> CommonMarkViewer<'f> {
         self
     }
 
+    /// Sets the table column gap (default: `0.0`).
+    pub fn table_column_spacing(mut self, spacing: f32) -> Self {
+        self.options.table_column_spacing = spacing;
+        self
+    }
+
     /// The maximum size images are allowed to be. They will be scaled down if
     /// they are larger
     pub fn max_image_width(mut self, width: Option<usize>) -> Self {

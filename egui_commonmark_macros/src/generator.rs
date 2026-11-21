@@ -485,7 +485,9 @@ impl CommonMarkViewerInternal {
             stream.extend(quote!(
                 egui::Frame::group(ui.style()).show(ui, |ui| {
                     let id = ui.make_persistent_id(("_table", #curr_table));
-                    egui::Grid::new(id).striped(true).show(ui, |ui| {
+                    egui::Grid::new(id)
+                        .spacing(egui::vec2(options.table_column_spacing, ui.spacing().item_spacing.y))
+                        .striped(true).show(ui, |ui| {
 
                     #header_stream
 
