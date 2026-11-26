@@ -136,6 +136,7 @@ pub fn apply_search_highlights(
 
             new_sections.push(LayoutSection {
                 leading_space,
+                wrap_indent: section.wrap_indent,
                 byte_range: ByteIndex(start)..ByteIndex(end),
                 format,
             });
